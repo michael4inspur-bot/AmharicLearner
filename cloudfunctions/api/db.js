@@ -9,6 +9,11 @@ const PAGE = 1000; // 云数据库单次 get 的 limit 上限
 const PROGRESS = 'progress';
 const LOGS = 'ai_logs';
 const TTS_CACHE = 'tts_cache';
+const USERS = 'users';
+const SETTINGS = 'settings';
+const ERRORS = 'error_logs';
+const AI_TYPES = ['diagnosis', 'plan', 'chat']; // countAiByDay 只统计这三类
+const PRUNE_BATCH = 100; // 单次裁剪最多删除的条数
 
 module.exports = {
   async getProgress(openid) {
@@ -88,5 +93,89 @@ module.exports = {
     if (extra.data.length) {
       await db.collection(LOGS).where({ _id: _.in(extra.data.map((d) => d._id)) }).remove();
     }
+  },
+  /** @returns {Promise<object|null>} users 文档（_id = openid） */
+  async getUser(openid) {
+    const r = await db.collection(USERS).where({ _id: openid }).limit(1).get();
+    return r.data[0] || null;
+  },
+  /** 合并写入：先读已有文档，再用 patch 覆盖后整体 set（doc.set 会替换整个文档）。 */
+  async putUser(openid, patch) {
+    const r = await db.collection(USERS).where({ _id: openid }).limit(1).get();
+    const { _id, ...old } = r.data[0] || {};
+    await db.collection(USERS).doc(openid).set({ data: { ...old, ...patch } });
+  },
+  /** @returns {Promise<Array<object>>} 全部用户摘要（最多 PAGE 条） */
+  async listUsers() {
+    const r = await db.collection(USERS).limit(PAGE).get();
+    return r.data;
+  },
+  /** 删除某用户的 progress 文档与全部 ai_logs（where().remove() 服务端一次删多条）。 */
+  async deleteUserData(openid) {
+    await db.collection(PROGRESS).where({ _id: openid }).remove();
+    await db.collection(LOGS).where({ openid }).remove();
+  },
+  /** @returns {Promise<object|null>} settings 文档 */
+  async getSetting(id) {
+    const r = await db.collection(SETTINGS).where({ _id: id }).limit(1).get();
+    return r.data[0] || null;
+  },
+  async putSetting(id, doc) {
+    const { _id, ...data } = doc;
+    await db.collection(SETTINGS).doc(id).set({ data });
+  },
+  /** entry = {date, openid, action, message} */
+  async addErrorLog(entry) {
+    await db.collection(ERRORS).add({ data: entry });
+  },
+  async listErrorLogs(limit = 20) {
+    const r = await db.collection(ERRORS)
+      .orderBy('date', 'desc')
+      .limit(limit)
+      .field({ date: true, openid: true, action: true, message: true })
+      .get();
+    return r.data.map(({ date, openid, action, message }) => ({ date, openid, action, message }));
+  },
+  /** 只保留最新 keep 条错误日志。 */
+  async pruneErrorLogs(keep = 200) {
+    const extra = await db.collection(ERRORS)
+      .orderBy('date', 'desc')
+      .skip(keep)
+      .limit(PRUNE_BATCH)
+      .field({ _id: true })
+      .get();
+    if (extra.data.length) {
+      await db.collection(ERRORS).where({ _id: _.in(extra.data.map((d) => d._id)) }).remove();
+    }
+  },
+  /**
+   * 自 sinceIso 起 AI 类日志按 date 前 10 位分组计数（聚合）。
+   * @returns {Promise<Array<{date: string, count: number}>>}
+   */
+  async countAiByDay(sinceIso) {
+    const r = await db.collection(LOGS).aggregate()
+      .match({ type: _.in(AI_TYPES), date: _.gte(sinceIso) })
+      .project({ day: $.substr(['$date', 0, 10]) })
+      .group({ _id: '$day', count: $.sum(1) })
+      .end();
+    return r.list.map((d) => ({ date: d._id, count: d.count }));
+  },
+  /** @returns {Promise<{count: number, chars: number}>} tts_cache 条数与字符合计 */
+  async ttsCacheStats() {
+    const c = await db.collection(TTS_CACHE).count();
+    if (!c.total) return { count: 0, chars: 0 };
+    const r = await db.collection(TTS_CACHE).aggregate()
+      .group({ _id: null, chars: $.sum('$chars') })
+      .end();
+    return { count: c.total, chars: r.list[0] ? r.list[0].chars : 0 };
+  },
+  /** @returns {Promise<Array<{_id: string, fileID: string}>>} */
+  async listTtsCache(limit = 50) {
+    const r = await db.collection(TTS_CACHE).limit(limit).field({ _id: true, fileID: true }).get();
+    return r.data.map(({ _id, fileID }) => ({ _id, fileID }));
+  },
+  async removeTtsCache(ids) {
+    if (!ids || !ids.length) return;
+    await db.collection(TTS_CACHE).where({ _id: _.in(ids) }).remove();
   }
 };

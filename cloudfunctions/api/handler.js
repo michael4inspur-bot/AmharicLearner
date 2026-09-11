@@ -2,6 +2,7 @@
 // ctx = { openid, db, deepseek, azure, storage, now? }
 const prompts = require('./prompts.js');
 const { handleSpeech } = require('./speech.js');
+const { handleAdmin } = require('./admin.js');
 const { getLimits, isAdmin, DEFAULT_LIMITS } = require('./limits.js');
 const { dayStartIso, monthStartIso } = require('./time.js');
 
@@ -13,6 +14,8 @@ const ADMIN_USAGE_DAYS = 7;
 const ADMIN_LOG_LIMIT = 2000;
 const MAX_CHAT_MESSAGES = 20;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const GATED_PREFIXES = ['ai.', 'tts.', 'stt.']; // 非 active 账号不可用
+const ADMIN_PREFIXES = ['user.', 'announcement.', 'admin.'];
 
 function ok(data) { return { ok: true, data }; }
 function fail(code, error) { return { ok: false, code, error }; }
@@ -93,13 +96,41 @@ async function adminUsage(ctx, now) {
   return ok({ users, since });
 }
 
+/** progress.put 成功后 upsert users 摘要；meta = {week, streak, stars}，缺省为 0。createdAt 仅首次写入。 */
+async function putUserSummary(ctx, now, meta) {
+  const { openid, db } = ctx;
+  const m = meta || {};
+  const existing = await db.getUser(openid);
+  const patch = {
+    lastActive: now.toISOString(),
+    week: Number(m.week) || 0,
+    streak: Number(m.streak) || 0,
+    stars: Number(m.stars) || 0
+  };
+  if (!existing || !existing.createdAt) patch.createdAt = now.toISOString();
+  await db.putUser(openid, patch);
+}
+
 async function handle(action, data, ctx) {
   const { openid, db, deepseek } = ctx;
   const now = ctx.now ? ctx.now() : new Date();
   data = data || {};
 
   if (typeof action !== 'string') return fail('BAD_REQUEST', `未知 action: ${action}`);
+
+  // 账号状态拦截：放在分发之前，speech.js 与 admin.js 都不必自行检查。
+  const isGated = GATED_PREFIXES.some((p) => action.startsWith(p));
+  const isProgress = action === 'progress.get' || action === 'progress.put';
+  if (isGated || isProgress) {
+    const user = await db.getUser(openid);
+    const status = user && user.status;
+    if (isGated && status && status !== 'active') return fail('BAD_REQUEST', '账号已被管理员暂停');
+    if (isProgress && status === 'blocked') return fail('BAD_REQUEST', '账号已停用');
+  }
+
   if (action.startsWith('tts.') || action.startsWith('stt.')) return handleSpeech(action, data, ctx);
+  // admin.usage 保留在本文件内（历史实现），其余 user./announcement./admin. 交给 admin.js
+  if (action !== 'admin.usage' && ADMIN_PREFIXES.some((p) => action.startsWith(p))) return handleAdmin(action, data, ctx);
 
   switch (action) {
     case 'progress.get': {
@@ -110,6 +141,7 @@ async function handle(action, data, ctx) {
       if (!data.progress || typeof data.progress !== 'object') return fail('BAD_REQUEST', 'progress 必须是对象');
       const updatedAt = now.toISOString();
       await db.putProgress(openid, { progress: data.progress, updatedAt });
+      await putUserSummary(ctx, now, data.meta);
       return ok({ updatedAt });
     }
     case 'ai.diagnose': {
