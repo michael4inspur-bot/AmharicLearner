@@ -18,6 +18,7 @@
         <view class="muted" wx:if="{{item.note}}">{{item.note}}</view>
       </view>
       <view class="acts">
+        <view class="btn outline small" data-text="{{item.am}}" catchtap="play" style="width:64rpx;height:64rpx;padding:0;line-height:64rpx;border-radius:50%;margin-bottom:10rpx">🔊</view>
         <view class="btn outline small" data-id="{{item.id}}" bindtap="addCard">+闪卡</view>
         <view class="muted unit" data-unit="{{item.unit}}" bindtap="openUnit">{{item.unitTitle}} ›</view>
       </view>

@@ -1,5 +1,6 @@
 const vocab = require('../../data/vocab.js');
 const progress = require('../../utils/progress.js');
+const audio = require('../../utils/audio.js');
 
 const ALL = vocab.allItems().map((it) => ({
   ...it,
@@ -55,5 +56,6 @@ Page({
     wx.showToast({ title: '已加入闪卡', icon: 'none' });
   },
   copy(e) { wx.setClipboardData({ data: e.currentTarget.dataset.text }); },
+  play(e) { audio.speak(e.currentTarget.dataset.text); },
   openUnit(e) { wx.navigateTo({ url: `/pages/lesson/lesson?id=${e.currentTarget.dataset.unit}` }); }
 });

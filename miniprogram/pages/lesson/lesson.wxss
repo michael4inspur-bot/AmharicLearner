@@ -7,3 +7,7 @@
 .line.b .who { background: #fdf0e3; color: var(--accent); }
 .bubble { background: #f7f9f8; border-radius: 16rpx; padding: 16rpx 20rpx; max-width: 80%; }
 .tip { padding: 10rpx 0; }
+.acts { display: flex; flex-direction: column; gap: 12rpx; flex-shrink: 0; margin-left: 16rpx; }
+.icon-btn { width: 64rpx; height: 64rpx; border-radius: 50%; background: var(--primary-light); display: flex; align-items: center; justify-content: center; font-size: 30rpx; flex-shrink: 0; }
+.icon-btn:active { opacity: 0.6; }
+.bubble .icon-btn { width: 52rpx; height: 52rpx; font-size: 26rpx; margin-left: 12rpx; }

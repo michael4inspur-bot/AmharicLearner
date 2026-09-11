@@ -12,8 +12,12 @@
 .chat { height: 55vh; background: #fff; border-radius: 20rpx; padding: 20rpx; box-sizing: border-box; margin-bottom: 12rpx; }
 .msg { display: flex; margin-bottom: 16rpx; }
 .msg.user { justify-content: flex-end; }
-.msg .bubble { max-width: 85%; padding: 16rpx 20rpx; border-radius: 16rpx; background: #f1f4f2; white-space: pre-wrap; word-break: break-all; font-size: 28rpx; }
+.bubble-wrap { max-width: 85%; }
+.msg .bubble { max-width: 100%; padding: 16rpx 20rpx; border-radius: 16rpx; background: #f1f4f2; white-space: pre-wrap; word-break: break-all; font-size: 28rpx; }
 .msg.user .bubble { background: var(--primary); color: #fff; }
+.am-chips { display: flex; flex-wrap: wrap; gap: 10rpx; margin-top: 10rpx; }
+.am-chip { background: var(--primary-light); color: var(--primary); border-radius: 999rpx; padding: 8rpx 20rpx; font-size: 26rpx; }
+.am-chip:active { opacity: 0.6; }
 .quick { white-space: nowrap; margin-bottom: 12rpx; }
 .qbtn { display: inline-block; background: #fff; border: 2rpx solid var(--border); border-radius: 999rpx; padding: 10rpx 22rpx; margin-right: 12rpx; font-size: 24rpx; color: var(--primary); }
 .composer { display: flex; align-items: center; gap: 12rpx; margin-bottom: 8rpx; }

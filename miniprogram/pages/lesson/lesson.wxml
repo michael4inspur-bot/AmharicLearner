@@ -19,11 +19,17 @@
       <view class="btn outline small" bindtap="toggleZh">{{showZh?'隐藏':'显示'}}中文</view>
     </view>
     <view class="card">
-      <view class="list-item" wx:for="{{unit.items}}" wx:key="id" data-text="{{item.am}}" bindlongpress="copy">
-        <view class="am">{{item.am}}</view>
-        <view class="rom" wx:if="{{showRom}}">{{item.rom}}</view>
-        <view class="zh" wx:if="{{showZh}}">{{item.zh}}</view>
-        <view class="muted" wx:if="{{item.note && showZh}}">{{item.note}}</view>
+      <view class="list-item row" wx:for="{{unit.items}}" wx:key="id" data-text="{{item.am}}" bindlongpress="copy">
+        <view class="grow">
+          <view class="am">{{item.am}}</view>
+          <view class="rom" wx:if="{{showRom}}">{{item.rom}}</view>
+          <view class="zh" wx:if="{{showZh}}">{{item.zh}}</view>
+          <view class="muted" wx:if="{{item.note && showZh}}">{{item.note}}</view>
+        </view>
+        <view class="acts">
+          <view class="icon-btn" data-text="{{item.am}}" catchtap="play">🔊</view>
+          <view class="icon-btn" data-id="{{item.id}}" catchtap="speakPage">🎤</view>
+        </view>
       </view>
     </view>
   </block>
@@ -33,7 +39,10 @@
     <view class="line {{item.who==='A'?'a':'b'}}" wx:for="{{unit.dialog}}" wx:key="index">
       <view class="who">{{item.who}}</view>
       <view class="bubble">
-        <view class="am">{{item.am}}</view>
+        <view class="row">
+          <view class="am grow">{{item.am}}</view>
+          <view class="icon-btn" data-text="{{item.am}}" catchtap="play">🔊</view>
+        </view>
         <view class="rom" wx:if="{{showRom}}">{{item.rom}}</view>
         <view class="zh">{{item.zh}}</view>
       </view>

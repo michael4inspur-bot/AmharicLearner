@@ -106,7 +106,12 @@
         <view class="bubble">ሰላም! 我是你的阿姆哈拉语教练。可以问我怎么说某句话、让我纠正你写的句子、或者陪你练对话。我知道你的学习进度，会结合你在埃塞的生活场景回答。</view>
       </view>
       <view class="msg {{m.role}}" wx:for="{{messages}}" wx:for-item="m" wx:key="index" id="m{{index}}">
-        <view class="bubble" data-text="{{m.content}}" bindlongpress="copy">{{m.content}}</view>
+        <view class="bubble-wrap">
+          <view class="bubble" data-text="{{m.content}}" bindlongpress="copy">{{m.content}}</view>
+          <view class="am-chips" wx:if="{{m.am && m.am.length}}">
+            <view class="am-chip" wx:for="{{m.am}}" wx:for-item="seg" wx:key="*this" data-text="{{seg}}" catchtap="playAm">🔊 {{seg}}</view>
+          </view>
+        </view>
       </view>
       <view class="msg assistant" wx:if="{{loading==='chat'}}"><view class="bubble muted">教练正在思考…</view></view>
     </scroll-view>

@@ -1,5 +1,6 @@
 const progress = require('../../utils/progress.js');
 const vocab = require('../../data/vocab.js');
+const audio = require('../../utils/audio.js');
 
 Page({
   data: { unit: null, tab: 'words', learned: false, showRom: true, showZh: true },
@@ -9,6 +10,7 @@ Page({
     wx.setNavigationBarTitle({ title: unit.title });
     this.enterAt = Date.now();
     this.setData({ unit, tab: q.tab || 'words' });
+    audio.prefetch(unit.items);
   },
   onShow() {
     const p = progress.load();
@@ -17,6 +19,7 @@ Page({
   onUnload() {
     const min = Math.round((Date.now() - this.enterAt) / 60000);
     if (min > 0) progress.addMinutes(Math.min(min, 30));
+    audio.stop();
   },
   switchTab(e) { this.setData({ tab: e.currentTarget.dataset.tab }); },
   toggleRom() { this.setData({ showRom: !this.data.showRom }); },
@@ -29,5 +32,7 @@ Page({
   quiz() { wx.navigateTo({ url: `/pages/quiz/quiz?scope=${this.data.unit.id}` }); },
   copy(e) {
     wx.setClipboardData({ data: e.currentTarget.dataset.text });
-  }
+  },
+  play(e) { audio.speak(e.currentTarget.dataset.text); },
+  speakPage(e) { wx.navigateTo({ url: `/pages/speak/speak?id=${e.currentTarget.dataset.id}` }); }
 });

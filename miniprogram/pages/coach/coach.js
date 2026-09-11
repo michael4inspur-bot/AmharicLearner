@@ -1,8 +1,31 @@
 const progress = require('../../utils/progress.js');
 const plan = require('../../data/plan.js');
 const api = require('../../utils/api.js');
+const audio = require('../../utils/audio.js');
 
 const CHAT_KEY = 'coach_chat_v1';
+const AM_RE = /[ሀ-፿][ሀ-፿\s፡።፣?!,.]*/g;
+
+/** 从教练回复中提取埃塞文字片段：去首尾空白、去重、长度 ≥ 2 */
+function extractAmharic(text) {
+  const out = [];
+  const seen = {};
+  const matches = String(text == null ? '' : text).match(AM_RE) || [];
+  matches.forEach((m) => {
+    const t = m.trim();
+    if (t.length < 2 || seen[t]) return;
+    seen[t] = true;
+    out.push(t);
+  });
+  return out;
+}
+
+/** assistant 消息补 am 字段（可朗读片段） */
+function withAm(msg) {
+  if (!msg || msg.role !== 'assistant') return msg;
+  return { ...msg, am: extractAmharic(msg.content) };
+}
+
 const QUICK = [
   '"这个多少钱，便宜点"怎么说？',
   '帮我练一段打车对话',
@@ -16,7 +39,8 @@ Page({
   onLoad() {
     let messages = [];
     try { messages = wx.getStorageSync(CHAT_KEY) || []; } catch (e) { /* ignore */ }
-    this.setData({ messages });
+    if (!Array.isArray(messages)) messages = [];
+    this.setData({ messages: messages.map(withAm) });
   },
   onShow() {
     const p = progress.load();
@@ -83,7 +107,7 @@ Page({
     this.setData({ messages, input: '', loading: 'chat', scrollTo: `m${messages.length - 1}` });
     try {
       const { reply } = await api.chat(messages.slice(-12), progress.summary());
-      const next = [...messages, { role: 'assistant', content: reply }].slice(-40);
+      const next = [...messages, withAm({ role: 'assistant', content: reply })].slice(-40);
       try { wx.setStorageSync(CHAT_KEY, next); } catch (e) { /* ignore */ }
       progress.addMinutes(1);
       this.setData({ messages: next, loading: '', scrollTo: `m${next.length - 1}` });
@@ -98,5 +122,6 @@ Page({
     this.setData({ messages: [] });
   },
 
-  copy(e) { wx.setClipboardData({ data: e.currentTarget.dataset.text }); }
+  copy(e) { wx.setClipboardData({ data: e.currentTarget.dataset.text }); },
+  playAm(e) { audio.speak(e.currentTarget.dataset.text); }
 });
