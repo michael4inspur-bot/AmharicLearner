@@ -1,0 +1,20 @@
+.am.big { font-size: 56rpx; text-align: center; margin: 12rpx 0; }
+.rom, .zh { text-align: center; }
+.muted { text-align: center; }
+.hint { margin-top: 8rpx; font-size: 24rpx; }
+.btn.rec { margin-top: 20rpx; padding: 32rpx 0; font-size: 32rpx; user-select: none; }
+.btn.rec.on { background: var(--danger); }
+.acts { margin-top: 16rpx; }
+.gap { width: 16rpx; }
+.btn.dim { opacity: 0.5; }
+button.btn { width: 100%; }
+.score { font-size: 56rpx; font-weight: 700; }
+.score.good { color: var(--primary); }
+.score.mid { color: var(--accent); }
+.score.bad { color: var(--danger); }
+.transcript { font-size: 36rpx; margin-top: 8rpx; text-align: left; }
+.transcript.empty-text { font-size: 28rpx; color: var(--muted); }
+.words { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 8rpx; }
+.word { font-size: 34rpx; padding: 8rpx 20rpx; border-radius: 12rpx; }
+.word.ok { background: var(--primary-light); color: var(--primary); }
+.word.miss { background: #fbe9e7; color: var(--danger); text-decoration: line-through; }

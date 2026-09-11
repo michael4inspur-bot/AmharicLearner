@@ -1,0 +1,47 @@
+<view class="page">
+  <view class="card" wx:if="{{item}}">
+    <view class="am big">{{item.am}}</view>
+    <view class="rom">{{item.rom}}</view>
+    <view class="zh">{{item.zh}}</view>
+    <view class="muted" wx:if="{{item.note}}">{{item.note}}</view>
+  </view>
+
+  <view class="card">
+    <view class="btn outline" bindtap="playStandard">🔊 听标准音</view>
+
+    <view class="hint muted" wx:if="{{!canRecord}}">当前环境不支持录音，无法跟读评分。</view>
+    <block wx:else>
+      <view class="btn rec {{recording?'on':''}}" bindtouchstart="startRecord" bindtouchend="stopRecord" bindtouchcancel="stopRecord">
+        {{recording ? '🔴 录音中…松开结束' : '🎤 按住录音'}}
+      </view>
+      <view class="muted hint">最长 10 秒，说完松开</view>
+
+      <view class="row acts">
+        <view class="btn outline grow {{tempFilePath?'':'dim'}}" bindtap="playMine">▶ 听我的</view>
+        <view class="gap"></view>
+        <view class="btn outline grow {{tempFilePath?'':'dim'}}" bindtap="compare">🔁 交替对比</view>
+      </view>
+
+      <button class="btn accent" bindtap="score" disabled="{{loading || !tempFilePath}}" loading="{{loading}}">
+        {{loading ? '评分中…' : '评分'}}
+      </button>
+    </block>
+  </view>
+
+  <view class="card" wx:if="{{result}}">
+    <view class="row between">
+      <view class="card-title">得分</view>
+      <view class="score {{scoreClass}}">{{result.score}}</view>
+    </view>
+    <view class="divider"></view>
+    <view class="muted">识别到的内容</view>
+    <view class="transcript" wx:if="{{result.transcript}}">{{result.transcript}}</view>
+    <view class="transcript empty-text" wx:else>{{noTranscriptText}}</view>
+    <block wx:if="{{result.words.length}}">
+      <view class="muted" style="margin-top:16rpx">逐词对照</view>
+      <view class="words">
+        <view class="word {{item.ok?'ok':'miss'}}" wx:for="{{result.words}}" wx:key="index">{{item.w}}</view>
+      </view>
+    </block>
+  </view>
+</view>

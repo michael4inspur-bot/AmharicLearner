@@ -9,7 +9,8 @@
     "pages/coach/coach",
     "pages/fidel/fidel",
     "pages/profile/profile",
-    "pages/search/search"
+    "pages/search/search",
+    "pages/speak/speak"
   ],
   "window": {
     "navigationBarBackgroundColor": "#0f6e56",
