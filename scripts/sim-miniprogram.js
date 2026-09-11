@@ -84,9 +84,9 @@ async function main() {
   // 学习流程
   progress.learnUnit('u01');
   const due = progress.dueCards();
-  assert.equal(due.length, 10, '每日新卡上限 10');
+  assert.equal(due.length, 15, '每日新卡上限 15');
   progress.gradeCard(due[0].id, 5); progress.gradeCard(due[1].id, 1); progress.gradeCard(due[2].id, 3);
-  assert.equal(progress.dueCards().length, 7);
+  assert.equal(progress.dueCards().length, 12);
   const q = quiz.buildQuiz('u01', 10, progress.load());
   assert.equal(q.length, 10);
   assert.ok(q[0].options.some((o) => o.id === q[0].answer));
@@ -97,6 +97,13 @@ async function main() {
   assert.equal(s.streak, 1);
   assert.equal(plan.planOutline().weeks.length, 8);
   plan.weeks.forEach((w) => w.units.forEach((id) => assert.ok(vocab.getUnit(id), 'unit ' + id)));
+
+  // 工作沟通主线：16 个单元，自选单元可取、第 5 天出现且为 optional，大纲含 extra 与 33 分钟
+  assert.equal(vocab.units.length, 16, '16 个单元');
+  plan.weeks.forEach((w) => { if (w.extra) assert.ok(vocab.getUnit(w.extra), 'extra unit ' + w.extra); });
+  assert.ok(plan.getDayTasks(2, 5).some((t) => t.optional === true && t.unit === 'u13'), '第 2 周第 5 天含自选 u13');
+  assert.equal(plan.planOutline().weeks[1].extra, 'u13', '大纲第 2 周 extra 为 u13');
+  assert.equal(plan.planOutline().dailyMinutes, 33, '每日 33 分钟');
 
   // 今日页
   const indexPage = pages[0];
@@ -176,6 +183,10 @@ async function main() {
   speakPage.data = { item: null, canRecord: true, recording: false, tempFilePath: '', loading: false, result: null, scoreClass: '' };
   speakPage.onLoad({ id: vocab.getUnit('u01').items[0].id });
   assert.equal(speakPage.data.item.id, vocab.getUnit('u01').items[0].id, '跟读页加载词句');
+
+  // 新学工作场景单元（放在同步断言之后，避免影响"未变化不重复上传"）
+  progress.learnUnit('u14');
+  assert.ok(progress.load().unitsLearned.u14, 'u14 已学');
 
   // 未配置云环境时的失败路径
   require(path.join(root, 'config.js')).cloudEnv = '';
