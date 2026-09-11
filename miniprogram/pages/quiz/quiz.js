@@ -1,10 +1,11 @@
 const progress = require('../../utils/progress.js');
 const quiz = require('../../utils/quiz.js');
+const points = require('../../utils/points.js');
 const vocab = require('../../data/vocab.js');
 const audio = require('../../utils/audio.js');
 
 Page({
-  data: { questions: [], idx: 0, picked: null, score: 0, finished: false, scope: 'all', title: '' },
+  data: { questions: [], idx: 0, picked: null, score: 0, finished: false, scope: 'all', title: '', pct: 0, earned: 0 },
   onLoad(q) {
     const scope = q.scope || 'all';
     const p = progress.load();
@@ -22,7 +23,7 @@ Page({
     const cur = this.data.current;
     if (cur && cur.listen && cur.audioText) audio.speak(cur.audioText);
   },
-  /** 大按钮"听一遍"与题面小 🔊 共用：播当前题的阿姆哈拉语 */
+  /** 听力题大圆钮与题面小喇叭共用：播当前题的阿姆哈拉语 */
   playCurrent() {
     const cur = this.data.current;
     if (!cur) return;
@@ -45,7 +46,11 @@ Page({
       progress.recordQuiz(this.data.scope, this.data.score, total);
       const min = Math.max(1, Math.round((Date.now() - this.enterAt) / 60000));
       progress.addMinutes(Math.min(min, 15));
-      this.setData({ finished: true, pct: Math.round((this.data.score / total) * 100) });
+      const pct = Math.round((this.data.score / total) * 100);
+      let earned = points.award('quiz');
+      if (pct >= 80) earned += points.award('quiz_bonus');
+      points.celebrate();
+      this.setData({ finished: true, pct, earned });
       return;
     }
     this.setData({ idx, current: this.data.questions[idx], picked: null, correct: null });

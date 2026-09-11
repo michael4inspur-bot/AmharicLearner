@@ -1,63 +1,94 @@
 <view class="page">
-  <view class="row between" style="margin-bottom:16rpx">
-    <view class="muted">到期 {{queue.length}} · 已学 {{stats.total}} · 熟练 {{stats.mature}}</view>
-    <view class="btn outline small" bindtap="toggleMode">{{mode==='am' ? '看阿→想中' : mode==='zh' ? '看中→想阿' : '先听→再看'}}</view>
+  <view class="row between rv-head">
+    <view class="grow">
+      <view class="rv-title">闪卡</view>
+      <view class="muted">第 {{pos}} / {{sessionTotal}} 张 · 今天已得 {{todayStars}} 星</view>
+    </view>
+    <view class="modes">
+      <view class="mode {{mode==='am' ? 'on' : ''}}" data-m="am" bindtap="setMode">看阿</view>
+      <view class="mode {{mode==='zh' ? 'on' : ''}}" data-m="zh" bindtap="setMode">看中</view>
+      <view class="mode {{mode==='listen' ? 'on' : ''}}" data-m="listen" bindtap="setMode">先听</view>
+    </view>
+  </view>
+
+  <view class="segs">
+    <view class="seg {{item.s}}" wx:for="{{segs}}" wx:key="k"></view>
   </view>
 
   <block wx:if="{{current}}">
-    <view class="flashcard" bindtap="flip">
-      <view class="tag warn" wx:if="{{current.again}}">刚才忘了，再来一次</view>
-      <block wx:if="{{mode==='am'}}">
-        <view class="fc-am">{{current.am}}</view>
-        <view class="fc-rom">{{current.rom}}</view>
-        <view class="fc-answer" wx:if="{{flipped}}">
-          <view class="fc-zh">{{current.zh}}</view>
-          <view class="muted" wx:if="{{current.note}}">{{current.note}}</view>
+    <view class="fc {{flipped ? 'is-flipped' : ''}}" bindtap="flip">
+      <view class="fc-face fc-front">
+        <view class="deco deco-mint"></view>
+        <view class="deco deco-lav"></view>
+        <view class="fc-unit">{{current.again ? '刚才忘了，再来一次' : current.unitTitle}}</view>
+        <view class="fc-body">
+          <block wx:if="{{mode==='listen'}}">
+            <view class="fc-play" catchtap="play"><x-icon name="speaker" size="80" color="#FFFFFF" /></view>
+            <view class="fc-hint">听一遍，在心里说出意思</view>
+          </block>
+          <block wx:elif="{{mode==='zh'}}">
+            <view class="fc-zh big">{{current.zh}}</view>
+            <view class="fc-hint">在心里说出阿姆哈拉语</view>
+          </block>
+          <block wx:else>
+            <view class="am fc-am">{{current.am}}</view>
+            <view class="fc-rom">{{current.rom}}</view>
+            <view class="fc-hint">在心里说出意思</view>
+          </block>
         </view>
-      </block>
-      <block wx:elif="{{mode==='zh'}}">
-        <view class="fc-zh big">{{current.zh}}</view>
-        <view class="fc-answer" wx:if="{{flipped}}">
-          <view class="fc-am">{{current.am}}</view>
+        <view class="fc-foot">点击卡片翻面</view>
+      </view>
+
+      <view class="fc-face fc-back">
+        <view class="deco deco-mint"></view>
+        <view class="deco deco-lav"></view>
+        <view class="fc-unit">{{current.unitTitle}}</view>
+        <view class="fc-body">
+          <view class="am fc-am">{{current.am}}</view>
           <view class="fc-rom">{{current.rom}}</view>
-          <view class="muted" wx:if="{{current.note}}">{{current.note}}</view>
-        </view>
-      </block>
-      <block wx:else>
-        <view class="fc-play" catchtap="play">🔊</view>
-        <view class="fc-answer" wx:if="{{flipped}}">
-          <view class="fc-am">{{current.am}}</view>
-          <view class="fc-rom">{{current.rom}}</view>
           <view class="fc-zh">{{current.zh}}</view>
-          <view class="muted" wx:if="{{current.note}}">{{current.note}}</view>
+          <view class="fc-note" wx:if="{{current.note}}">{{current.note}}</view>
+          <view class="fc-tools">
+            <view class="square mint" catchtap="play"><x-icon name="speaker" size="36" color="#2F7A5E" /></view>
+            <view class="square lav" catchtap="goSpeak"><x-icon name="mic" size="36" color="#4C3D8F" /></view>
+          </view>
         </view>
-      </block>
-      <view class="muted" wx:if="{{!flipped}}" style="margin-top:30rpx">{{mode==='listen' ? '听一遍，在心里说出意思，再点击翻面' : '先在心里说出答案，再点击翻面'}}</view>
-      <view class="fc-tools" wx:if="{{flipped}}">
-        <view class="icon-btn" catchtap="play">🔊</view>
-        <view class="icon-btn" catchtap="goSpeak">🎤</view>
       </view>
     </view>
 
     <view class="grades" wx:if="{{flipped}}">
-      <view class="g bad" data-g="1" bindtap="grade">忘了<text class="sub">10 分钟后</text></view>
-      <view class="g mid" data-g="3" bindtap="grade">模糊<text class="sub">较快再见</text></view>
-      <view class="g good" data-g="5" bindtap="grade">记得<text class="sub">间隔拉长</text></view>
+      <view class="g peach" data-g="1" bindtap="grade">
+        <view class="g-main">忘了</view>
+        <view class="g-sub">10 分钟后</view>
+      </view>
+      <view class="g lav" data-g="3" bindtap="grade">
+        <view class="g-main">模糊</view>
+        <view class="g-sub">明天</view>
+      </view>
+      <view class="g mint" data-g="5" bindtap="grade">
+        <view class="g-main">记得 +5</view>
+        <view class="g-sub">间隔拉长</view>
+      </view>
     </view>
+    <view class="grades-hint" wx:else>先给自己一个答案，再翻面评分</view>
   </block>
 
-  <view class="card" wx:else>
-    <view class="empty" wx:if="{{stats.total === 0}}">
-      还没有卡片。先去"课程"学一个单元，点"加入闪卡复习"。
+  <view class="card done-card" wx:else>
+    <block wx:if="{{stats.total === 0}}">
+      <view class="done-title">还没有卡片</view>
+      <view class="muted">先去「课程」学一个单元，点「加入闪卡复习」。</view>
       <view class="btn" bindtap="goLessons">去课程</view>
-    </view>
-    <view class="empty" wx:else>
-      <view class="am">ጥሩ ስራ!</view>
-      <view>今天的复习清空了 · 对 {{sessionCorrect}} / 错 {{sessionWrong}}</view>
-      <view class="muted" style="margin-top:8rpx">{{stats.newWaiting ? '还有 ' + stats.newWaiting + ' 张新卡按每日上限明天放出。' : '下一批卡片会按遗忘曲线自动到期。'}}想加练可以做综合小测。</view>
+    </block>
+    <block wx:else>
+      <view class="am done-am">ጥሩ ስራ!</view>
+      <view class="stars done-stars">
+        <x-icon name="star" size="32" color="#F59E0B" />
+        <text>今天已得 {{todayStars}} 星</text>
+      </view>
+      <view class="done-title">今天的复习清空了</view>
+      <view class="muted">对 {{sessionCorrect}} · 错 {{sessionWrong}} · 已学 {{stats.total}} 词 · 熟练 {{stats.mature}}</view>
+      <view class="muted" style="margin-top:12rpx">{{stats.newWaiting ? '还有 ' + stats.newWaiting + ' 张新卡按每日上限明天放出。' : '下一批卡片会按遗忘曲线自动到期。'}}</view>
       <view class="btn outline" bindtap="goQuiz">综合小测</view>
-    </view>
+    </block>
   </view>
-
-  <view class="muted" style="text-align:center">本次：{{done}} 张 · 对 {{sessionCorrect}} · 错 {{sessionWrong}}</view>
 </view>

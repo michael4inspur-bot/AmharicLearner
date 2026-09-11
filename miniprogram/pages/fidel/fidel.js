@@ -1,9 +1,10 @@
 const fidel = require('../../data/fidel.js');
 const progress = require('../../utils/progress.js');
 const quiz = require('../../utils/quiz.js');
+const points = require('../../utils/points.js');
 
 Page({
-  data: { group: 1, rows: [], orderLabels: fidel.ORDER_LABELS, mode: 'table', q: null, qScore: 0, qIdx: 0, qTotal: 10, qPicked: null, done: false },
+  data: { group: 1, rows: [], orderLabels: fidel.ORDER_LABELS, mode: 'table', q: null, qScore: 0, qIdx: 0, qTotal: 10, qPicked: null, done: false, pct: 0, earned: 0 },
   onLoad(q) { this.setGroup(Number(q.group) || 1); this.enterAt = Date.now(); },
   onUnload() {
     const min = Math.round((Date.now() - this.enterAt) / 60000);
@@ -26,8 +27,14 @@ Page({
     const { qIdx, qTotal } = this.data;
     if (qIdx >= qTotal) {
       const pct = Math.round((this.data.qScore / qTotal) * 100);
-      if (pct >= 70 && this.data.group > 0) progress.completeFidelGroup(this.data.group);
-      this.setData({ mode: 'result', pct, done: pct >= 70 });
+      let earned = 0;
+      if (pct >= 70 && this.data.group > 0) {
+        // 只在本次首次通过该批时加星
+        const firstPass = !progress.load().fidelGroupsDone[this.data.group];
+        progress.completeFidelGroup(this.data.group);
+        if (firstPass) { earned = points.award('fidel'); points.celebrate(); }
+      }
+      this.setData({ mode: 'result', pct, earned, done: pct >= 70 });
       return;
     }
     const target = this.pool[qIdx % this.pool.length];

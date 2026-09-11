@@ -1,19 +1,47 @@
-.groups { white-space: nowrap; margin-bottom: 16rpx; }
-.gbtn { display: inline-block; padding: 12rpx 26rpx; border-radius: 999rpx; background: #fff; margin-right: 12rpx; font-size: 26rpx; color: var(--muted); }
-.gbtn.on { background: var(--primary); color: #fff; }
+/* Fidel 字母表：方案 C */
+.fd-head { margin-bottom: 20rpx; }
+.fd-title { font-size: 44rpx; font-weight: 800; line-height: 1.2; margin-bottom: 6rpx; }
+
+/* 批次胶囊 */
+.groups { white-space: nowrap; margin-bottom: 24rpx; }
+.gbtn {
+  display: inline-block; padding: 16rpx 30rpx; border-radius: 999rpx;
+  background: var(--card); margin-right: 14rpx; font-size: 26rpx; font-weight: 700;
+  color: var(--muted-2); box-shadow: var(--shadow-sm);
+}
+.gbtn.on { background: var(--accent); color: #FFFFFF; box-shadow: 0 14rpx 36rpx rgba(194, 65, 12, 0.26); }
+
+/* 字母表 */
+.fd-card { padding: 32rpx 24rpx; }
+.fd-card-head { margin-bottom: 16rpx; }
 .grid { display: inline-block; min-width: 100%; }
 .hrow, .frow { display: flex; }
-.hcell, .cell { width: 110rpx; flex-shrink: 0; text-align: center; padding: 10rpx 4rpx; border-bottom: 2rpx solid var(--border); }
-.hcell { font-size: 20rpx; color: var(--muted); }
-.first { width: 150rpx; text-align: left; }
-.c-name { font-weight: 600; }
-.tiny { font-size: 18rpx; line-height: 1.2; }
-.f-ch { font-size: 40rpx; }
-.f-rom { font-size: 20rpx; color: var(--primary); }
-.qbox { text-align: center; padding: 30rpx; }
-.big { font-size: 140rpx; line-height: 1.2; }
-.big2 { font-size: 64rpx; font-weight: 700; color: var(--primary); }
-.opt { background: #fff; border: 3rpx solid var(--border); border-radius: 16rpx; padding: 22rpx; margin-bottom: 14rpx; font-size: 34rpx; text-align: center; }
-.opt.right { border-color: var(--primary); background: var(--primary-light); }
-.opt.wrong { border-color: var(--danger); background: #fbe9e7; }
+.hcell, .cell { width: 116rpx; flex-shrink: 0; text-align: center; padding: 14rpx 4rpx; }
+.frow { border-top: 2rpx solid #F5EADF; }
+.hcell { font-size: 22rpx; }
+.first { width: 170rpx; text-align: left; padding-left: 8rpx; }
+.c-name { font-size: 26rpx; font-weight: 800; }
+.tiny { font-size: 20rpx; line-height: 1.3; }
+.f-ch { font-size: 44rpx; line-height: 1.2; }
+.f-rom { font-size: 20rpx; color: var(--muted); }
+
+/* 认读自测 */
+.qz-head { margin-bottom: 20rpx; }
+.qz-count { font-size: 32rpx; font-weight: 800; }
+.qz-score { font-size: 26rpx; color: var(--muted); font-weight: 700; }
+.qbox { text-align: center; padding: 48rpx 32rpx; border-radius: 56rpx; }
+.big { font-size: 200rpx; line-height: 1.1; }
+.opt {
+  background: var(--card); border-radius: 999rpx; padding: 28rpx;
+  margin-bottom: 18rpx; font-size: 30rpx; font-weight: 700; text-align: center;
+  box-shadow: var(--shadow-sm); transition: background 200ms ease, color 200ms ease, opacity 200ms ease;
+}
+.opt:active { transform: scale(0.98); }
+.opt.right { background: var(--mint); color: var(--mint-deep); box-shadow: none; }
+.opt.wrong { background: var(--peach); color: var(--accent); box-shadow: none; }
 .opt.dim { opacity: 0.5; }
+
+.result-card { text-align: center; padding: 60rpx 40rpx 44rpx; }
+.result-am { font-size: 64rpx; line-height: 1.3; }
+.result-score { font-size: 96rpx; font-weight: 800; color: var(--accent); line-height: 1.1; margin: 12rpx 0 8rpx; }
+.result-stars { margin-bottom: 16rpx; font-size: 26rpx; }
