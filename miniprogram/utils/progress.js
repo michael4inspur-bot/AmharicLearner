@@ -17,8 +17,8 @@ function defaultProgress() {
   return {
     version: 1,
     startDate: todayStr(),
-    dailyMinutesGoal: 20,
-    newCardsPerDay: 10,
+    dailyMinutesGoal: 35,
+    newCardsPerDay: 15,
     unitsLearned: {},   // unitId -> date
     quizScores: [],     // {unit, score, total, date}
     srs: {},            // itemId -> card
