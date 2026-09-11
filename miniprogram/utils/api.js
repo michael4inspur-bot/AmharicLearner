@@ -1,73 +1,50 @@
-// 后台请求封装：自动登录（wx.login -> /api/auth/login），带 token 重试一次。
-const SETTINGS_KEY = 'settings_v1';
-const DEFAULT_BASE_URL = 'https://your-server.example.com/api';
+// 后台请求封装：全部走微信云函数 api，按 action 分发。
+const config = require('../config.js');
 
-function getSettings() {
-  try { return { baseUrl: DEFAULT_BASE_URL, ...(wx.getStorageSync(SETTINGS_KEY) || {}) }; } catch (e) { return { baseUrl: DEFAULT_BASE_URL }; }
-}
-function saveSettings(s) {
-  try { wx.setStorageSync(SETTINGS_KEY, { ...getSettings(), ...s }); } catch (e) { /* ignore */ }
+const MESSAGES = {
+  NO_API_KEY: '管理员还没配置 DeepSeek 密钥',
+  UPSTREAM: 'AI 服务暂时不可用，稍后再试',
+  TIMEOUT: 'AI 响应超时，请重试'
+};
+
+function configured() {
+  return !!config.cloudEnv;
 }
 
-function rawRequest(path, method, data, token) {
-  const { baseUrl } = getSettings();
+function call(action, data) {
+  if (!configured()) {
+    const err = new Error('还没有配置云开发环境');
+    err.code = 'NO_ENV';
+    return Promise.reject(err);
+  }
   return new Promise((resolve, reject) => {
-    wx.request({
-      url: baseUrl.replace(/\/$/, '') + path,
-      method,
-      data,
-      timeout: 90000,
-      header: token ? { Authorization: `Bearer ${token}` } : {},
+    wx.cloud.callFunction({
+      name: 'api',
+      data: { action, data },
       success: (res) => {
-        if (res.statusCode >= 200 && res.statusCode < 300) resolve(res.data);
-        else {
-          const err = new Error((res.data && res.data.error) || `请求失败 (${res.statusCode})`);
-          err.status = res.statusCode;
-          reject(err);
-        }
+        const r = res.result || {};
+        if (r.ok) { resolve(r.data); return; }
+        const err = new Error(MESSAGES[r.code] || r.error || '请求失败');
+        err.code = r.code || 'UNKNOWN';
+        err.raw = r.error;
+        reject(err);
       },
-      fail: (e) => reject(new Error(e.errMsg || '网络错误'))
+      fail: (e) => {
+        const msg = (e && e.errMsg) || '';
+        const err = new Error(/timeout/i.test(msg) ? MESSAGES.TIMEOUT : `网络错误：${msg}`);
+        err.code = /timeout/i.test(msg) ? 'TIMEOUT' : 'NETWORK';
+        reject(err);
+      }
     });
   });
 }
 
-let loginPromise = null;
-function login() {
-  if (loginPromise) return loginPromise;
-  loginPromise = new Promise((resolve, reject) => {
-    wx.login({
-      success: (r) => resolve(r.code),
-      fail: () => resolve('dev')
-    });
-  })
-    .then((code) => rawRequest('/auth/login', 'POST', { code }))
-    .then((data) => { saveSettings({ token: data.token, userId: data.userId }); return data.token; })
-    .finally(() => { loginPromise = null; });
-  return loginPromise;
-}
-
-async function request(path, method = 'GET', data) {
-  let { token } = getSettings();
-  if (!token) token = await login();
-  try {
-    return await rawRequest(path, method, data, token);
-  } catch (err) {
-    if (err.status === 401) {
-      token = await login();
-      return rawRequest(path, method, data, token);
-    }
-    throw err;
-  }
-}
-
 module.exports = {
-  getSettings,
-  saveSettings,
-  health: () => rawRequest('/health', 'GET'),
-  syncProgress: (progress) => request('/progress', 'PUT', { progress }),
-  fetchProgress: () => request('/progress', 'GET'),
-  diagnose: (summary, planOutline) => request('/ai/diagnose', 'POST', { summary, planOutline }),
-  adjustPlan: (summary, planOutline, diagnosis, req) => request('/ai/adjust-plan', 'POST', { summary, planOutline, diagnosis, request: req }),
-  chat: (messages, summary) => request('/ai/chat', 'POST', { messages, summary }),
-  aiHistory: () => request('/ai/history', 'GET')
+  configured,
+  syncProgress: (progress) => call('progress.put', { progress }),
+  fetchProgress: () => call('progress.get'),
+  diagnose: (summary, planOutline) => call('ai.diagnose', { summary, planOutline }),
+  adjustPlan: (summary, planOutline, diagnosis, request) => call('ai.adjustPlan', { summary, planOutline, diagnosis, request }),
+  chat: (messages, summary) => call('ai.chat', { messages, summary }),
+  aiHistory: () => call('ai.history')
 };

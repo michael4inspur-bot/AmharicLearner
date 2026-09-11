@@ -6,8 +6,7 @@ let timer = null;
 let lastPayload = '';
 
 function configured() {
-  const { baseUrl } = api.getSettings();
-  return baseUrl && !baseUrl.includes('example.com');
+  return api.configured();
 }
 
 function syncNow() {
