@@ -1,78 +1,99 @@
 <view class="page">
   <view class="hero">
-    <view class="row between">
+    <view class="blob a"></view>
+    <view class="blob b"></view>
+    <view class="hero-am am">{{greet.am}}</view>
+    <view class="hero-sub">{{greet.zh}} · 第 {{pos.week}} 周 第 {{pos.day}} 天</view>
+    <view class="hero-meta">
+      <view class="streak-pill" bindtap="goProfile">
+        <x-icon name="flame" size="32" color="#C2410C" />
+        <text>连续 {{streak}} 天</text>
+      </view>
+      <view class="hero-hint" wx:if="{{badgeHint}}">{{badgeHint}}</view>
+    </view>
+  </view>
+
+  <view class="stat-row">
+    <view class="stat mint grow">
+      <view class="ring" style="background: conic-gradient(#2F7A5E 0deg {{minuteDeg}}deg, rgba(255,255,255,0.7) {{minuteDeg}}deg 360deg)">
+        <view class="ring-in">{{minutes}}</view>
+      </view>
       <view>
-        <view class="hero-am">{{greet.am}}</view>
-        <view class="hero-rom">{{greet.rom}} · {{greet.zh}}</view>
-      </view>
-      <view class="streak" bindtap="goProfile">
-        <view class="streak-num">{{streak}}</view>
-        <view class="streak-label">连续天</view>
+        <view class="stat-label mint">今日分钟</view>
+        <view class="stat-value mint">{{minutes}} / {{goal}}</view>
       </view>
     </view>
-    <view class="hero-week" bindtap="goPlan">
-      <view class="row between">
-        <text>第 {{pos.week}} 周 · 第 {{pos.day}} 天</text>
-        <text class="link">看计划 ›</text>
-      </view>
-      <view class="hero-theme">{{week.theme}}</view>
-      <view class="progress-bar light"><view class="fill" style="width:{{weekPct}}%"></view></view>
+    <view class="stat lav" bindtap="goReview">
+      <view class="stat-label lav">到期卡</view>
+      <view class="stat-value lav">{{due}} 张</view>
     </view>
   </view>
 
   <view class="card">
     <view class="row between">
-      <view class="card-title">今天 {{minutes}} / {{goal}} 分钟</view>
-      <view class="muted">{{doneCount}}/{{requiredCount}} 项完成</view>
+      <view class="card-title">今日任务</view>
+      <view class="muted">{{doneCount}} / {{requiredCount}} · 共 {{stars}} 星</view>
     </view>
-    <view class="progress-bar"><view class="fill" style="width:{{minutePct}}%"></view></view>
-    <view class="muted" style="margin-top:12rpx">到期卡片 {{due}} 张 · 已学 {{total}} 词</view>
-  </view>
-
-  <view class="card">
-    <view class="card-title">今日任务</view>
-    <view class="task {{item.done ? 'done' : ''}}" wx:for="{{tasks}}" wx:key="title" data-idx="{{index}}" bindtap="onTask">
-      <view class="task-check">{{item.done ? '✓' : ''}}</view>
-      <view class="grow">
-        <view class="task-title">{{item.title}} <text class="tag gray" wx:if="{{item.optional}}">自选</text></view>
-        <view class="muted">{{item.extra || item.desc}}</view>
+    <view class="task" wx:for="{{tasks}}" wx:key="title" data-idx="{{index}}" bindtap="onTask">
+      <view class="tsq {{item.done ? 'done pop' : ''}}">
+        <x-icon wx:if="{{item.done}}" name="check" size="34" color="#FFFFFF" />
       </view>
-      <view class="muted">{{item.minutes}}′</view>
+      <view class="grow">
+        <view class="task-title {{item.done ? 'off' : ''}}">{{item.title}}<text class="tag gray after" wx:if="{{item.optional}}">自选</text></view>
+        <view class="task-desc">{{item.extra || item.desc}} · {{item.minutes}} 分钟</view>
+      </view>
+      <view class="stars {{item.done ? 'done' : ''}}" wx:if="{{item.stars}}">
+        <x-icon name="star" size="28" color="{{item.done ? '#B08A78' : '#F59E0B'}}" />
+        <text>+{{item.stars}}</text>
+      </view>
     </view>
   </view>
 
-  <view class="card" wx:if="{{overrides}}">
-    <view class="card-title">AI 调整中的计划</view>
-    <view class="muted">{{overrides.summary}}</view>
-    <view class="muted" style="margin-top:8rpx">本周任务：{{overrides.mission_this_week}}</view>
+  <view class="card lav mission-card" bindtap="goPlan">
+    <view class="grow">
+      <view class="m-label">本周实战</view>
+      <view class="m-text">{{week.mission}}</view>
+      <view class="dots">
+        <view class="dot {{item <= pos.day ? 'on' : ''}}" wx:for="{{days7}}" wx:key="*this"></view>
+      </view>
+    </view>
+    <view class="m-btn"><x-icon name="chevron-right" size="36" color="#4C3D8F" /></view>
   </view>
 
-  <view class="card">
-    <view class="card-title">为什么这周学这个</view>
+  <view class="search-pill" bindtap="goSearch">
+    <x-icon name="search" size="36" color="#B08A78" />
+    <text>现场急用：多少钱 / sint / ውሃ</text>
+  </view>
+
+  <view class="card lav" wx:if="{{overrides}}">
+    <view class="card-title">AI 调整中的计划</view>
+    <view class="muted-2">{{overrides.summary}}</view>
+    <view class="muted-2 gap-top">本周任务：{{overrides.mission_this_week}}</view>
+  </view>
+
+  <view class="card" bindtap="goPlan">
+    <view class="row between">
+      <view class="card-title">为什么这周学这个</view>
+      <x-icon name="chevron-right" size="32" color="#B08A78" />
+    </view>
     <view class="zh">{{week.why}}</view>
     <view class="divider"></view>
-    <view class="muted">本周目标：{{week.goal}}</view>
-  </view>
-
-  <view class="card row between" bindtap="goSearch">
-    <view>
-      <view class="card-title">查词句</view>
-      <view class="muted">现场急用：输中文马上找到怎么说</view>
-    </view>
-    <view class="am">🔍</view>
+    <view class="muted-2">本周目标：{{week.goal}}</view>
+    <view class="progress-bar gap-top"><view class="fill" style="width:{{weekPct}}%"></view></view>
   </view>
 
   <view class="card row between" bindtap="goFidel">
-    <view>
+    <view class="square mint"><text class="am">ፊ</text></view>
+    <view class="grow side-gap">
       <view class="card-title">Fidel 字母表</view>
-      <view class="muted">本周学第 {{week.fidelGroup}} 批</view>
+      <view class="muted-2">本周学第 {{week.fidelGroup}} 批</view>
     </view>
-    <view class="am">ፊደል</view>
+    <x-icon name="chevron-right" size="32" color="#B08A78" />
   </view>
 
   <view class="card">
     <view class="muted">每日一句</view>
-    <view class="am">{{tip.am}}</view>
+    <view class="am am-lg">{{tip.am}}</view>
     <view class="rom">{{tip.rom}} · {{tip.zh}}</view>
   </view>
 </view>

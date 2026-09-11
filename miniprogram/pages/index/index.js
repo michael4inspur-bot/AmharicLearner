@@ -1,4 +1,5 @@
 const progress = require('../../utils/progress.js');
+const points = require('../../utils/points.js');
 const plan = require('../../data/plan.js');
 const vocab = require('../../data/vocab.js');
 
@@ -10,9 +11,26 @@ const GREETINGS = [
   { am: 'አማርኛ እማራለሁ', rom: 'Amarigna imaralehu', zh: '我在学阿姆哈拉语' }
 ];
 
+// 每类任务完成后可得的星数（与 utils/points.js 的 STAR_RULES 对齐）
+const R = points.STAR_RULES;
+const TASK_STARS = {
+  review: R.review_clear,
+  learn: R.learn_unit,
+  quiz: R.quiz,
+  mission: R.mission,
+  fidel: R.fidel,
+  dialog: 0,
+  ai: 0,
+  reflect: 0
+};
+
 Page({
-  data: {},
-  onShow() { this.refresh(); },
+  data: { days7: [1, 2, 3, 4, 5, 6, 7] },
+
+  onShow() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().setData({ selected: 0 });
+    this.refresh();
+  },
 
   refresh() {
     const p = progress.load();
@@ -27,6 +45,8 @@ Page({
     const weekUnitsDone = week.units.filter((id) => p.unitsLearned[id]).length;
     const hour = new Date().getHours();
     const greet = GREETINGS[hour < 12 ? 1 : hour < 18 ? 2 : 0];
+    const minutePct = Math.min(100, Math.round((log.minutes / p.dailyMinutesGoal) * 100));
+    const nb = points.nextBadge(p);
 
     this.setData({
       pos,
@@ -36,12 +56,15 @@ Page({
       streak: progress.streak(p),
       minutes: log.minutes,
       goal: p.dailyMinutesGoal,
-      minutePct: Math.min(100, Math.round((log.minutes / p.dailyMinutesGoal) * 100)),
+      minutePct,
+      minuteDeg: Math.round(minutePct * 3.6),
       due: stats.due,
       total: stats.total,
       tasks,
       doneCount,
       requiredCount,
+      stars: p.stars || 0,
+      badgeHint: nb ? nb.hint : '',
       weekPct: week.units.length ? Math.round((weekUnitsDone / week.units.length) * 100) : Math.round((pos.day / 7) * 100),
       overrides: p.planOverrides
     });
@@ -65,6 +88,7 @@ Page({
       case 'ai': case 'reflect': d.done = p.aiHistory.some((h) => (h.date || '').slice(0, 10) === today); break;
       default: d.done = false;
     }
+    d.stars = TASK_STARS[t.type] || 0;
     return d;
   },
 
@@ -97,7 +121,9 @@ Page({
         if (r.confirm) {
           progress.completeMission(t.missionKey);
           progress.addMinutes(t.minutes || 10);
-          wx.showToast({ title: 'ጥሩ ስራ! 干得好', icon: 'none' });
+          points.award('mission');
+          wx.showToast({ title: 'ጥሩ ስራ! +40 星', icon: 'none' });
+          points.celebrate();
           this.refresh();
         }
       }
@@ -107,5 +133,6 @@ Page({
   goPlan() { wx.navigateTo({ url: '/pages/plan/plan' }); },
   goProfile() { wx.navigateTo({ url: '/pages/profile/profile' }); },
   goSearch() { wx.navigateTo({ url: '/pages/search/search' }); },
+  goReview() { wx.switchTab({ url: '/pages/review/review' }); },
   goFidel() { wx.navigateTo({ url: `/pages/fidel/fidel?group=${this.data.week.fidelGroup}` }); }
 });

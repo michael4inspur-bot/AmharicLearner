@@ -1,53 +1,60 @@
-<view class="page">
+<view class="page no-tab">
   <view class="card">
     <view class="card-title">目标：8 周内用阿姆哈拉语完成日常工作沟通</view>
-    <view class="muted">每天 {{goal}} 分钟：{{daily.reviewMinutes}}′ 闪卡复习 + {{daily.learnMinutes}}′ 新内容 + {{daily.practiceMinutes}}′ 小测/实战 · 每日新词上限 {{newCards}}</view>
-    <view class="row" style="margin-top:16rpx">
+    <view class="muted-2">每天 {{goal}} 分钟：{{daily.reviewMinutes}}′ 闪卡复习 + {{daily.learnMinutes}}′ 新内容 + {{daily.practiceMinutes}}′ 小测 / 实战 · 每日新词上限 {{newCards}}</view>
+    <view class="row gap" style="margin-top:20rpx">
       <view class="btn outline small" bindtap="togglePrinciples">{{showPrinciples ? '收起' : '为什么这样设计'}}</view>
-      <view style="width:16rpx"></view>
       <view class="btn small" bindtap="goCoach">让 AI 诊断并调整</view>
     </view>
-    <view wx:if="{{showPrinciples}}" style="margin-top:16rpx">
+    <view wx:if="{{showPrinciples}}" class="pr-list">
       <view class="pr" wx:for="{{principles}}" wx:key="title">
         <view class="pr-title">{{index + 1}}. {{item.title}}</view>
-        <view class="muted">{{item.desc}}</view>
+        <view class="muted-2">{{item.desc}}</view>
       </view>
     </view>
   </view>
 
-  <view class="card" wx:if="{{overrides}}">
+  <view class="card lav" wx:if="{{overrides}}">
     <view class="row between">
       <view class="card-title">AI 调整（{{overrides.appliedAt}}）</view>
-      <text class="muted" bindtap="clearOverrides">恢复默认</text>
+      <text class="reset" bindtap="clearOverrides">恢复默认</text>
     </view>
     <view class="zh">{{overrides.summary}}</view>
-    <view class="muted" style="margin-top:8rpx">复习占比 {{overrides.review_ratio}} · 本周任务：{{overrides.mission_this_week}}</view>
-    <view class="muted" wx:if="{{overrides.checkpoint}}">检查点：{{overrides.checkpoint}}</view>
+    <view class="muted-2 gap-top">复习占比 {{overrides.review_ratio}} · 本周任务：{{overrides.mission_this_week}}</view>
+    <view class="muted-2" wx:if="{{overrides.checkpoint}}">检查点：{{overrides.checkpoint}}</view>
     <block wx:if="{{overrides.extra_focus && overrides.extra_focus.length}}">
       <view class="section-title">补充重点</view>
-      <view class="zh" wx:for="{{overrides.extra_focus}}" wx:key="*this">• {{item}}</view>
+      <view class="zh" wx:for="{{overrides.extra_focus}}" wx:key="*this">· {{item}}</view>
     </block>
   </view>
 
-  <view class="week {{w.status}}" wx:for="{{weeks}}" wx:for-item="w" wx:key="week">
+  <view class="card week {{w.status}}" wx:for="{{weeks}}" wx:for-item="w" wx:key="week">
     <view class="wk-head">
-      <view class="wk-num">W{{w.week}}</view>
+      <view class="wk-num {{w.status === 'current' ? 'now' : ''}}">W{{w.week}}</view>
       <view class="grow">
-        <view class="wk-theme">{{w.theme}} <text class="tag" wx:if="{{w.status==='current'}}">本周</text><text class="tag gray" wx:if="{{w.reviewWeek}}">复习周</text></view>
+        <view class="wk-theme">{{w.theme}}<text class="tag after" wx:if="{{w.status === 'current'}}">本周</text><text class="tag gray after" wx:if="{{w.reviewWeek}}">复习周</text></view>
         <view class="muted">{{w.unitTitles}}</view>
-        <view class="muted" wx:if="{{w.extraTitle}}">自选补充：{{w.extraTitle}}</view>
       </view>
     </view>
-    <view class="wk-body">
-      <view class="zh">{{w.goal}}</view>
-      <view class="muted" style="margin-top:6rpx">{{w.why}}</view>
-      <view class="mission"><text class="tag warn">实战</text>{{w.mission}} <text class="ok" wx:if="{{w.missionDone}}">✓ 已完成</text></view>
-      <view class="muted">里程碑：{{w.milestone}} · 单元 {{w.unitsDone}}/{{w.units.length}} · Fidel 第 {{w.fidelGroup}} 批</view>
-      <view class="adj" wx:if="{{w.adjustment}}">
-        <view class="adj-title">AI 调整：{{w.adjustment.theme || w.theme}}</view>
-        <view>{{w.adjustment.change}}</view>
-        <view class="muted">依据：{{w.adjustment.reason}}</view>
-      </view>
+
+    <view class="zh gap-top">{{w.goal}}</view>
+    <view class="muted-2 gap-top">{{w.why}}</view>
+
+    <view class="line">
+      <text class="tag warn">实战</text>
+      <view class="grow muted-2">{{w.mission}}</view>
+      <x-icon wx:if="{{w.missionDone}}" name="check" size="32" color="#2F7A5E" />
+    </view>
+    <view class="line muted">里程碑：{{w.milestone}} · 单元 {{w.unitsDone}}/{{w.units.length}} · Fidel 第 {{w.fidelGroup}} 批</view>
+    <view class="line" wx:if="{{w.extraTitle}}">
+      <text class="tag gray">自选</text>
+      <view class="grow muted">补充单元：{{w.extraTitle}}</view>
+    </view>
+
+    <view class="adj" wx:if="{{w.adjustment}}">
+      <view class="adj-title">AI 调整：{{w.adjustment.theme || w.theme}}</view>
+      <view class="zh">{{w.adjustment.change}}</view>
+      <view class="muted">依据：{{w.adjustment.reason}}</view>
     </view>
   </view>
 </view>

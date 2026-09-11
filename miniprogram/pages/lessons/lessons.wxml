@@ -1,41 +1,48 @@
 <view class="page">
-  <view class="search-entry" bindtap="goSearch">🔍 查词句：多少钱 / sint / ውሃ</view>
-  <view class="muted" style="margin-bottom:16rpx">按在埃塞的真实场景排序，可以跳着学；点"看计划"了解每周为什么这样安排。 <text class="link" bindtap="goPlan">看计划 ›</text></view>
-  <view class="card {{w.current ? 'current' : ''}}" wx:for="{{weeks}}" wx:for-item="w" wx:key="week">
-    <view class="row between">
-      <view class="card-title">第 {{w.week}} 周 · {{w.theme}}</view>
-      <text class="tag" wx:if="{{w.current}}">本周</text>
-    </view>
-    <view class="muted">{{w.goal}}</view>
-    <view class="unit" wx:for="{{w.unitList}}" wx:for-item="u" wx:key="id" data-id="{{u.id}}" bindtap="open">
+  <view class="search-pill" bindtap="goSearch">
+    <x-icon name="search" size="36" color="#B08A78" />
+    <text>查词句：多少钱 / sint / ውሃ</text>
+  </view>
+  <view class="lead">按在埃塞的真实场景排序，可以跳着学。<text class="link" bindtap="goPlan">看计划</text></view>
+
+  <view class="card" wx:for="{{weeks}}" wx:for-item="w" wx:key="week">
+    <view class="wk-head">
+      <view class="wk-num {{w.current ? 'now' : ''}}">W{{w.week}}</view>
       <view class="grow">
-        <view class="unit-title">{{u.title}} <text class="tag gray">{{u.count}} 词</text></view>
+        <view class="wk-theme">第 {{w.week}} 周 · {{w.theme}}<text class="tag after" wx:if="{{w.current}}">本周</text></view>
+        <view class="muted">{{w.goal}}</view>
+      </view>
+    </view>
+
+    <view class="list-item unit" wx:for="{{w.unitList}}" wx:for-item="u" wx:key="id" data-id="{{u.id}}" bindtap="open">
+      <view class="grow">
+        <view class="unit-title">{{u.title}}<text class="tag gray after">{{u.count}} 词</text></view>
         <view class="muted">{{u.scene}}</view>
       </view>
-      <view class="unit-state">
-        <text class="tag" wx:if="{{u.learned}}">已学</text>
-        <text class="tag warn" wx:if="{{u.best !== undefined}}">小测 {{u.best}}%</text>
-        <text class="muted" wx:if="{{!u.learned}}">›</text>
-      </view>
+      <text class="tag mint" wx:if="{{u.learned}}">已学</text>
+      <text class="tag warn" wx:if="{{u.best !== undefined}}">小测 {{u.best}}%</text>
+      <x-icon name="chevron-right" size="32" color="#B08A78" />
     </view>
-    <view class="unit" wx:if="{{w.extraUnit}}" data-id="{{w.extraUnit.id}}" bindtap="open">
+
+    <view class="list-item unit" wx:if="{{w.extraUnit}}" data-id="{{w.extraUnit.id}}" bindtap="open">
       <view class="grow">
-        <view class="unit-title"><text class="tag gray">自选</text> {{w.extraUnit.title}} <text class="tag gray">{{w.extraUnit.count}} 词</text></view>
+        <view class="unit-title"><text class="tag gray">自选</text>{{w.extraUnit.title}}<text class="tag gray after">{{w.extraUnit.count}} 词</text></view>
         <view class="muted">{{w.extraUnit.scene}} · 时间充裕再学，不计入本周完成度</view>
       </view>
-      <view class="unit-state">
-        <text class="tag" wx:if="{{w.extraUnit.learned}}">已学</text>
-        <text class="tag warn" wx:if="{{w.extraUnit.best !== undefined}}">小测 {{w.extraUnit.best}}%</text>
-        <text class="muted" wx:if="{{!w.extraUnit.learned}}">›</text>
-      </view>
+      <text class="tag mint" wx:if="{{w.extraUnit.learned}}">已学</text>
+      <text class="tag warn" wx:if="{{w.extraUnit.best !== undefined}}">小测 {{w.extraUnit.best}}%</text>
+      <x-icon name="chevron-right" size="32" color="#B08A78" />
     </view>
-    <view class="unit" data-group="{{w.fidelGroup}}" bindtap="goFidel">
-      <view class="grow">
+
+    <view class="list-item unit" data-group="{{w.fidelGroup}}" bindtap="goFidel">
+      <view class="usq mint"><text class="am">ፊ</text></view>
+      <view class="grow side-gap">
         <view class="unit-title">Fidel 字母 第 {{w.fidelGroup}} 批</view>
         <view class="muted">和本周词汇绑定认读</view>
       </view>
-      <view class="am">ፊ</view>
+      <x-icon name="chevron-right" size="32" color="#B08A78" />
     </view>
-    <view class="mission"><text class="tag warn">实战</text>{{w.mission}}</view>
+
+    <view class="mission muted-2"><text class="tag warn">实战</text>{{w.mission}}</view>
   </view>
 </view>

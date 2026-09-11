@@ -1,7 +1,33 @@
-.card.current { border: 3rpx solid var(--primary); }
-.unit { display: flex; align-items: center; padding: 18rpx 0; border-top: 2rpx solid var(--border); }
-.unit-title { font-size: 30rpx; font-weight: 500; }
-.unit-state { text-align: right; }
-.mission { margin-top: 16rpx; padding-top: 16rpx; border-top: 2rpx dashed var(--border); font-size: 26rpx; color: #5a615d; }
-.link { color: var(--primary); }
-.search-entry { background: #fff; border-radius: 999rpx; padding: 18rpx 28rpx; color: var(--muted); margin-bottom: 20rpx; font-size: 28rpx; }
+/* 课程页：搜索胶囊 + 每周白卡（周方块 + 单元行） */
+.search-pill {
+  display: flex; align-items: center; gap: 20rpx;
+  background: var(--card); border-radius: 999rpx; padding: 24rpx 32rpx;
+  color: var(--muted); font-size: 28rpx; box-shadow: var(--shadow-sm);
+  margin-bottom: 20rpx;
+}
+.search-pill:active { transform: scale(0.98); }
+.lead { font-size: 26rpx; color: var(--muted-2); margin-bottom: 20rpx; }
+.link { color: var(--accent); font-weight: 700; }
+
+.wk-head { display: flex; align-items: center; gap: 20rpx; padding-bottom: 8rpx; }
+.wk-num {
+  width: 64rpx; height: 64rpx; border-radius: 24rpx; flex-shrink: 0;
+  background: var(--peach); color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26rpx; font-weight: 800;
+}
+.wk-num.now { background: var(--accent); color: #fff; }
+.wk-theme { font-size: 30rpx; font-weight: 800; }
+.tag.after { margin-left: 12rpx; margin-right: 0; }
+
+.unit { display: flex; align-items: center; gap: 12rpx; }
+.unit:active { transform: scale(0.99); }
+.unit-title { font-size: 30rpx; font-weight: 600; }
+.usq {
+  width: 64rpx; height: 64rpx; border-radius: 24rpx; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 30rpx;
+}
+.usq.mint { background: var(--mint); }
+.side-gap { margin-left: 8rpx; }
+
+.mission { margin-top: 20rpx; padding-top: 20rpx; border-top: 2rpx dashed #F1E3D6; }

@@ -1,14 +1,28 @@
-.pr { padding: 10rpx 0; }
-.pr-title { font-weight: 600; }
-.week { background: #fff; border-radius: 20rpx; margin-bottom: 20rpx; overflow: hidden; }
-.week.past { opacity: 0.7; }
-.week.current { border: 3rpx solid var(--primary); }
-.wk-head { display: flex; align-items: center; padding: 22rpx 28rpx; background: #f7f9f8; }
-.wk-num { width: 80rpx; height: 80rpx; border-radius: 16rpx; background: var(--primary); color: #fff; text-align: center; line-height: 80rpx; font-weight: 700; margin-right: 20rpx; flex-shrink: 0; }
-.week.future .wk-num { background: #b9c4bf; }
-.wk-theme { font-size: 30rpx; font-weight: 600; }
-.wk-body { padding: 20rpx 28rpx; }
-.mission { margin: 14rpx 0; font-size: 26rpx; color: #5a615d; }
-.ok { color: var(--primary); }
-.adj { margin-top: 14rpx; background: #fdf6ec; border-left: 6rpx solid var(--accent); padding: 14rpx 18rpx; border-radius: 8rpx; font-size: 26rpx; }
-.adj-title { font-weight: 600; color: var(--accent); }
+/* 计划页：目标卡 + AI 调整卡 + 8 张周卡片 */
+.pr-list { margin-top: 20rpx; }
+.pr { padding: 12rpx 0; }
+.pr-title { font-weight: 800; font-size: 28rpx; }
+.reset { color: var(--lav-ink); font-size: 26rpx; font-weight: 700; }
+
+.week.past { opacity: 0.72; }
+.week.current { border: 3rpx solid var(--accent); }
+
+.wk-head { display: flex; align-items: center; gap: 20rpx; }
+.wk-num {
+  width: 64rpx; height: 64rpx; border-radius: 24rpx; flex-shrink: 0;
+  background: var(--peach); color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26rpx; font-weight: 800;
+}
+.wk-num.now { background: var(--accent); color: #fff; }
+.wk-theme { font-size: 30rpx; font-weight: 800; }
+.tag.after { margin-left: 12rpx; margin-right: 0; }
+
+.line { display: flex; align-items: center; gap: 8rpx; margin-top: 14rpx; font-size: 26rpx; }
+.gap-top { margin-top: 10rpx; }
+
+.adj {
+  margin-top: 18rpx; background: var(--lav); border-radius: 28rpx;
+  padding: 20rpx 24rpx; font-size: 26rpx;
+}
+.adj-title { font-weight: 800; color: var(--lav-ink); margin-bottom: 6rpx; }
