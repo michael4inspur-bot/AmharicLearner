@@ -1,4 +1,5 @@
 // 内存实现，接口与 ../db.js 完全一致，供测试与小程序模拟脚本使用。
+const { eatDayKey } = require('../time.js');
 const AI_TYPES = ['diagnosis', 'plan', 'chat']; // countAiByDay 只统计这三类
 
 function createFakeDb() {
@@ -103,7 +104,7 @@ function createFakeDb() {
       const by = new Map();
       for (const l of logs) {
         if (!AI_TYPES.includes(l.type) || l.date < sinceIso) continue;
-        const day = String(l.date).slice(0, 10);
+        const day = eatDayKey(l.date);
         by.set(day, (by.get(day) || 0) + 1);
       }
       return [...by.entries()].map(([date, count]) => ({ date, count }));

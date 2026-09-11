@@ -45,7 +45,7 @@
 - 破坏性动作缺 `confirm: true` → `BAD_REQUEST`"需要确认"。
 - 管理员操作自己 → `BAD_REQUEST`"不能操作自己的账号"。
 - `index.js` 兜底 catch 时写 `error_logs`（失败静默），并裁剪到 200 条。
-- db 适配器新增：`getUser/putUser/listUsers/deleteUserData(openid)`、`getSetting/putSetting`、`addErrorLog/listErrorLogs/pruneErrorLogs`、`countAiByDay(sinceIso)`（聚合按 date 前 10 位分组）、`ttsCacheStats()`（count + sum chars）、`listTtsCache(limit)`、`removeTtsCache(ids)`。fakeDb 同步。
+- db 适配器新增：`getUser/putUser/listUsers/deleteUserData(openid)`、`getSetting/putSetting`、`addErrorLog/listErrorLogs/pruneErrorLogs`、`countAiByDay(sinceIso)`（按东非日分组，与配额计日一致）、`ttsCacheStats()`（count + sum chars）、`listTtsCache(limit)`、`removeTtsCache(ids)`。fakeDb 同步。
 
 ## 5. 小程序
 

@@ -2,7 +2,7 @@
 // 不直接依赖 wx-server-sdk，外部依赖通过 ctx 注入。
 // ctx = { openid, db, storage, now? }
 const { getLimits, isAdmin } = require('./limits.js');
-const { dayStartIso, monthStartIso } = require('./time.js');
+const { dayStartIso, monthStartIso, eatDayKey } = require('./time.js');
 
 const USER_STATUSES = ['active', 'paused', 'blocked'];
 const AI_TYPES = ['diagnosis', 'plan', 'chat'];
@@ -127,10 +127,10 @@ async function deleteUser(data, ctx, now) {
   return ok({ deleted: true });
 }
 
-/** 最近 AI_DAILY_DAYS 天的 UTC 日期（升序），与 countAiByDay 的分组口径一致。 */
+/** 最近 AI_DAILY_DAYS 天的东非日期键（升序），与 countAiByDay 的分组口径和配额计日一致。 */
 function recentDays(now) {
   const days = [];
-  for (let i = AI_DAILY_DAYS - 1; i >= 0; i--) days.push(new Date(now.getTime() - i * DAY_MS).toISOString().slice(0, 10));
+  for (let i = AI_DAILY_DAYS - 1; i >= 0; i--) days.push(eatDayKey(new Date(now.getTime() - i * DAY_MS)));
   return days;
 }
 
@@ -139,7 +139,7 @@ async function system(ctx, now) {
   const days = recentDays(now);
   const [monthUsed, rows, ttsCache, errors] = await Promise.all([
     db.sumTtsCharsSince(monthStartIso(now)),
-    db.countAiByDay(`${days[0]}T00:00:00.000Z`),
+    db.countAiByDay(dayStartIso(new Date(now.getTime() - (AI_DAILY_DAYS - 1) * DAY_MS))),
     db.ttsCacheStats(),
     db.listErrorLogs(ERROR_LIST_LIMIT)
   ]);

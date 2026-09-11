@@ -190,7 +190,7 @@ test('admin.deleteUser：进度与日志被删，users 文档变 blocked 且保�
   });
 });
 
-test('admin.system：结构完整，aiDaily 14 项按日期升序，aiToday 为当天', async () => {
+test('admin.system：结构完整，aiDaily 14 项按东非日升序，aiToday 为东非当天', async () => {
   await withEnv({ ADMIN_OPENIDS: 'u1', TTS_MONTHLY_CHARS_LIMIT: '1000' }, async () => {
     const db = createFakeDb();
     await db.addAiLog(log('u1', 'chat', '2026-09-11T08:00:00.000Z', { reply: 'a' }));
@@ -199,19 +199,23 @@ test('admin.system：结构完整，aiDaily 14 项按日期升序，aiToday 为�
     await db.addAiLog(log('u1', 'tts', '2026-09-11T09:30:00.000Z', { chars: 20, key: 'k' }));
     // 14 天之前的不计入
     await db.addAiLog(log('u2', 'chat', '2026-08-01T09:00:00.000Z', {}));
+    // 东非日口径：UTC 09-10 21:30 = 东非 09-11 00:30，计入今天；UTC 09-10 20:30 = 东非 09-10 23:30，计入昨天
+    await db.addAiLog(log('u2', 'chat', '2026-09-10T21:30:00.000Z', {}));
+    await db.addAiLog(log('u2', 'plan', '2026-09-10T20:30:00.000Z', {}));
     await db.putTtsCache({ _id: 'k1', fileID: 'cloud://a', text: 'a', voice: 'female', rate: 'normal', chars: 6, createdAt: NOW });
     await db.putTtsCache({ _id: 'k2', fileID: 'cloud://b', text: 'b', voice: 'female', rate: 'normal', chars: 4, createdAt: NOW });
     await db.addErrorLog({ date: '2026-09-11T07:00:00.000Z', openid: 'u2', action: 'ai.chat', message: 'boom' });
     const res = await handle('admin.system', {}, ctx({ openid: 'u1', db }));
     assert.equal(res.ok, true);
     assert.deepEqual(res.data.monthChars, { used: 20, limit: 1000 });
-    assert.equal(res.data.aiToday, 2);
+    assert.equal(res.data.aiToday, 3);
     assert.equal(res.data.aiDaily.length, 14);
     assert.equal(res.data.aiDaily[0].date, '2026-08-29');
     assert.equal(res.data.aiDaily[13].date, '2026-09-11');
-    assert.equal(res.data.aiDaily[13].count, 2);
+    assert.equal(res.data.aiDaily[13].count, 3);
+    assert.equal(res.data.aiDaily.find((d) => d.date === '2026-09-10').count, 1);
     assert.equal(res.data.aiDaily.find((d) => d.date === '2026-09-05').count, 1);
-    assert.equal(res.data.aiDaily.filter((d) => d.count === 0).length, 12);
+    assert.equal(res.data.aiDaily.filter((d) => d.count === 0).length, 11);
     const dates = res.data.aiDaily.map((d) => d.date);
     assert.deepEqual(dates, [...dates].sort());
     assert.deepEqual(res.data.ttsCache, { count: 2, chars: 10 });

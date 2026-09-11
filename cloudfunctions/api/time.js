@@ -17,4 +17,9 @@ function monthStartIso(now) {
   return new Date(shifted.getTime() - EAT_OFFSET_MS).toISOString();
 }
 
-module.exports = { dayStartIso, monthStartIso, EAT_OFFSET_HOURS };
+/** ISO 时刻对应的东非日期键 YYYY-MM-DD */
+function eatDayKey(iso) {
+  return new Date(new Date(iso).getTime() + EAT_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+module.exports = { dayStartIso, monthStartIso, eatDayKey, EAT_OFFSET_HOURS };

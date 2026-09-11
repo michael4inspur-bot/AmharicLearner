@@ -1,5 +1,6 @@
 // 云数据库适配器。接口与 test/fakeDb.js 一致。
 const cloud = require('wx-server-sdk');
+const { eatDayKey } = require('./time.js');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
@@ -152,13 +153,26 @@ module.exports = {
    * 自 sinceIso 起 AI 类日志按 date 前 10 位分组计数（聚合）。
    * @returns {Promise<Array<{date: string, count: number}>>}
    */
+  /** 自 sinceIso 起的 AI 日志按东非日分组计数：[{date: 'YYYY-MM-DD', count}] */
   async countAiByDay(sinceIso) {
-    const r = await db.collection(LOGS).aggregate()
-      .match({ type: _.in(AI_TYPES), date: _.gte(sinceIso) })
-      .project({ day: $.substr(['$date', 0, 10]) })
-      .group({ _id: '$day', count: $.sum(1) })
-      .end();
-    return r.list.map((d) => ({ date: d._id, count: d.count }));
+    const by = new Map();
+    let skip = 0;
+    for (;;) {
+      const r = await db.collection(LOGS)
+        .where({ type: _.in(AI_TYPES), date: _.gte(sinceIso) })
+        .orderBy('date', 'asc')
+        .skip(skip)
+        .limit(PAGE)
+        .field({ date: true })
+        .get();
+      for (const d of r.data) {
+        const day = eatDayKey(d.date);
+        by.set(day, (by.get(day) || 0) + 1);
+      }
+      if (r.data.length < PAGE) break;
+      skip += PAGE;
+    }
+    return [...by.entries()].map(([date, count]) => ({ date, count }));
   },
   /** @returns {Promise<{count: number, chars: number}>} tts_cache 条数与字符合计 */
   async ttsCacheStats() {
