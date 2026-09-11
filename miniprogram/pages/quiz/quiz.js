@@ -1,6 +1,7 @@
 const progress = require('../../utils/progress.js');
 const quiz = require('../../utils/quiz.js');
 const vocab = require('../../data/vocab.js');
+const audio = require('../../utils/audio.js');
 
 Page({
   data: { questions: [], idx: 0, picked: null, score: 0, finished: false, scope: 'all', title: '' },
@@ -13,6 +14,19 @@ Page({
     wx.setNavigationBarTitle({ title: `小测 · ${title}` });
     this.enterAt = Date.now();
     this.setData({ questions, scope, title, current: questions[0] });
+    this.autoPlay();
+  },
+  onUnload() { audio.stop(); },
+  /** 听力题：切到该题时自动播一次 */
+  autoPlay() {
+    const cur = this.data.current;
+    if (cur && cur.listen && cur.audioText) audio.speak(cur.audioText);
+  },
+  /** 大按钮"听一遍"与题面小 🔊 共用：播当前题的阿姆哈拉语 */
+  playCurrent() {
+    const cur = this.data.current;
+    if (!cur) return;
+    audio.speak(cur.listen ? cur.audioText : cur.promptAm);
   },
   pick(e) {
     if (this.data.picked) return;
@@ -35,6 +49,7 @@ Page({
       return;
     }
     this.setData({ idx, current: this.data.questions[idx], picked: null, correct: null });
+    this.autoPlay();
   },
   again() { wx.redirectTo({ url: `/pages/quiz/quiz?scope=${this.data.scope}` }); },
   back() { wx.navigateBack(); }

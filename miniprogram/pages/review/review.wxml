@@ -1,7 +1,7 @@
 <view class="page">
   <view class="row between" style="margin-bottom:16rpx">
     <view class="muted">到期 {{queue.length}} · 已学 {{stats.total}} · 熟练 {{stats.mature}}</view>
-    <view class="btn outline small" bindtap="toggleMode">{{mode==='am' ? '看阿→想中' : '看中→想阿'}}</view>
+    <view class="btn outline small" bindtap="toggleMode">{{mode==='am' ? '看阿→想中' : mode==='zh' ? '看中→想阿' : '先听→再看'}}</view>
   </view>
 
   <block wx:if="{{current}}">
@@ -15,7 +15,7 @@
           <view class="muted" wx:if="{{current.note}}">{{current.note}}</view>
         </view>
       </block>
-      <block wx:else>
+      <block wx:elif="{{mode==='zh'}}">
         <view class="fc-zh big">{{current.zh}}</view>
         <view class="fc-answer" wx:if="{{flipped}}">
           <view class="fc-am">{{current.am}}</view>
@@ -23,7 +23,20 @@
           <view class="muted" wx:if="{{current.note}}">{{current.note}}</view>
         </view>
       </block>
-      <view class="muted" wx:if="{{!flipped}}" style="margin-top:30rpx">先在心里说出答案，再点击翻面</view>
+      <block wx:else>
+        <view class="fc-play" catchtap="play">🔊</view>
+        <view class="fc-answer" wx:if="{{flipped}}">
+          <view class="fc-am">{{current.am}}</view>
+          <view class="fc-rom">{{current.rom}}</view>
+          <view class="fc-zh">{{current.zh}}</view>
+          <view class="muted" wx:if="{{current.note}}">{{current.note}}</view>
+        </view>
+      </block>
+      <view class="muted" wx:if="{{!flipped}}" style="margin-top:30rpx">{{mode==='listen' ? '听一遍，在心里说出意思，再点击翻面' : '先在心里说出答案，再点击翻面'}}</view>
+      <view class="fc-tools" wx:if="{{flipped}}">
+        <view class="icon-btn" catchtap="play">🔊</view>
+        <view class="icon-btn" catchtap="goSpeak">🎤</view>
+      </view>
     </view>
 
     <view class="grades" wx:if="{{flipped}}">

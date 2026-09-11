@@ -7,10 +7,19 @@
     <view class="progress-bar" style="margin-bottom:24rpx"><view class="fill" style="width:{{(idx) / questions.length * 100}}%"></view></view>
 
     <view class="card qcard">
-      <view class="muted">{{current.promptAm ? '这是什么意思？' : '阿姆哈拉语怎么说？'}}</view>
-      <view class="am q-am" wx:if="{{current.promptAm}}">{{current.promptAm}}</view>
-      <view class="rom" wx:if="{{current.promptRom}}">{{current.promptRom}}</view>
-      <view class="q-zh" wx:if="{{current.promptZh}}">{{current.promptZh}}</view>
+      <view class="muted">{{current.listen ? '听音选意思' : current.promptAm ? '这是什么意思？' : '阿姆哈拉语怎么说？'}}</view>
+      <block wx:if="{{current.listen}}">
+        <view class="play-big" bindtap="playCurrent">🔊 听一遍</view>
+        <view class="muted" style="margin-top:16rpx">听不清可以再点一次</view>
+      </block>
+      <block wx:else>
+        <view class="row q-am-row" wx:if="{{current.promptAm}}">
+          <view class="am q-am">{{current.promptAm}}</view>
+          <view class="icon-btn" bindtap="playCurrent">🔊</view>
+        </view>
+        <view class="rom" wx:if="{{current.promptRom}}">{{current.promptRom}}</view>
+        <view class="q-zh" wx:if="{{current.promptZh}}">{{current.promptZh}}</view>
+      </block>
     </view>
 
     <view class="opt {{picked ? (item.id === current.answer ? 'right' : (item.id === picked ? 'wrong' : 'dim')) : ''}}"
@@ -18,6 +27,10 @@
 
     <view class="card" wx:if="{{picked}}">
       <view class="{{correct ? 'ok' : 'no'}}">{{correct ? '✓ 正确' : '✗ 答错了'}}</view>
+      <view class="row q-am-row" wx:if="{{current.listen}}">
+        <view class="am">{{current.audioText}}</view>
+        <view class="icon-btn" bindtap="playCurrent">🔊</view>
+      </view>
       <view class="muted">{{current.explain}}</view>
       <view class="btn" bindtap="next">{{idx + 1 >= questions.length ? '看结果' : '下一题'}}</view>
     </view>

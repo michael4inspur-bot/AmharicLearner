@@ -8,6 +8,12 @@
 .fc-zh { font-size: 36rpx; margin-top: 8rpx; }
 .fc-zh.big { font-size: 44rpx; }
 .fc-answer { margin-top: 28rpx; padding-top: 24rpx; border-top: 2rpx dashed var(--border); width: 100%; }
+.fc-play {
+  width: 200rpx; height: 200rpx; border-radius: 50%; background: var(--primary); color: #fff;
+  font-size: 88rpx; line-height: 200rpx; text-align: center; box-shadow: 0 6rpx 20rpx rgba(15,110,86,0.3);
+}
+.fc-tools { display: flex; justify-content: center; gap: 24rpx; margin-top: 24rpx; }
+.icon-btn { font-size: 40rpx; padding: 12rpx 28rpx; border-radius: 999rpx; background: var(--primary-light); line-height: 1.4; }
 .grades { display: flex; gap: 16rpx; margin-bottom: 24rpx; }
 .g { flex: 1; text-align: center; color: #fff; border-radius: 16rpx; padding: 22rpx 0; font-size: 30rpx; }
 .g .sub { display: block; font-size: 22rpx; opacity: 0.85; }

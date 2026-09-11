@@ -1,4 +1,4 @@
-// 生成选择题：题型混合（看阿姆哈拉语选中文 / 看中文选阿姆哈拉语），做提取练习。
+// 生成选择题：题型混合（看阿姆哈拉语选中文 / 看中文选阿姆哈拉语 / 听音选中文），做提取练习。
 const vocab = require('../data/vocab.js');
 const plan = require('../data/plan.js');
 
@@ -41,12 +41,29 @@ function buildQuiz(scope, n, progress) {
   const all = vocab.allItems();
 
   return chosen.map((it, idx) => {
+    // 每 3 题中 1 题为听力题（听音选中文）；其余按看阿选中 / 看中选阿交替
+    const listen = idx % 3 === 2;
     const amToZh = idx % 2 === 0;
     const distractorPool = shuffle(pool.length >= 8 ? pool : all).filter((d) => d.id !== it.id && d.zh !== it.zh).slice(0, 3);
     const options = shuffle([it, ...distractorPool]).map((d) => ({
       id: d.id,
-      text: amToZh ? d.zh : `${d.am}  ${d.rom}`
+      text: listen || amToZh ? d.zh : `${d.am}  ${d.rom}`
     }));
+    const explain = `${it.am} (${it.rom}) ${it.zh}${it.note ? '｜' + it.note : ''}`;
+    if (listen) {
+      return {
+        id: it.id,
+        listen: true,
+        audioText: it.am,
+        prompt: '',
+        promptAm: '',
+        promptRom: '',
+        promptZh: '',
+        answer: it.id,
+        options,
+        explain
+      };
+    }
     return {
       id: it.id,
       prompt: amToZh ? `${it.am}\n${it.rom}` : it.zh,
@@ -55,7 +72,7 @@ function buildQuiz(scope, n, progress) {
       promptZh: amToZh ? '' : it.zh,
       answer: it.id,
       options,
-      explain: `${it.am} (${it.rom}) ${it.zh}${it.note ? '｜' + it.note : ''}`
+      explain
     };
   });
 }
