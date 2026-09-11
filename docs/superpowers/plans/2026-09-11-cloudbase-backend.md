@@ -433,7 +433,7 @@ node --check cloudfunctions/api/prompts.js
 - [ ] **Step 5: 运行测试确认通过**
 
 Run: `cd cloudfunctions/api && npm test`
-Expected: `# pass 10`，`# fail 0`
+Expected: 本文件 `# pass 5`；连同 Task 1 一起 `npm test` 为 `# pass 10`
 
 - [ ] **Step 6: 提交**
 
@@ -592,7 +592,8 @@ test('ai.history 只返回 diagnosis/plan，倒序，最多 30 条', async () =>
   const db = createFakeDb();
   const ds = createFakeDeepseek(() => JSON.stringify(DIAG));
   for (let i = 0; i < 35; i++) {
-    const iso = `2026-08-${String(1 + (i % 28)).padStart(2, '0')}T0${i % 10}:00:00Z`;
+    // 日期必须单调递增（真实调用如此），否则后插入的早期日期会被"每日上限"按当天计数拦截
+    const iso = new Date(Date.UTC(2026, 6, 1 + i, 10)).toISOString(); // 2026-07-01 … 2026-08-04，每天一条
     await handle('ai.diagnose', { summary: {} }, ctx('u1', db, ds, iso));
   }
   await handle('ai.chat', { messages: [{ role: 'user', content: 'hi' }] }, ctx('u1', db, ds, '2026-09-11T10:00:00Z'));
