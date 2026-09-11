@@ -15,65 +15,68 @@
 | 计划 | 8 周计划、每周"为什么学"、实战任务、里程碑；展示 AI 调整 |
 | AI 教练 | DeepSeek 进度诊断（优势/薄弱/风险/建议/未来 7 天）、计划调整（按周改动 + 依据，可一键采纳）、随时问教练 |
 | 查词句 | 现场急用：中文 / 转写 / 阿姆哈拉语模糊搜索全部词句，长按复制，可直接加入闪卡 |
-| 我的 | 每日目标、新词上限、开始日期、后台地址、进度自动同步 / 恢复 |
+| 我的 | 每日目标、新词上限、开始日期、云端同步状态、立即上传 / 从云端恢复 |
 
 ## 目录
 
 ```
-miniprogram/          微信小程序（原生 WXML/WXSS/JS，无第三方依赖）
-  data/vocab.js       词汇与对话
-  data/plan.js        8 周计划与每日任务生成
-  data/fidel.js       Fidel 字母表
-  utils/srs.js        SM-2 算法
-  utils/progress.js   进度存储、统计、给 AI 的摘要
-  utils/api.js        后台请求与登录
-  utils/sync.js       进度自动同步
-  pages/              10 个页面
-server/               Node.js + Express 后台
-  src/deepseek.js     DeepSeek Chat Completions 调用
-  src/prompts.js      诊断 / 调整 / 教练提示词（含成人学习原则）
-  src/routes.js       API 路由
-docs/learning-plan.md 学习计划设计说明
+miniprogram/            微信小程序（原生 WXML/WXSS/JS，无第三方依赖）
+  config.js             云开发环境 id
+  data/vocab.js         词汇与对话
+  data/plan.js          8 周计划与每日任务生成
+  data/fidel.js         Fidel 字母表
+  utils/srs.js          SM-2 算法
+  utils/progress.js     进度存储、统计、给 AI 的摘要
+  utils/api.js          云函数调用封装
+  utils/sync.js         进度自动同步
+  pages/                10 个页面
+cloudfunctions/api/     微信云函数：进度存储 + DeepSeek 诊断 / 计划调整 / 教练对话
+  handler.js            纯逻辑（可本地测试）
+  prompts.js            提示词（含成人学习原则）
+  deepseek.js           DeepSeek Chat Completions 调用
+  db.js                 云数据库适配器
+scripts/sim-miniprogram.js  小程序端到端模拟
+docs/learning-plan.md   学习计划设计说明
+docs/superpowers/       设计 spec 与实施计划
 ```
 
 ## 快速开始
 
-### 1. 后台
+后台运行在微信云开发上，不需要服务器、域名和备案。
+
+### 1. 本地测试
 
 ```bash
-cd server
-cp .env.example .env      # 填入 DEEPSEEK_API_KEY；可选 WX_APPID / WX_SECRET
-npm install
-npm test
-npm start                 # http://localhost:3000
+npm test     # 云函数单元测试 + 小程序端到端模拟
 ```
 
-API（均以 `/api` 开头）：
+### 2. 注册与开通（只需一次）
 
-| 方法 | 路径 | 说明 |
+1. 在 [mp.weixin.qq.com](https://mp.weixin.qq.com) 注册个人主体小程序（需大陆身份证、手机号、本人微信），把 AppID 填进 `project.config.json` 的 `appid`。
+2. 用微信开发者工具打开仓库根目录，点工具栏「云开发」，创建环境，把环境 id 填进 `miniprogram/config.js` 的 `cloudEnv`。云开发为付费套餐，个人最低档约每月 20 元，以控制台为准。
+3. 云开发控制台 → 数据库 → 新建集合 `progress` 和 `ai_logs`，权限选「仅创建者可读写」。
+4. 云开发控制台 → 云函数 → `api` → 配置 → 环境变量，添加 `DEEPSEEK_API_KEY`（[platform.deepseek.com](https://platform.deepseek.com) 申请）。可选 `DEEPSEEK_MODEL`，默认 `deepseek-chat`。
+
+### 3. 部署与分发
+
+1. 开发者工具中右键 `cloudfunctions/api` → 「上传并部署：云端安装依赖」。以后每次改后台都重复这一步。
+2. 开发者工具「上传」代码，到 mp.weixin.qq.com「版本管理」把该版本设为体验版。
+3. 「成员管理」添加同事微信号为体验成员（个人主体上限 15 人），扫体验二维码即可使用。
+
+### 云函数接口
+
+小程序通过 `wx.cloud.callFunction({ name: 'api', data: { action, data } })` 调用，返回 `{ok: true, data}` 或 `{ok: false, code, error}`。
+
+| action | 入参 | 说明 |
 | --- | --- | --- |
-| POST | /auth/login | `{code}` 微信 code 换 token；未配置 AppID 时匿名开发模式 |
-| GET/PUT | /progress | 读取 / 上传学习进度 |
-| POST | /ai/diagnose | `{summary, planOutline}` → 诊断 JSON |
-| POST | /ai/adjust-plan | `{summary, planOutline, diagnosis?, request?}` → 计划调整 JSON |
-| POST | /ai/chat | `{messages, summary}` → 教练回复 |
-| GET | /ai/history | 最近的 AI 记录 |
+| `progress.get` | 无 | 读取云端进度 |
+| `progress.put` | `{progress}` | 整份覆盖上传 |
+| `ai.diagnose` | `{summary, planOutline}` | 学习进度诊断 |
+| `ai.adjustPlan` | `{summary, planOutline, diagnosis?, request?}` | 计划调整建议 |
+| `ai.chat` | `{messages, summary}` | AI 教练对话 |
+| `ai.history` | 无 | 最近 30 条诊断 / 调整记录 |
 
-Docker 部署：
-
-```bash
-cd server && cp .env.example .env   # 填 DEEPSEEK_API_KEY
-docker compose up -d --build        # 数据持久化在 server/data/
-```
-
-部署到公网时需要 HTTPS（`server/nginx.example.conf` 是 Nginx + Let's Encrypt 反代示例），
-并在微信公众平台「开发 → 开发设置 → 服务器域名」中把域名加入 request 合法域名。
-
-### 2. 小程序
-
-1. 用微信开发者工具打开仓库根目录（`project.config.json` 已指向 `miniprogram/`），把 `appid` 改成自己的。
-2. 开发阶段勾选「不校验合法域名」，在小程序「我的」页填后台地址，例如 `http://192.168.1.10:3000/api`，点「测试连接」。
-3. 正式发布前把 `miniprogram/utils/api.js` 里的 `DEFAULT_BASE_URL` 改成你的 HTTPS 域名。
+AI 动作每人每天 20 次；密钥只存在云函数环境变量里。
 
 ## 学习计划概览
 
