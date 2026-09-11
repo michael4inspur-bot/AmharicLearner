@@ -1,0 +1,12 @@
+{
+  "name": "api",
+  "version": "1.0.0",
+  "description": "AmharicLeander 云函数：进度存储 + DeepSeek 学习诊断",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}
