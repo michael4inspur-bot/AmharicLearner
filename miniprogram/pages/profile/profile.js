@@ -64,7 +64,9 @@ Page({
   goAdmin() { wx.navigateTo({ url: '/pages/admin/admin' }); },
   onVoice(e) { const { voice } = audio.setSettings({ voice: e.detail.value }); this.setData({ voice }); },
   onRate(e) { const { rate } = audio.setSettings({ rate: e.detail.value }); this.setData({ rate }); },
+  onGoalMoving(e) { this.setData({ goal: e.detail.value }); },
   onGoal(e) { const p = progress.load(); p.dailyMinutesGoal = e.detail.value; progress.save(p); this.setData({ goal: e.detail.value }); },
+  onNewCardsMoving(e) { this.setData({ newCards: e.detail.value }); },
   onNewCards(e) { const p = progress.load(); p.newCardsPerDay = e.detail.value; progress.save(p); this.setData({ newCards: e.detail.value }); },
   onStartDate(e) { const p = progress.load(); p.startDate = e.detail.value; progress.save(p); this.setData({ startDate: e.detail.value }); },
   async upload() {

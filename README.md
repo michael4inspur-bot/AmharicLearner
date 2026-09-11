@@ -62,17 +62,58 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 
 1. 在 [mp.weixin.qq.com](https://mp.weixin.qq.com) 注册个人主体小程序（需大陆身份证、手机号、本人微信），把 AppID 填进 `project.config.json` 的 `appid`。
 2. 用微信开发者工具打开仓库根目录，点工具栏「云开发」，创建环境，把环境 id 填进 `miniprogram/config.js` 的 `cloudEnv`。云开发为付费套餐，个人最低档约每月 20 元，以控制台为准。
-3. 云开发控制台 → 数据库 → 新建集合 `progress`、`ai_logs`、`tts_cache`、`users`、`settings`、`error_logs`，权限选「仅创建者可读写」。
+3. 云开发控制台 → 数据库 → 新建集合 `progress`、`ai_logs`、`tts_cache`、`users`、`settings`、`error_logs`，权限都选「仅创建者可读写」。
 4. 云开发控制台 → 云函数 → `api` → 配置 → 环境变量，添加 `DEEPSEEK_API_KEY`（[platform.deepseek.com](https://platform.deepseek.com) 申请）。可选 `DEEPSEEK_MODEL`，默认 `deepseek-chat`。
-5. 注册 [Azure](https://portal.azure.com) 账号，创建「语音服务」（Speech）资源，定价层选 F0 免费（每月 50 万字符合成、5 小时识别），区域建议 `southeastasia` 或 `eastasia`。
-6. 同一环境变量页添加 `AZURE_SPEECH_KEY`（资源的密钥）和 `AZURE_SPEECH_REGION`（如 `southeastasia`）。
-7. 语音音频缓存在云存储 `tts/` 目录和第 3 步的 `tts_cache` 集合里；跟读需要小程序录音权限，真机首次录音会弹授权。
-
 5. 可选：Fidel 专用字体。从 [Noto Sans Ethiopic](https://fonts.google.com/noto/specimen/Noto+Sans+Ethiopic) 下载 Bold 的 `.ttf`（或转成 `.woff`），上传到云存储任意目录，把文件的 fileID（`cloud://...`）填进 `miniprogram/config.js` 的 `fidelFontFileID`。不填则用手机系统自带的埃塞文字字体。
-
 6. 管理员：在小程序「我的」页长按“我的账号”复制自己的 openid，填入云函数环境变量 `ADMIN_OPENIDS`（多人用逗号分隔）。
 
-### 3. 部署与分发
+### 3. 配置 Azure 语音（朗读与发音评分）
+
+不配这一步，小程序的学习、闪卡、小测、字母表照常可用，只是没有声音：点朗读会提示语音不可用，听力题与跟读评分不可用。
+
+**一、创建语音资源**
+
+1. 打开 [portal.azure.com](https://portal.azure.com) 注册账号（需要一张信用卡做身份验证，F0 免费层不扣费）。
+2. 顶部搜索框输入 `Speech services`，进入后点「创建」。
+3. 按下表填写，其余保持默认，点「查看 + 创建」→「创建」，等待约一分钟部署完成。
+
+| 字段 | 填什么 |
+| --- | --- |
+| 订阅 | 默认的那个 |
+| 资源组 | 新建一个，名字随意，如 `amharic` |
+| 区域 | `Southeast Asia`（或 `East Asia`），埃塞访问延迟较低 |
+| 名称 | 全局唯一，如 `amharic-speech` |
+| 定价层 | **F0（免费）**，每月 50 万字符合成、5 小时识别 |
+
+**二、取密钥和区域**
+
+4. 部署完成后点「转到资源」，左侧菜单选「密钥和终结点」。
+5. 复制「密钥 1」和「位置/区域」两个值。区域是小写无空格的形式，例如 `southeastasia`，不是界面上显示的 `Southeast Asia`。
+
+**三、填进云函数**
+
+6. 云开发控制台 → 云函数 → `api` → 配置 → 环境变量，添加两项，保存。
+
+| 变量名 | 值 |
+| --- | --- |
+| `AZURE_SPEECH_KEY` | 上一步的密钥 1 |
+| `AZURE_SPEECH_REGION` | 上一步的区域，如 `southeastasia` |
+
+7. 右键 `cloudfunctions/api` →「上传并部署：云端安装依赖」，让新环境变量生效。
+8. 在小程序里随便点一个词的喇叭按钮验证。第一次有一到两秒延迟（在线合成），之后同一句走缓存，秒开。
+
+**声音与语速**在小程序「我的」页切换：女声 `am-ET-MekdesNeural`、男声 `am-ET-AmehaNeural`，语速有正常和慢速（慢 25%）两档。
+
+**费用与额度**：合成结果存在云存储 `tts/` 目录和 `tts_cache` 集合里，同一句只合成一次，全部课程内容合成一遍约 1 万字符。默认每人每天最多 300 次缓存未命中的合成、100 次发音评分，全体用户每月上限 40 万字符，三项都可用环境变量调整。跟读需要录音权限，真机首次录音会弹授权。
+
+**排查**：
+
+- 点朗读提示「管理员还没配置 DeepSeek 密钥」之外的语音报错，先看云开发控制台的云函数日志。
+- 报 `NO_API_KEY`：两个环境变量有一个没填，或者填完没重新部署。
+- 报 `UPSTREAM` 且日志里有 401：密钥错了，或者密钥和区域不是同一个资源的。
+- 报 `TIMEOUT`：Azure 区域选得太远，换 `southeastasia` 重建资源。
+
+### 4. 部署与分发
 
 1. 开发者工具中右键 `cloudfunctions/api` → 「上传并部署：云端安装依赖」。以后每次改后台都重复这一步。
 2. 开发者工具「上传」代码，到 mp.weixin.qq.com「版本管理」把该版本设为体验版。
