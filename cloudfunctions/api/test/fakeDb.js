@@ -32,6 +32,18 @@ function createFakeDb() {
       const { _id, ...rest } = doc;
       ttsCache.set(_id, { _id, ...rest });
     },
+    async sumTtsCharsSince(sinceIso) {
+      return logs
+        .filter((l) => l.type === 'tts' && l.date >= sinceIso)
+        .reduce((sum, l) => sum + (Number(l.result && l.result.chars) || 0), 0);
+    },
+    async listLogsSince(sinceIso, limit = 2000) {
+      return logs
+        .filter((l) => l.date >= sinceIso)
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, limit)
+        .map(({ openid, type, date, result }) => ({ openid, type, date, result }));
+    },
     async pruneAiLogs(openid, { keep, chatBefore }) {
       for (let i = logs.length - 1; i >= 0; i--) {
         const l = logs[i];

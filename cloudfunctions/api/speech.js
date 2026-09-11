@@ -2,26 +2,20 @@
 // ctx = { openid, db, azure, storage, now? }
 const crypto = require('node:crypto');
 const { similarity, wordMatches } = require('./scoring.js');
+const { getLimits, DEFAULT_LIMITS } = require('./limits.js');
+const { dayStartIso, monthStartIso } = require('./time.js');
 
-const TTS_DAILY_LIMIT = 300; // 每人每日 TTS 缓存未命中次数
-const STT_DAILY_LIMIT = 100; // 每人每日识别次数
+const TTS_DAILY_LIMIT = DEFAULT_LIMITS.tts; // 默认值常量；实际上限每次调用 getLimits() 读取
+const STT_DAILY_LIMIT = DEFAULT_LIMITS.stt;
 const VOICES = { female: 'am-ET-MekdesNeural', male: 'am-ET-AmehaNeural' };
 const RATES = ['normal', 'slow'];
 const MAX_TEXT_CHARS = 300;
 const MAX_BATCH_ITEMS = 40;
 const BATCH_CONCURRENCY = 5;
-const EAT_OFFSET_HOURS = 3; // 东非时间 UTC+3
 const UPSTREAM_CODES = ['NO_API_KEY', 'TIMEOUT', 'UPSTREAM'];
 
 function ok(data) { return { ok: true, data }; }
 function fail(code, error) { return { ok: false, code, error }; }
-
-/** 东非时间当天 00:00 对应的 ISO 时刻（与 handler.dayStartIso 一致，避免循环依赖故重复实现） */
-function dayStartIso(now) {
-  const shifted = new Date(now.getTime() + EAT_OFFSET_HOURS * 3600 * 1000);
-  shifted.setUTCHours(0, 0, 0, 0);
-  return new Date(shifted.getTime() - EAT_OFFSET_HOURS * 3600 * 1000).toISOString();
-}
 
 /** 缓存键：sha1(`${voice}|${rate}|${text}`) 十六进制 */
 function ttsKey(voice, rate, text) {
@@ -46,17 +40,20 @@ function cleanText(text) {
 }
 
 /**
- * 取一条文本的音频 url：缓存命中直接取临时链接；未命中检查上限 → 合成 → 上传 → 缓存 → 日志。
+ * 取一条文本的音频 url：缓存命中直接取临时链接；未命中检查每日次数与本月全体字符上限 → 合成 → 上传 → 缓存 → 日志。
  * 抛出的错误由调用方映射。
- * @returns {Promise<{url: string, key: string} | {limited: true}>}
+ * @returns {Promise<{url: string, key: string} | {limited: 'day' | 'month', limit: number}>}
  */
 async function ensureTts(ctx, now, text, voice, rate) {
   const { openid, db, azure, storage } = ctx;
   const key = ttsKey(voice, rate, text);
   let cached = await db.getTtsCache(key);
   if (!cached) {
+    const limits = getLimits();
     const used = await db.countAiSince(openid, dayStartIso(now), ['tts']);
-    if (used >= TTS_DAILY_LIMIT) return { limited: true };
+    if (used >= limits.tts) return { limited: 'day', limit: limits.tts };
+    const monthChars = await db.sumTtsCharsSince(monthStartIso(now));
+    if (monthChars + text.length > limits.ttsMonthlyChars) return { limited: 'month', limit: limits.ttsMonthlyChars };
     const audio = await azure.synthesize(text, VOICES[voice], rate);
     const fileID = await storage.upload(`tts/${key}.mp3`, audio);
     cached = { _id: key, fileID, text, voice, rate, chars: text.length, createdAt: now.toISOString() };
@@ -105,7 +102,8 @@ async function ttsGet(data, ctx, now) {
   } catch (err) {
     return mapError(err);
   }
-  if (r.limited) return fail('BAD_REQUEST', `今天的语音合成次数已用完（${TTS_DAILY_LIMIT} 次），明天再来`);
+  if (r.limited === 'month') return fail('BAD_REQUEST', '本月语音额度已用完，下月恢复');
+  if (r.limited) return fail('BAD_REQUEST', `今天的语音合成次数已用完（${r.limit} 次），明天再来`);
   return ok({ url: r.url, key: r.key });
 }
 
@@ -138,8 +136,9 @@ async function sttScore(data, ctx, now) {
   if (typeof fileID !== 'string' || !fileID) return fail('BAD_REQUEST', '缺少 fileID');
   const target = typeof data.target === 'string' ? data.target.trim() : '';
   if (!target) return fail('BAD_REQUEST', '缺少 target');
+  const sttLimit = getLimits().stt;
   const used = await db.countAiSince(openid, dayStartIso(now), ['stt']);
-  if (used >= STT_DAILY_LIMIT) return fail('BAD_REQUEST', `今天的跟读评分次数已用完（${STT_DAILY_LIMIT} 次），明天再来`);
+  if (used >= sttLimit) return fail('BAD_REQUEST', `今天的跟读评分次数已用完（${sttLimit} 次），明天再来`);
   let recog;
   try {
     const wav = await storage.download(fileID);
@@ -177,4 +176,4 @@ async function handleSpeech(action, data, ctx) {
   }
 }
 
-module.exports = { handleSpeech, TTS_DAILY_LIMIT, STT_DAILY_LIMIT, VOICES, ttsKey };
+module.exports = { handleSpeech, TTS_DAILY_LIMIT, STT_DAILY_LIMIT, VOICES, ttsKey, monthStartIso };

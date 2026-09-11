@@ -188,6 +188,17 @@ async function main() {
   progress.learnUnit('u14');
   assert.ok(progress.load().unitsLearned.u14, 'u14 已学');
 
+  // 用量与配额
+  const usage = await api.usageGet();
+  assert.ok(usage.ai && typeof usage.ai.used === 'number' && usage.ai.limit === 20, 'usage.get 结构');
+  assert.equal(usage.isAdmin, false);
+  await assert.rejects(api.adminUsage(), (e) => /无权限/.test(e.message));
+  process.env.ADMIN_OPENIDS = 'sim-user';
+  const team = await api.adminUsage();
+  assert.equal(team.users.length, 1);
+  assert.equal(team.users[0].openid, 'sim-user');
+  delete process.env.ADMIN_OPENIDS;
+
   // 未配置云环境时的失败路径
   require(path.join(root, 'config.js')).cloudEnv = '';
   await assert.rejects(api.diagnose(s, {}), (e) => e.code === 'NO_ENV');

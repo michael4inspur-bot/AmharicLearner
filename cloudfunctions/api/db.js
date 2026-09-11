@@ -4,6 +4,8 @@ const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 const _ = db.command;
+const $ = _.aggregate;
+const PAGE = 1000; // 云数据库单次 get 的 limit 上限
 const PROGRESS = 'progress';
 const LOGS = 'ai_logs';
 const TTS_CACHE = 'tts_cache';
@@ -45,6 +47,34 @@ module.exports = {
   async putTtsCache(doc) {
     const { _id, ...data } = doc;
     await db.collection(TTS_CACHE).doc(_id).set({ data });
+  },
+  /** 自 sinceIso 起全体用户 tts 日志 result.chars 之和（聚合）。 */
+  async sumTtsCharsSince(sinceIso) {
+    const r = await db.collection(LOGS).aggregate()
+      .match({ type: 'tts', date: _.gte(sinceIso) })
+      .group({ _id: null, total: $.sum('$result.chars') })
+      .end();
+    return r.list[0] ? r.list[0].total : 0;
+  },
+  /**
+   * 自 sinceIso 起全体用户的日志（按 date 倒序），最多 limit 条；超过单页上限时分页拉取。
+   * @returns {Promise<Array<{openid: string, type: string, date: string, result: object}>>}
+   */
+  async listLogsSince(sinceIso, limit = 2000) {
+    const out = [];
+    while (out.length < limit) {
+      const size = Math.min(PAGE, limit - out.length);
+      const r = await db.collection(LOGS)
+        .where({ date: _.gte(sinceIso) })
+        .orderBy('date', 'desc')
+        .skip(out.length)
+        .limit(size)
+        .field({ openid: true, type: true, date: true, result: true })
+        .get();
+      for (const { openid, type, date, result } of r.data) out.push({ openid, type, date, result });
+      if (r.data.length < size) break;
+    }
+    return out;
   },
   async pruneAiLogs(openid, { keep, chatBefore }) {
     await db.collection(LOGS).where({ openid, type: 'chat', date: _.lt(chatBefore) }).remove();

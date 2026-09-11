@@ -2,30 +2,27 @@
 // ctx = { openid, db, deepseek, azure, storage, now? }
 const prompts = require('./prompts.js');
 const { handleSpeech } = require('./speech.js');
+const { getLimits, isAdmin, DEFAULT_LIMITS } = require('./limits.js');
+const { dayStartIso, monthStartIso } = require('./time.js');
 
-const DAILY_AI_LIMIT = 20;
+const DAILY_AI_LIMIT = DEFAULT_LIMITS.ai; // 默认值常量；实际上限每次调用 getLimits() 读取
 const AI_LIMIT_TYPES = ['diagnosis', 'plan', 'chat']; // 每日 AI 上限只统计这三类，tts/stt 另计
 const HISTORY_LIMIT = 30;
 const CHAT_LOG_TTL_DAYS = 7;
-const EAT_OFFSET_HOURS = 3; // 东非时间 UTC+3
+const ADMIN_USAGE_DAYS = 7;
+const ADMIN_LOG_LIMIT = 2000;
 const MAX_CHAT_MESSAGES = 20;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function ok(data) { return { ok: true, data }; }
 function fail(code, error) { return { ok: false, code, error }; }
 
-/** 东非时间当天 00:00 对应的 ISO 时刻 */
-function dayStartIso(now) {
-  const shifted = new Date(now.getTime() + EAT_OFFSET_HOURS * 3600 * 1000);
-  shifted.setUTCHours(0, 0, 0, 0);
-  return new Date(shifted.getTime() - EAT_OFFSET_HOURS * 3600 * 1000).toISOString();
-}
-
 async function withAi(ctx, now, type, request, run) {
   const { openid, db, deepseek } = ctx;
+  const aiLimit = getLimits().ai;
   const used = await db.countAiSince(openid, dayStartIso(now), AI_LIMIT_TYPES);
-  if (used >= DAILY_AI_LIMIT) {
-    return fail('BAD_REQUEST', `今天的 AI 次数已用完（${DAILY_AI_LIMIT} 次），明天再来`);
+  if (used >= aiLimit) {
+    return fail('BAD_REQUEST', `今天的 AI 次数已用完（${aiLimit} 次），明天再来`);
   }
   let result;
   try {
@@ -47,6 +44,53 @@ async function withAi(ctx, now, type, request, run) {
   });
   void deepseek;
   return ok(result);
+}
+
+/** usage.get：当前用户今日各类用量与上限、全体本月 TTS 字符。 */
+async function usageGet(ctx, now) {
+  const { openid, db } = ctx;
+  const limits = getLimits();
+  const dayStart = dayStartIso(now);
+  const [ai, tts, stt, monthChars] = await Promise.all([
+    db.countAiSince(openid, dayStart, AI_LIMIT_TYPES),
+    db.countAiSince(openid, dayStart, ['tts']),
+    db.countAiSince(openid, dayStart, ['stt']),
+    db.sumTtsCharsSince(monthStartIso(now))
+  ]);
+  return ok({
+    ai: { used: ai, limit: limits.ai },
+    tts: { used: tts, limit: limits.tts },
+    stt: { used: stt, limit: limits.stt },
+    monthChars: { used: monthChars, limit: limits.ttsMonthlyChars },
+    isAdmin: isAdmin(openid)
+  });
+}
+
+/** admin.usage：最近 7 天按用户汇总，按 ai 次数降序。仅 ADMIN_OPENIDS 中的用户可用。 */
+async function adminUsage(ctx, now) {
+  const { openid, db } = ctx;
+  if (!isAdmin(openid)) return fail('BAD_REQUEST', '无权限');
+  const since = new Date(now.getTime() - ADMIN_USAGE_DAYS * DAY_MS).toISOString();
+  const logs = await db.listLogsSince(since, ADMIN_LOG_LIMIT);
+  const byUser = new Map();
+  for (const l of logs) {
+    let u = byUser.get(l.openid);
+    if (!u) {
+      u = { openid: l.openid, ai: 0, tts: 0, stt: 0, ttsChars: 0, lastActive: '' };
+      byUser.set(l.openid, u);
+    }
+    if (AI_LIMIT_TYPES.includes(l.type)) u.ai++;
+    else if (l.type === 'tts') {
+      u.tts++;
+      u.ttsChars += Number(l.result && l.result.chars) || 0;
+    } else if (l.type === 'stt') u.stt++;
+    const date = String(l.date || '');
+    if (date > u.lastActive) u.lastActive = date;
+  }
+  const users = [...byUser.values()]
+    .map((u) => ({ ...u, lastActive: u.lastActive.slice(0, 10) }))
+    .sort((a, b) => b.ai - a.ai || a.openid.localeCompare(b.openid));
+  return ok({ users, since });
 }
 
 async function handle(action, data, ctx) {
@@ -114,6 +158,10 @@ async function handle(action, data, ctx) {
       const history = await db.listAiLogs(openid, ['diagnosis', 'plan'], HISTORY_LIMIT);
       return ok({ history });
     }
+    case 'usage.get':
+      return usageGet(ctx, now);
+    case 'admin.usage':
+      return adminUsage(ctx, now);
     default:
       return fail('BAD_REQUEST', `未知 action: ${action}`);
   }
