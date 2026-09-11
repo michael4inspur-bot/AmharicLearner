@@ -40,7 +40,16 @@
 .usage-n { font-size: 26rpx; font-weight: 800; color: var(--mint-deep); }
 .usage-l { font-size: 20rpx; color: var(--mint-ink); margin-top: 2rpx; }
 
-/* 团队用量 */
-.team-id { font-size: 26rpx; font-weight: 800; color: var(--accent); }
-.team-date { font-size: 22rpx; }
-.team-nums { font-size: 24rpx; margin-top: 6rpx; }
+/* 昵称 */
+.nick-hint { font-size: 22rpx; }
+.list-item .input { margin-top: 12rpx; }
+
+/* 管理入口 */
+.admin-card { align-items: center; }
+.admin-card:active { transform: scale(0.99); }
+.admin-text { margin: 0 20rpx; }
+.admin-title { font-size: 30rpx; font-weight: 800; color: var(--lav-ink); }
+.admin-sub { font-size: 24rpx; color: var(--lav-muted); margin-top: 4rpx; }
+
+/* 我的账号 */
+.openid { font-size: 22rpx; word-break: break-all; margin-top: 8rpx; }

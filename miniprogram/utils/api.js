@@ -41,7 +41,7 @@ function call(action, data) {
 
 module.exports = {
   configured,
-  syncProgress: (progress) => call('progress.put', { progress }),
+  syncProgress: (progress, meta) => call('progress.put', { progress, meta }),
   fetchProgress: () => call('progress.get'),
   diagnose: (summary, planOutline) => call('ai.diagnose', { summary, planOutline }),
   adjustPlan: (summary, planOutline, diagnosis, request) => call('ai.adjustPlan', { summary, planOutline, diagnosis, request }),
@@ -51,5 +51,14 @@ module.exports = {
   ttsBatch: (items, voice, rate) => call('tts.batch', { items, voice, rate }),
   sttScore: (fileID, target) => call('stt.score', { fileID, target }),
   usageGet: () => call('usage.get'),
-  adminUsage: () => call('admin.usage')
+  adminUsage: () => call('admin.usage'),
+  setProfile: (nickname) => call('user.setProfile', { nickname }),
+  me: () => call('user.me'),
+  announcement: () => call('announcement.get'),
+  adminUsers: () => call('admin.users'),
+  adminSetStatus: (openid, status) => call('admin.setStatus', { openid, status }),
+  adminDeleteUser: (openid) => call('admin.deleteUser', { openid, confirm: true }),
+  adminSystem: () => call('admin.system'),
+  adminClearTtsCache: () => call('admin.clearTtsCache', { confirm: true }),
+  adminSetAnnouncement: (text) => call('admin.setAnnouncement', { text })
 };

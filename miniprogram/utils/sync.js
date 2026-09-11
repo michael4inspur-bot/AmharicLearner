@@ -9,12 +9,21 @@ function configured() {
   return api.configured();
 }
 
+/** 上传时附带的账号摘要，云端用来更新用户列表；计算失败不影响同步 */
+function buildMeta(p) {
+  try {
+    return { week: progress.currentPosition(p).week, streak: progress.streak(p), stars: p.stars || 0 };
+  } catch (e) {
+    return { week: 0, streak: 0, stars: 0 };
+  }
+}
+
 function syncNow() {
   if (!configured()) return Promise.resolve(false);
   const p = progress.load();
   const payload = JSON.stringify(p);
   if (payload === lastPayload) return Promise.resolve(false);
-  return api.syncProgress(p)
+  return api.syncProgress(p, buildMeta(p))
     .then(() => { lastPayload = payload; return true; })
     .catch(() => false);
 }
@@ -25,4 +34,4 @@ function scheduleSync(delayMs) {
   timer = setTimeout(() => { timer = null; syncNow(); }, delayMs == null ? 3000 : delayMs);
 }
 
-module.exports = { syncNow, scheduleSync, configured };
+module.exports = { syncNow, scheduleSync, configured, buildMeta };

@@ -231,7 +231,12 @@ Page({
       })
       .catch((err) => {
         this.setData({ loading: false });
-        wx.showModal({ title: '评分失败', content: (err && err.message) || '请稍后再试', showCancel: false });
+        const msg = (err && err.message) || '请稍后再试';
+        if (/暂停|停用/.test(msg)) {
+          wx.showModal({ title: '账号已被管理员暂停', content: '请联系管理员', showCancel: false });
+          return;
+        }
+        wx.showModal({ title: '评分失败', content: msg, showCancel: false });
       });
   }
 });

@@ -2,9 +2,20 @@ const progress = require('../../utils/progress.js');
 const api = require('../../utils/api.js');
 const audio = require('../../utils/audio.js');
 const points = require('../../utils/points.js');
+const sync = require('../../utils/sync.js');
+
+const PROFILE_KEY = 'profile_v1';
+
+function loadNickname() {
+  try { return String((wx.getStorageSync(PROFILE_KEY) || {}).nickname || ''); } catch (e) { return ''; }
+}
+
+function saveNickname(nickname) {
+  try { wx.setStorageSync(PROFILE_KEY, { ...(wx.getStorageSync(PROFILE_KEY) || {}), nickname }); } catch (e) { /* 忽略 */ }
+}
 
 Page({
-  data: { cloudReady: false, goal: 20, newCards: 10, startDate: '', voice: 'female', rate: 'normal', stats: {}, streak: 0, totalMinutes: 0, days: 0, quizzes: 0, stars: 0, badges: [], earnedCount: 0, usage: null, isAdmin: false, team: null },
+  data: { cloudReady: false, goal: 20, newCards: 10, startDate: '', voice: 'female', rate: 'normal', stats: {}, streak: 0, totalMinutes: 0, days: 0, quizzes: 0, stars: 0, badges: [], earnedCount: 0, usage: null, isAdmin: false, nickname: '', openid: '' },
   onShow() {
     const p = progress.load();
     const totalMinutes = Object.values(p.logs).reduce((a, l) => a + (l.minutes || 0), 0);
@@ -17,28 +28,48 @@ Page({
       quizzes: p.quizScores.length,
       stars: p.stars || 0,
       badges,
-      earnedCount: badges.filter((b) => b.earned).length
+      earnedCount: badges.filter((b) => b.earned).length,
+      nickname: loadNickname()
     });
-    if (api.configured()) this.loadUsage();
+    if (api.configured()) { this.loadUsage(); this.loadMe(); }
   },
   async loadUsage() {
     let usage;
     try { usage = await api.usageGet(); } catch (e) { return; }
     if (!usage) return;
     this.setData({ usage, isAdmin: !!usage.isAdmin });
-    if (!usage.isAdmin) return;
-    try {
-      const { users } = await api.adminUsage();
-      this.setData({ team: (users || []).map((u) => ({ ...u, short: String(u.openid || '').slice(-6) })) });
-    } catch (e) { /* 静默 */ }
   },
+  async loadMe() {
+    try {
+      const me = await api.me();
+      if (!me) return;
+      const d = { openid: me.openid || '' };
+      if (me.nickname && !this.data.nickname) { saveNickname(me.nickname); d.nickname = me.nickname; }
+      this.setData(d);
+    } catch (e) { this.setData({ openid: '' }); }
+  },
+  onNickname(e) {
+    const nickname = String((e.detail && e.detail.value) || '').trim().slice(0, 20);
+    if (nickname === this.data.nickname) return;
+    saveNickname(nickname);
+    this.setData({ nickname });
+    if (!nickname || !api.configured()) return;
+    api.setProfile(nickname).catch(() => { /* 静默，下次进入再试 */ });
+  },
+  copyOpenid() {
+    if (!this.data.openid) return;
+    wx.setClipboardData({ data: this.data.openid });
+    wx.showToast({ title: '已复制', icon: 'none' });
+  },
+  goAdmin() { wx.navigateTo({ url: '/pages/admin/admin' }); },
   onVoice(e) { const { voice } = audio.setSettings({ voice: e.detail.value }); this.setData({ voice }); },
   onRate(e) { const { rate } = audio.setSettings({ rate: e.detail.value }); this.setData({ rate }); },
   onGoal(e) { const p = progress.load(); p.dailyMinutesGoal = e.detail.value; progress.save(p); this.setData({ goal: e.detail.value }); },
   onNewCards(e) { const p = progress.load(); p.newCardsPerDay = e.detail.value; progress.save(p); this.setData({ newCards: e.detail.value }); },
   onStartDate(e) { const p = progress.load(); p.startDate = e.detail.value; progress.save(p); this.setData({ startDate: e.detail.value }); },
   async upload() {
-    try { await api.syncProgress(progress.load()); wx.showToast({ title: '已上传到云端', icon: 'success' }); }
+    const p = progress.load();
+    try { await api.syncProgress(p, sync.buildMeta(p)); wx.showToast({ title: '已上传到云端', icon: 'success' }); }
     catch (e) { wx.showModal({ title: '上传失败', content: e.message, showCancel: false }); }
   },
   async download() {

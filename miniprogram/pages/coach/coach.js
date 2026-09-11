@@ -71,6 +71,10 @@ Page({
   fail(err) {
     this.setData({ loading: '' });
     const msg = err.message || '请求失败';
+    if (/暂停|停用/.test(msg)) {
+      wx.showModal({ title: '账号已被管理员暂停', content: '请联系管理员', showCancel: false });
+      return;
+    }
     const hint = err.code === 'NO_ENV' ? '\n\n请管理员在 miniprogram/config.js 填写云开发环境 id。' : '';
     const quota = /已用完/.test(String(err.message || '') + String(err.raw || ''));
     wx.showModal({ title: quota ? '今日额度已用完' : 'AI 请求失败', content: msg + hint, showCancel: false });

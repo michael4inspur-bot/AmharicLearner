@@ -13,6 +13,20 @@
     </view>
   </view>
 
+  <view class="card lav notice" wx:if="{{announce}}">
+    <view class="notice-label">公告</view>
+    <view class="notice-text">{{announce.text}}</view>
+    <view class="notice-ok" catchtap="dismissAnnounce">知道了</view>
+  </view>
+
+  <view class="card peach notice-nick" wx:if="{{needNickname}}" bindtap="goProfile">
+    <view class="grow">
+      <view class="nick-title">填个昵称，方便同事认出你</view>
+      <view class="nick-sub">去"我的"页填写，一次就好</view>
+    </view>
+    <x-icon name="chevron-right" size="32" color="#C2410C" />
+  </view>
+
   <view class="stat-row">
     <view class="stat mint grow">
       <view class="ring" style="background: conic-gradient(#2F7A5E 0deg {{minuteDeg}}deg, rgba(255,255,255,0.7) {{minuteDeg}}deg 360deg)">

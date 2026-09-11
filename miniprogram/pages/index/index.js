@@ -1,5 +1,6 @@
 const progress = require('../../utils/progress.js');
 const points = require('../../utils/points.js');
+const api = require('../../utils/api.js');
 const plan = require('../../data/plan.js');
 const vocab = require('../../data/vocab.js');
 
@@ -10,6 +11,13 @@ const GREETINGS = [
   { am: 'ጥሩ ስራ!', rom: 'tiru sira!', zh: '干得好！' },
   { am: 'አማርኛ እማራለሁ', rom: 'Amarigna imaralehu', zh: '我在学阿姆哈拉语' }
 ];
+
+const ANNOUNCE_KEY = 'announcement_seen';
+const PROFILE_KEY = 'profile_v1';
+
+function readStorage(key) {
+  try { return wx.getStorageSync(key); } catch (e) { return null; }
+}
 
 // 每类任务完成后可得的星数（与 utils/points.js 的 STAR_RULES 对齐）
 const R = points.STAR_RULES;
@@ -25,11 +33,34 @@ const TASK_STARS = {
 };
 
 Page({
-  data: { days7: [1, 2, 3, 4, 5, 6, 7] },
+  data: { days7: [1, 2, 3, 4, 5, 6, 7], announce: null, needNickname: false },
 
   onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().setData({ selected: 0 });
     this.refresh();
+    this.loadNotices();
+  },
+
+  /** 公告与昵称提示：云端没准备好时静默跳过，不打扰用户 */
+  loadNotices() {
+    const nickname = String((readStorage(PROFILE_KEY) || {}).nickname || '');
+    const configured = api.configured();
+    this.setData({ needNickname: configured && !nickname });
+    if (!configured) { this.setData({ announce: null }); return; }
+    api.announcement()
+      .then((a) => {
+        const text = a && a.text ? String(a.text) : '';
+        const updatedAt = String((a && a.updatedAt) || '');
+        const seen = String(readStorage(ANNOUNCE_KEY) || '');
+        this.setData({ announce: text && seen !== updatedAt ? { text, updatedAt } : null });
+      })
+      .catch(() => { /* 静默：云端还没有公告能力时当作没有公告 */ });
+  },
+
+  dismissAnnounce() {
+    const a = this.data.announce;
+    if (a) { try { wx.setStorageSync(ANNOUNCE_KEY, a.updatedAt || ''); } catch (e) { /* 忽略 */ } }
+    this.setData({ announce: null });
   },
 
   refresh() {
