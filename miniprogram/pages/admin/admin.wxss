@@ -1,0 +1,50 @@
+/* 子 Tab 胶囊 */
+.segs { display: flex; background: var(--peach); border-radius: 999rpx; padding: 8rpx; margin-bottom: 28rpx; }
+.seg { flex: 1; text-align: center; padding: 18rpx 0; font-size: 28rpx; font-weight: 700; color: var(--muted-2); border-radius: 999rpx; }
+.seg.on { background: var(--accent); color: #fff; box-shadow: 0 12rpx 30rpx rgba(194, 65, 12, 0.26); }
+.seg:active { opacity: 0.85; }
+
+/* 用户行 */
+.u-row:active { opacity: 0.7; }
+.u-name { font-size: 30rpx; font-weight: 800; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.u-meta { margin-top: 6rpx; font-size: 24rpx; }
+.u-tip { margin-top: 20rpx; font-size: 22rpx; }
+
+/* 系统状态块 */
+.st-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16rpx; margin-bottom: 24rpx; }
+.st { border-radius: 32rpx; padding: 24rpx 22rpx; animation: rise 280ms ease-out both; }
+.st.peach { background: var(--peach); }
+.st.mint { background: var(--mint); }
+.st.lav { background: var(--lav); }
+.st.white { background: var(--card); box-shadow: var(--shadow-sm); }
+.st-n { font-size: 44rpx; font-weight: 800; line-height: 1.1; }
+.st-l { font-size: 22rpx; margin-top: 6rpx; }
+.st.peach .st-n { color: var(--accent); }
+.st.peach .st-l { color: var(--muted-2); }
+.st.mint .st-n { color: var(--mint-deep); }
+.st.mint .st-l { color: var(--mint-ink); }
+.st.lav .st-n { color: var(--lav-ink); }
+.st.lav .st-l { color: var(--lav-muted); }
+.st.white .st-n { color: var(--ink); }
+.st.white .st-l { color: var(--muted); }
+.st-bar { margin-top: 14rpx; background: var(--card); }
+.st-act { margin-top: 14rpx; }
+
+/* 14 天柱状条 */
+.bars { display: flex; align-items: flex-end; gap: 6rpx; margin-top: 20rpx; }
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.bar-n { font-size: 18rpx; color: var(--muted); line-height: 1.2; margin-bottom: 4rpx; }
+.bar-track { width: 100%; height: 160rpx; display: flex; align-items: flex-end; background: #F7F0E9; border-radius: 12rpx; overflow: hidden; }
+.bar-fill { width: 100%; background: var(--mint-ink); border-radius: 12rpx; transition: height 300ms ease; }
+.bar-lab { font-size: 18rpx; color: var(--muted); margin-top: 8rpx; height: 24rpx; }
+
+/* 错误列表 */
+.err-top { font-size: 26rpx; font-weight: 700; }
+.err-time { font-size: 22rpx; flex-shrink: 0; }
+.err-msg { margin-top: 6rpx; font-size: 22rpx; word-break: break-all; }
+
+/* 公告 */
+.notice-input { margin-top: 16rpx; }
+.notice-count { text-align: right; margin-top: 10rpx; font-size: 22rpx; }
+.notice-cur { white-space: pre-wrap; word-break: break-word; color: var(--lav-ink); }
+.notice-time { margin-top: 12rpx; font-size: 22rpx; }

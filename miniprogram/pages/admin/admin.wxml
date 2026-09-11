@@ -1,0 +1,116 @@
+<view class="page no-tab">
+  <view class="segs">
+    <view class="seg {{tab==='users'?'on':''}}" data-tab="users" bindtap="switchTab">用户</view>
+    <view class="seg {{tab==='system'?'on':''}}" data-tab="system" bindtap="switchTab">系统</view>
+    <view class="seg {{tab==='notice'?'on':''}}" data-tab="notice" bindtap="switchTab">公告</view>
+  </view>
+
+  <view class="empty" wx:if="{{!configured}}">未配置云环境</view>
+
+  <block wx:else>
+    <!-- 用户 -->
+    <block wx:if="{{tab==='users'}}">
+      <view class="empty" wx:if="{{loading}}">加载中</view>
+      <view class="empty" wx:elif="{{users.length === 0}}">还没有用户</view>
+      <view class="card" wx:else>
+        <view class="row between">
+          <view class="card-title" style="margin-bottom:0">共 {{users.length}} 人</view>
+          <view class="icon-btn" bindtap="loadUsers">
+            <x-icon name="refresh" size="32" color="#7C5A4C" />
+          </view>
+        </view>
+        <view class="list-item u-row" wx:for="{{users}}" wx:key="openid" data-id="{{item.openid}}" bindtap="onUserTap">
+          <view class="row gap">
+            <view class="grow u-name">{{item.name}}</view>
+            <view class="tag {{item.tagClass}}">{{item.statusLabel}}</view>
+            <view class="tag white" wx:if="{{item.isSelf}}">我</view>
+          </view>
+          <view class="muted u-meta">第 {{item.week}} 周 · 连续 {{item.streak}} 天 · {{item.stars}} 星</view>
+          <view class="muted u-meta">今日 AI {{item.today.ai}} · 语音 {{item.today.tts}} · 评分 {{item.today.stt}}</view>
+          <view class="muted u-meta">最近活跃 {{item.lastActiveShort}}</view>
+        </view>
+        <view class="muted u-tip">点击用户行可暂停、恢复或删除；本人账号不可操作。</view>
+      </view>
+    </block>
+
+    <!-- 系统 -->
+    <block wx:elif="{{tab==='system'}}">
+      <view class="empty" wx:if="{{loading}}">加载中</view>
+      <view class="empty" wx:elif="{{!system}}">暂无数据</view>
+      <block wx:else>
+        <view class="st-grid">
+          <view class="st peach">
+            <view class="st-n">{{system.charsUsed}}</view>
+            <view class="st-l">本月语音字符 / {{system.charsLimit}}</view>
+            <view class="progress-bar st-bar">
+              <view class="fill" style="width:{{charsPercent}}%"></view>
+            </view>
+          </view>
+          <view class="st mint">
+            <view class="st-n">{{system.aiToday}}</view>
+            <view class="st-l">今日 AI 调用</view>
+          </view>
+          <view class="st lav">
+            <view class="st-n">{{system.cacheCount}}</view>
+            <view class="st-l">语音缓存条 · {{system.cacheChars}} 字符</view>
+            <view class="btn small ghost st-act" catchtap="confirmClearCache">清理</view>
+          </view>
+          <view class="st white">
+            <view class="st-n">{{system.errorCount}}</view>
+            <view class="st-l">最近错误条数</view>
+          </view>
+        </view>
+
+        <view class="card">
+          <view class="row between">
+            <view class="card-title" style="margin-bottom:0">近 14 天 AI 调用</view>
+            <view class="icon-btn" bindtap="loadSystem">
+              <x-icon name="refresh" size="32" color="#7C5A4C" />
+            </view>
+          </view>
+          <view class="bars">
+            <view class="bar-col" wx:for="{{aiDaily}}" wx:key="date">
+              <view class="bar-n">{{item.count}}</view>
+              <view class="bar-track">
+                <view class="bar-fill" style="height:{{item.h}}%"></view>
+              </view>
+              <view class="bar-lab">{{item.label}}</view>
+            </view>
+          </view>
+        </view>
+
+        <view class="card">
+          <view class="card-title">最近错误</view>
+          <view class="empty" wx:if="{{errors.length === 0}}">最近没有错误</view>
+          <block wx:else>
+            <view class="list-item" wx:for="{{errors}}" wx:key="index">
+              <view class="row gap">
+                <view class="grow err-top">{{item.action}}</view>
+                <view class="muted err-time">{{item.time}}</view>
+              </view>
+              <view class="muted err-msg">尾号 {{item.tail}} · {{item.message}}</view>
+            </view>
+          </block>
+        </view>
+      </block>
+    </block>
+
+    <!-- 公告 -->
+    <block wx:else>
+      <view class="card">
+        <view class="card-title">发布公告</view>
+        <view class="muted">最多 500 字，所有人在首页看到；清空后发布即撤下。</view>
+        <textarea class="input notice-input" value="{{noticeText}}" maxlength="500" placeholder="写给所有人的一句话" bindinput="onNoticeInput"></textarea>
+        <view class="muted notice-count">{{noticeText.length}} / 500</view>
+        <button class="btn" bindtap="publishNotice" loading="{{publishing}}" disabled="{{publishing}}">发布</button>
+      </view>
+
+      <view class="card lav" wx:if="{{announcement && announcement.text}}">
+        <view class="card-title">当前公告</view>
+        <view class="zh notice-cur">{{announcement.text}}</view>
+        <view class="muted-2 notice-time">更新于 {{announcement.updatedShort}}</view>
+      </view>
+      <view class="empty" wx:else>当前没有公告</view>
+    </block>
+  </block>
+</view>

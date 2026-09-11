@@ -10,7 +10,8 @@
     "pages/fidel/fidel",
     "pages/profile/profile",
     "pages/search/search",
-    "pages/speak/speak"
+    "pages/speak/speak",
+    "pages/admin/admin"
   ],
   "window": {
     "navigationBarBackgroundColor": "#0f6e56",
