@@ -7,25 +7,55 @@ const fnRoot = path.join(__dirname, '..', 'cloudfunctions', 'api');
 const { handle } = require(path.join(fnRoot, 'handler.js'));
 const { createFakeDb } = require(path.join(fnRoot, 'test', 'fakeDb.js'));
 const { createFakeDeepseek } = require(path.join(fnRoot, 'test', 'fakeDeepseek.js'));
+const { createFakeAzure } = require(path.join(fnRoot, 'test', 'fakeAzure.js'));
+const { createFakeStorage } = require(path.join(fnRoot, 'test', 'fakeStorage.js'));
 
 const DIAG = { overall_level: '入门', score: 50, summary: '模拟诊断', strengths: ['坚持'], weaknesses: [], risks: [],
   recommendations: [], plan_changes: [], daily_minutes_suggestion: 30, next_7_days: [], encouragement: '继续' };
 const db = createFakeDb();
 const deepseek = createFakeDeepseek((messages, opts) => (opts && opts.json ? JSON.stringify(DIAG) : 'ሰላም! 模拟回复'));
+const azure = createFakeAzure({ synth: () => Buffer.from('mp3'), recog: () => ({ status: 'Success', text: 'ሰላም' }) });
+const storage = createFakeStorage();
 
 const store = {};
+const localFiles = new Set(); // downloadFile 成功写入的本地路径，供 accessSync 判断存在
 global.wx = {
+  env: { USER_DATA_PATH: '/tmp/sim' },
   getStorageSync: (k) => store[k],
   setStorageSync: (k, v) => { store[k] = JSON.parse(JSON.stringify(v)); },
   removeStorageSync: (k) => { delete store[k]; },
   showToast() {}, showModal() {}, setNavigationBarTitle() {}, navigateTo() {}, switchTab() {},
   navigateBack() {}, redirectTo() {}, setClipboardData() {},
+  authorize({ success }) { if (success) success(); },
+  createInnerAudioContext() {
+    const ctx = { src: '', played: 0, play() { this.played += 1; }, stop() {}, onEnded() {}, onError() {}, destroy() {} };
+    global.__audioCtx = ctx;
+    return ctx;
+  },
+  downloadFile({ url, filePath, success }) {
+    localFiles.add(filePath);
+    success({ statusCode: 200, tempFilePath: filePath, filePath, url });
+  },
+  getFileSystemManager() {
+    return {
+      mkdirSync() {},
+      accessSync(p) { if (!localFiles.has(p)) throw new Error('nofile'); }
+    };
+  },
+  getRecorderManager() {
+    return { start() {}, stop() {}, onStop() {}, onError() {} };
+  },
   cloud: {
     init() {},
     callFunction({ data, success, fail }) {
-      handle(data.action, data.data, { openid: 'sim-user', db, deepseek })
+      handle(data.action, data.data, { openid: 'sim-user', db, deepseek, azure, storage })
         .then((result) => success({ result }))
         .catch((e) => fail({ errMsg: e.message }));
+    },
+    uploadFile({ cloudPath, success, fail }) {
+      storage.upload(cloudPath, Buffer.alloc(16))
+        .then((fileID) => success({ fileID }))
+        .catch((e) => fail && fail({ errMsg: e.message }));
     }
   }
 };
@@ -42,10 +72,11 @@ const plan = require(path.join(root, 'data/plan.js'));
 const vocab = require(path.join(root, 'data/vocab.js'));
 const api = require(path.join(root, 'utils/api.js'));
 const sync = require(path.join(root, 'utils/sync.js'));
+const audio = require(path.join(root, 'utils/audio.js'));
 
-['index/index', 'lessons/lessons', 'lesson/lesson', 'review/review', 'quiz/quiz', 'plan/plan', 'coach/coach', 'fidel/fidel', 'profile/profile', 'search/search']
+['index/index', 'lessons/lessons', 'lesson/lesson', 'review/review', 'quiz/quiz', 'plan/plan', 'coach/coach', 'fidel/fidel', 'profile/profile', 'search/search', 'speak/speak']
   .forEach((p) => require(path.join(root, 'pages', p + '.js')));
-assert.equal(pages.length, 10, 'pages loaded');
+assert.equal(pages.length, 11, 'pages loaded');
 require(path.join(root, 'app.js'));
 global.__app.onLaunch();
 
@@ -104,6 +135,47 @@ async function main() {
   await coach.diagnose();
   assert.equal(coach.data.diagnosis.score, 50);
   assert.equal(coach.data.loading, '');
+
+  // 语音：朗读走云端合成 + 本地缓存
+  const deepseekCallsBefore = deepseek.calls.length;
+  await audio.speak('ሰላም');
+  assert.ok(global.__audioCtx, 'InnerAudioContext created');
+  assert.equal(global.__audioCtx.played, 1, '首次朗读播放一次');
+  assert.equal(azure.synthCalls.length, 1, '首次朗读调用 Azure 合成');
+  assert.equal(azure.synthCalls[0].text, 'ሰላም');
+  await audio.speak('ሰላም');
+  assert.equal(global.__audioCtx.played, 2, '第二次朗读仍播放（单例累计）');
+  assert.equal(azure.synthCalls.length, 1, '第二次朗读走本地缓存，不再合成');
+  assert.equal(deepseek.calls.length, deepseekCallsBefore, '朗读不触发 DeepSeek');
+  assert.equal(storage._files.size, 1, 'tts 音频已上传云存储');
+
+  // 语音：小测每 3 题含 1 题听力题
+  const q9 = quiz.buildQuiz('u01', 9, progress.load());
+  assert.equal(q9.length, 9);
+  assert.equal(q9[2].listen, true, '第 3 题为听力题');
+  assert.ok(q9[2].audioText, '听力题带朗读文本');
+  assert.equal(q9[2].promptAm, '', '听力题题面不显示阿姆哈拉语');
+  assert.ok(!q9[0].listen && !q9[1].listen, '前两题非听力题');
+  [5, 8].forEach((i) => assert.equal(q9[i].listen, true, `第 ${i + 1} 题为听力题`));
+
+  // 语音：跟读评分链路（上传 → stt.score → 删除文件）
+  const fileID = await new Promise((resolve, reject) => wx.cloud.uploadFile({
+    cloudPath: 'stt/sim.wav', filePath: '/tmp/sim/rec.wav', success: (r) => resolve(r.fileID), fail: reject
+  }));
+  assert.ok(storage._files.has(fileID), '录音已上传');
+  const scored = await api.sttScore(fileID, 'ሰላም');
+  assert.equal(scored.score, 100, '识别一致得 100 分');
+  assert.equal(scored.transcript, 'ሰላም');
+  assert.deepEqual(scored.words, [{ w: 'ሰላም', ok: true }]);
+  assert.equal(azure.recogCalls.length, 1, '调用一次 Azure 识别');
+  assert.equal(storage._files.has(fileID), false, '评分后录音文件已删除');
+
+  // 语音：跟读页可加载并展示词句
+  const speakPage = pages[10];
+  speakPage.setData = function (d) { this.data = { ...this.data, ...d }; };
+  speakPage.data = { item: null, canRecord: true, recording: false, tempFilePath: '', loading: false, result: null, scoreClass: '' };
+  speakPage.onLoad({ id: vocab.getUnit('u01').items[0].id });
+  assert.equal(speakPage.data.item.id, vocab.getUnit('u01').items[0].id, '跟读页加载词句');
 
   // 未配置云环境时的失败路径
   require(path.join(root, 'config.js')).cloudEnv = '';

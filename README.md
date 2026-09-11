@@ -1,7 +1,7 @@
 # AmharicLeander
 
 面向在埃塞俄比亚工作/生活的中文使用者的阿姆哈拉语速成微信小程序。
-8 周生存级学习计划按成人学习特性设计，后台对接 DeepSeek 做学习进度诊断和计划修改建议。
+8 周生存级学习计划按成人学习特性设计，后台对接 DeepSeek 做学习进度诊断和计划修改建议，接 Azure 语音做阿姆哈拉语朗读与发音评分。
 
 ## 功能
 
@@ -15,7 +15,8 @@
 | 计划 | 8 周计划、每周"为什么学"、实战任务、里程碑；展示 AI 调整 |
 | AI 教练 | DeepSeek 进度诊断（优势/薄弱/风险/建议/未来 7 天）、计划调整（按周改动 + 依据，可一键采纳）、随时问教练 |
 | 查词句 | 现场急用：中文 / 转写 / 阿姆哈拉语模糊搜索全部词句，长按复制，可直接加入闪卡 |
-| 我的 | 每日目标、新词上限、开始日期、云端同步状态、立即上传 / 从云端恢复 |
+| 语音 | Azure 阿姆哈拉语朗读（课程、闪卡、搜索结果、教练回复，男 / 女声、正常 / 慢速）、小测与闪卡听力题、跟读录音、发音评分（分数 + 识别文字 + 逐词对错） |
+| 我的 | 每日目标、新词上限、开始日期、声音与语速、云端同步状态、立即上传 / 从云端恢复 |
 
 ## 目录
 
@@ -29,11 +30,16 @@ miniprogram/            微信小程序（原生 WXML/WXSS/JS，无第三方依�
   utils/progress.js     进度存储、统计、给 AI 的摘要
   utils/api.js          云函数调用封装
   utils/sync.js         进度自动同步
-  pages/                10 个页面
-cloudfunctions/api/     微信云函数：进度存储 + DeepSeek 诊断 / 计划调整 / 教练对话
+  utils/audio.js        语音播放、本地缓存、预取
+  pages/                11 个页面（含 speak 跟读评分）
+cloudfunctions/api/     微信云函数：进度存储 + DeepSeek 诊断 / 计划调整 / 教练对话 + Azure 语音
   handler.js            纯逻辑（可本地测试）
   prompts.js            提示词（含成人学习原则）
   deepseek.js           DeepSeek Chat Completions 调用
+  speech.js             tts.get / tts.batch / stt.score（云端缓存 + 每日上限）
+  scoring.js            发音评分（归一化 + Levenshtein 相似度 + 逐词匹配）
+  azure.js              Azure Speech REST（合成 / 识别）
+  storage.js            云存储适配器
   db.js                 云数据库适配器
 scripts/sim-miniprogram.js  小程序端到端模拟
 docs/learning-plan.md   学习计划设计说明
@@ -54,8 +60,11 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 
 1. 在 [mp.weixin.qq.com](https://mp.weixin.qq.com) 注册个人主体小程序（需大陆身份证、手机号、本人微信），把 AppID 填进 `project.config.json` 的 `appid`。
 2. 用微信开发者工具打开仓库根目录，点工具栏「云开发」，创建环境，把环境 id 填进 `miniprogram/config.js` 的 `cloudEnv`。云开发为付费套餐，个人最低档约每月 20 元，以控制台为准。
-3. 云开发控制台 → 数据库 → 新建集合 `progress` 和 `ai_logs`，权限选「仅创建者可读写」。
+3. 云开发控制台 → 数据库 → 新建集合 `progress`、`ai_logs` 和 `tts_cache`，权限选「仅创建者可读写」。
 4. 云开发控制台 → 云函数 → `api` → 配置 → 环境变量，添加 `DEEPSEEK_API_KEY`（[platform.deepseek.com](https://platform.deepseek.com) 申请）。可选 `DEEPSEEK_MODEL`，默认 `deepseek-chat`。
+5. 注册 [Azure](https://portal.azure.com) 账号，创建「语音服务」（Speech）资源，定价层选 F0 免费（每月 50 万字符合成、5 小时识别），区域建议 `southeastasia` 或 `eastasia`。
+6. 同一环境变量页添加 `AZURE_SPEECH_KEY`（资源的密钥）和 `AZURE_SPEECH_REGION`（如 `southeastasia`）。
+7. 语音音频缓存在云存储 `tts/` 目录和第 3 步的 `tts_cache` 集合里；跟读需要小程序录音权限，真机首次录音会弹授权。
 
 ### 3. 部署与分发
 
@@ -75,8 +84,11 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 | `ai.adjustPlan` | `{summary, planOutline, diagnosis?, request?}` | 计划调整建议 |
 | `ai.chat` | `{messages, summary}` | AI 教练对话 |
 | `ai.history` | 无 | 最近 30 条诊断 / 调整记录 |
+| `tts.get` | `{text, voice: 'female'\|'male', rate: 'normal'\|'slow'}` | 合成朗读，返回 `{url, key}`；命中 `tts_cache` 不再调 Azure |
+| `tts.batch` | `{items: [{id, text}], voice, rate}`（最多 40 条） | 批量取 url，返回 `{urls: {id: url}}`，缺失项并行生成 |
+| `stt.score` | `{fileID, target}` | 识别云存储里的录音并评分，返回 `{transcript, score, words}`；处理完删除录音 |
 
-AI 动作每人每天 20 次；密钥只存在云函数环境变量里。
+AI 动作（`ai.diagnose` / `ai.adjustPlan` / `ai.chat`）每人每天 20 次；`tts` 缓存未命中每人每天 300 次，`stt.score` 每人每天 100 次。DeepSeek 与 Azure 密钥只存在云函数环境变量里。
 
 ## 学习计划概览
 
@@ -96,5 +108,5 @@ AI 动作每人每天 20 次；密钥只存在云函数环境变量里。
 
 ## 说明
 
-- 小程序无法内置阿姆哈拉语 TTS，发音以转写为主；建议配合当地同事或 Google Translate 听读。
+- 阿姆哈拉语朗读与发音评分由 Azure 语音服务提供（`am-ET-MekdesNeural` 女声 / `am-ET-AmehaNeural` 男声），合成结果缓存在云存储，本机再缓存一份，同一句只合成一次。
 - 词汇为亚的斯亚贝巴日常口语，第二人称区分对男 / 对女形式，注意 note 字段。
