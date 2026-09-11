@@ -38,7 +38,8 @@ Page({
   fail(err) {
     this.setData({ loading: '' });
     const msg = err.message || '请求失败';
-    wx.showModal({ title: 'AI 请求失败', content: msg.includes('example.com') || msg.includes('网络') || msg.includes('url') ? `${msg}\n\n请先到"我的"页面设置后台地址。` : msg, showCancel: false });
+    const hint = err.code === 'NO_ENV' ? '\n\n请管理员在 miniprogram/config.js 填写云开发环境 id。' : '';
+    wx.showModal({ title: 'AI 请求失败', content: msg + hint, showCancel: false });
   },
 
   async diagnose() {
@@ -46,7 +47,7 @@ Page({
     this.setData({ loading: 'diagnose' });
     try {
       const summary = progress.summary();
-      const { diagnosis } = await api.diagnose(summary, plan.planOutline());
+      const diagnosis = await api.diagnose(summary, plan.planOutline());
       progress.pushAi({ type: 'diagnosis', date: new Date().toISOString(), result: diagnosis });
       progress.addMinutes(3);
       this.setData({ diagnosis, loading: '' });
@@ -59,7 +60,7 @@ Page({
     this.setData({ loading: 'adjust' });
     try {
       const summary = progress.summary();
-      const { adjustment } = await api.adjustPlan(summary, plan.planOutline(), this.data.diagnosis, this.data.request);
+      const adjustment = await api.adjustPlan(summary, plan.planOutline(), this.data.diagnosis, this.data.request);
       progress.pushAi({ type: 'plan', date: new Date().toISOString(), request: this.data.request, result: adjustment });
       this.setData({ adjustment, loading: '', tab: 'adjust' });
       this.onShow();
