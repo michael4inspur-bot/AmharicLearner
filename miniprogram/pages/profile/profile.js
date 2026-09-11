@@ -1,18 +1,23 @@
 const progress = require('../../utils/progress.js');
 const api = require('../../utils/api.js');
 const audio = require('../../utils/audio.js');
+const points = require('../../utils/points.js');
 
 Page({
-  data: { cloudReady: false, goal: 20, newCards: 10, startDate: '', voice: 'female', rate: 'normal', stats: {}, streak: 0, totalMinutes: 0, days: 0, quizzes: 0, usage: null, isAdmin: false, team: null },
+  data: { cloudReady: false, goal: 20, newCards: 10, startDate: '', voice: 'female', rate: 'normal', stats: {}, streak: 0, totalMinutes: 0, days: 0, quizzes: 0, stars: 0, badges: [], earnedCount: 0, usage: null, isAdmin: false, team: null },
   onShow() {
     const p = progress.load();
     const totalMinutes = Object.values(p.logs).reduce((a, l) => a + (l.minutes || 0), 0);
     const { voice, rate } = audio.getSettings();
+    const badges = points.allBadges(p);
     this.setData({
       cloudReady: api.configured(), goal: p.dailyMinutesGoal, newCards: p.newCardsPerDay, startDate: p.startDate, voice, rate,
       stats: progress.srsStats(p), streak: progress.streak(p), totalMinutes,
       days: Object.keys(p.logs).filter((k) => p.logs[k].minutes > 0).length,
-      quizzes: p.quizScores.length
+      quizzes: p.quizScores.length,
+      stars: p.stars || 0,
+      badges,
+      earnedCount: badges.filter((b) => b.earned).length
     });
     if (api.configured()) this.loadUsage();
   },

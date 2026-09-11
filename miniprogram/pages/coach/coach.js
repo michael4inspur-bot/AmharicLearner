@@ -26,6 +26,12 @@ function withAm(msg) {
   return { ...msg, am: extractAmharic(msg.content) };
 }
 
+/** 诊断分数 → conic-gradient 角度（0-360） */
+function scoreToDeg(diagnosis) {
+  const n = diagnosis && typeof diagnosis.score === 'number' ? diagnosis.score : 0;
+  return Math.round(Math.max(0, Math.min(100, n)) * 3.6);
+}
+
 const QUICK = [
   '"这个多少钱，便宜点"怎么说？',
   '帮我练一段打车对话',
@@ -35,7 +41,7 @@ const QUICK = [
 ];
 
 Page({
-  data: { tab: 'diagnose', diagnosis: null, adjustment: null, selfReport: '', request: '', loading: '', messages: [], input: '', quick: QUICK, history: [], scrollTo: '' },
+  data: { tab: 'diagnose', diagnosis: null, adjustment: null, scoreDeg: 0, selfReport: '', request: '', loading: '', messages: [], input: '', quick: QUICK, history: [], scrollTo: '' },
   onLoad() {
     let messages = [];
     try { messages = wx.getStorageSync(CHAT_KEY) || []; } catch (e) { /* ignore */ }
@@ -43,12 +49,15 @@ Page({
     this.setData({ messages: messages.map(withAm) });
   },
   onShow() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().setData({ selected: 3 });
     const p = progress.load();
     const latestDiag = p.aiHistory.find((h) => h.type === 'diagnosis');
     const latestAdj = p.aiHistory.find((h) => h.type === 'plan');
+    const diagnosis = this.data.diagnosis || (latestDiag ? latestDiag.result : null);
     this.setData({
       selfReport: p.selfReport || '',
-      diagnosis: this.data.diagnosis || (latestDiag ? latestDiag.result : null),
+      diagnosis,
+      scoreDeg: scoreToDeg(diagnosis),
       adjustment: this.data.adjustment || (latestAdj ? latestAdj.result : null),
       history: p.aiHistory.slice(0, 10).map((h) => ({ ...h, dateShort: (h.date || '').slice(0, 10), label: h.type === 'diagnosis' ? '诊断' : '计划调整' })),
       overridesApplied: !!p.planOverrides
@@ -75,7 +84,7 @@ Page({
       const diagnosis = await api.diagnose(summary, plan.planOutline());
       progress.pushAi({ type: 'diagnosis', date: new Date().toISOString(), result: diagnosis });
       progress.addMinutes(3);
-      this.setData({ diagnosis, loading: '' });
+      this.setData({ diagnosis, scoreDeg: scoreToDeg(diagnosis), loading: '' });
       this.onShow();
     } catch (err) { this.fail(err); }
   },

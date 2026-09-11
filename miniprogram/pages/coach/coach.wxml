@@ -1,8 +1,8 @@
 <view class="page coach">
-  <view class="tabs">
-    <view class="tab {{tab==='diagnose'?'on':''}}" data-tab="diagnose" bindtap="switchTab">进度诊断</view>
-    <view class="tab {{tab==='adjust'?'on':''}}" data-tab="adjust" bindtap="switchTab">计划调整</view>
-    <view class="tab {{tab==='chat'?'on':''}}" data-tab="chat" bindtap="switchTab">问教练</view>
+  <view class="segs">
+    <view class="seg {{tab==='diagnose'?'on':''}}" data-tab="diagnose" bindtap="switchTab">进度诊断</view>
+    <view class="seg {{tab==='adjust'?'on':''}}" data-tab="adjust" bindtap="switchTab">计划调整</view>
+    <view class="seg {{tab==='chat'?'on':''}}" data-tab="chat" bindtap="switchTab">问教练</view>
   </view>
 
   <!-- 诊断 -->
@@ -17,40 +17,67 @@
 
     <block wx:if="{{diagnosis}}">
       <view class="card">
-        <view class="row between">
-          <view class="card-title">{{diagnosis.overall_level}}</view>
-          <view class="score">{{diagnosis.score}}</view>
+        <view class="row gap">
+          <view class="ring" style="background: conic-gradient(#2F7A5E 0deg {{scoreDeg}}deg, #DDF3EA {{scoreDeg}}deg 360deg)">
+            <view class="ring-in">{{diagnosis.score}}</view>
+          </view>
+          <view class="grow">
+            <view class="card-title">{{diagnosis.overall_level}}</view>
+            <view class="muted">综合评分 {{diagnosis.score}} / 100</view>
+          </view>
         </view>
-        <view class="zh">{{diagnosis.summary}}</view>
+        <view class="zh" style="margin-top:20rpx">{{diagnosis.summary}}</view>
         <view class="enc">{{diagnosis.encouragement}}</view>
       </view>
+
       <view class="card">
         <view class="section-title" style="margin-top:0">优势</view>
-        <view class="li ok" wx:for="{{diagnosis.strengths}}" wx:key="*this">✓ {{item}}</view>
+        <view class="li" wx:for="{{diagnosis.strengths}}" wx:key="*this">
+          <view class="li-ic mint">
+            <x-icon name="check" size="26" color="#2F7A5E" />
+          </view>
+          <view class="grow">{{item}}</view>
+        </view>
         <view class="section-title">薄弱点</view>
-        <view class="li warn" wx:for="{{diagnosis.weaknesses}}" wx:key="*this">! {{item}}</view>
+        <view class="li" wx:for="{{diagnosis.weaknesses}}" wx:key="*this">
+          <view class="li-ic peach">
+            <x-icon name="spark" size="26" color="#C2410C" />
+          </view>
+          <view class="grow">{{item}}</view>
+        </view>
         <view class="section-title" wx:if="{{diagnosis.risks && diagnosis.risks.length}}">风险</view>
-        <view class="li" wx:for="{{diagnosis.risks}}" wx:key="*this">• {{item}}</view>
+        <view class="li" wx:for="{{diagnosis.risks}}" wx:key="*this">
+          <view class="li-dot"></view>
+          <view class="grow">{{item}}</view>
+        </view>
       </view>
+
       <view class="card">
         <view class="card-title">建议</view>
         <view class="rec" wx:for="{{diagnosis.recommendations}}" wx:key="title">
-          <view class="rec-title"><text class="tag {{item.priority==='high'?'warn':'gray'}}">{{item.priority}}</text>{{item.title}}</view>
+          <view class="rec-title">
+            <text class="tag {{item.priority==='high'?'':'gray'}}">{{item.priority}}</text>{{item.title}}
+          </view>
           <view class="muted">{{item.detail}}</view>
         </view>
       </view>
+
       <view class="card" wx:if="{{diagnosis.plan_changes && diagnosis.plan_changes.length}}">
         <view class="card-title">建议的计划改动</view>
         <view class="rec" wx:for="{{diagnosis.plan_changes}}" wx:key="index">
           <view class="rec-title"><text class="tag">{{item.scope}}</text>{{item.target}}：{{item.change}}</view>
           <view class="muted">依据：{{item.reason}}</view>
         </view>
-        <view class="muted">建议每日 {{diagnosis.daily_minutes_suggestion}} 分钟</view>
+        <view class="muted" style="margin-top:12rpx">建议每日 {{diagnosis.daily_minutes_suggestion}} 分钟</view>
         <view class="btn" bindtap="adjust" wx:if="{{!loading}}">据此生成新计划</view>
       </view>
+
       <view class="card" wx:if="{{diagnosis.next_7_days}}">
         <view class="card-title">接下来 7 天</view>
-        <view class="li" wx:for="{{diagnosis.next_7_days}}" wx:key="day">第 {{item.day}} 天：{{item.focus}}</view>
+        <view class="day-row" wx:for="{{diagnosis.next_7_days}}" wx:key="day">
+          <view class="day-num">{{item.day}}</view>
+          <view class="grow">{{item.focus}}</view>
+        </view>
       </view>
     </block>
   </block>
@@ -69,19 +96,26 @@
       <view class="card">
         <view class="card-title">调整思路</view>
         <view class="zh">{{adjustment.summary}}</view>
-        <view class="muted" style="margin-top:8rpx">每日 {{adjustment.daily_minutes}} 分钟 · 每日新词 {{adjustment.new_words_per_day}} · 复习占比 {{adjustment.review_ratio}}</view>
+        <view class="row gap" style="margin-top:16rpx;flex-wrap:wrap">
+          <text class="tag">每日 {{adjustment.daily_minutes}} 分钟</text>
+          <text class="tag mint">新词 {{adjustment.new_words_per_day}}</text>
+          <text class="tag warn">复习 {{adjustment.review_ratio}}</text>
+        </view>
       </view>
       <view class="card">
         <view class="card-title">按周改动</view>
         <view class="rec" wx:for="{{adjustment.week_adjustments}}" wx:key="week">
-          <view class="rec-title">第 {{item.week}} 周 · {{item.theme}}</view>
+          <view class="rec-title"><text class="tag gray">第 {{item.week}} 周</text>{{item.theme}}</view>
           <view class="zh">{{item.change}}</view>
           <view class="muted">依据：{{item.reason}}</view>
         </view>
       </view>
       <view class="card" wx:if="{{adjustment.extra_focus && adjustment.extra_focus.length}}">
         <view class="card-title">补充重点</view>
-        <view class="li" wx:for="{{adjustment.extra_focus}}" wx:key="*this">• {{item}}</view>
+        <view class="li" wx:for="{{adjustment.extra_focus}}" wx:key="*this">
+          <view class="li-dot"></view>
+          <view class="grow">{{item}}</view>
+        </view>
       </view>
       <view class="card">
         <view class="card-title">本周实战任务</view>
@@ -94,34 +128,53 @@
     <view class="card" wx:if="{{history.length}}">
       <view class="card-title">历史记录</view>
       <view class="list-item" wx:for="{{history}}" wx:key="date">
-        <text class="tag gray">{{item.label}}</text>{{item.dateShort}} <text class="muted">{{item.result.summary}}</text>
+        <view class="row between">
+          <view class="grow"><text class="tag gray">{{item.label}}</text>{{item.dateShort}}</view>
+        </view>
+        <view class="muted">{{item.result.summary}}</view>
       </view>
     </view>
   </block>
 
   <!-- 对话 -->
   <block wx:if="{{tab==='chat'}}">
-    <scroll-view scroll-y class="chat" scroll-into-view="{{scrollTo}}" scroll-with-animation>
-      <view class="msg assistant" wx:if="{{!messages.length}}">
-        <view class="bubble">ሰላም! 我是你的阿姆哈拉语教练。可以问我怎么说某句话、让我纠正你写的句子、或者陪你练对话。我知道你的学习进度，会结合你在埃塞的生活场景回答。</view>
-      </view>
-      <view class="msg {{m.role}}" wx:for="{{messages}}" wx:for-item="m" wx:key="index" id="m{{index}}">
-        <view class="bubble-wrap">
-          <view class="bubble" data-text="{{m.content}}" bindlongpress="copy">{{m.content}}</view>
-          <view class="am-chips" wx:if="{{m.am && m.am.length}}">
-            <view class="am-chip" wx:for="{{m.am}}" wx:for-item="seg" wx:key="*this" data-text="{{seg}}" catchtap="playAm">🔊 {{seg}}</view>
+    <view class="chat-wrap">
+      <scroll-view scroll-y class="chat" scroll-into-view="{{scrollTo}}" scroll-with-animation>
+        <view class="msg assistant" wx:if="{{!messages.length}}">
+          <view class="bubble-wrap">
+            <view class="bubble">ሰላም! 我是你的阿姆哈拉语教练。可以问我怎么说某句话、让我纠正你写的句子、或者陪你练对话。我知道你的学习进度，会结合你在埃塞的生活场景回答。</view>
           </view>
         </view>
-      </view>
-      <view class="msg assistant" wx:if="{{loading==='chat'}}"><view class="bubble muted">教练正在思考…</view></view>
-    </scroll-view>
+        <view class="msg {{m.role}}" wx:for="{{messages}}" wx:for-item="m" wx:key="index" id="m{{index}}">
+          <view class="bubble-wrap">
+            <view class="bubble" data-text="{{m.content}}" bindlongpress="copy">{{m.content}}</view>
+            <view class="am-chips" wx:if="{{m.am && m.am.length}}">
+              <view class="am-chip" wx:for="{{m.am}}" wx:for-item="seg" wx:key="*this" data-text="{{seg}}" catchtap="playAm">
+                <x-icon name="speaker" size="24" color="#1E5C45" />
+                <text class="am">{{seg}}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+        <view class="msg assistant" wx:if="{{loading==='chat'}}">
+          <view class="bubble-wrap">
+            <view class="bubble thinking">教练正在思考…</view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
     <scroll-view scroll-x class="quick">
       <view class="qbtn" wx:for="{{quick}}" wx:key="*this" data-q="{{item}}" bindtap="quickAsk">{{item}}</view>
     </scroll-view>
+
     <view class="composer">
       <input class="input grow" value="{{input}}" placeholder="用中文或阿姆哈拉语提问…" bindinput="onInput" confirm-type="send" bindconfirm="send" />
-      <view class="btn small" bindtap="send">发送</view>
+      <view class="send" bindtap="send">
+        <x-icon name="chevron-right" size="36" color="#FFFFFF" />
+      </view>
     </view>
-    <view class="muted" style="text-align:right" bindtap="clearChat">清空对话</view>
+
+    <view class="muted clear-chat" bindtap="clearChat">清空对话</view>
   </block>
 </view>

@@ -1,12 +1,58 @@
-<view class="page">
+<view class="page no-tab">
+  <view class="grid6">
+    <view class="cell peach">
+      <view class="cell-top">
+        <x-icon name="flame" size="30" color="#C2410C" />
+        <view class="n">{{streak}}</view>
+      </view>
+      <view class="l">连续天</view>
+    </view>
+    <view class="cell white">
+      <view class="cell-top">
+        <view class="n">{{days}}</view>
+      </view>
+      <view class="l">学习天数</view>
+    </view>
+    <view class="cell mint">
+      <view class="cell-top">
+        <view class="n">{{totalMinutes}}</view>
+      </view>
+      <view class="l">总分钟</view>
+    </view>
+    <view class="cell lav">
+      <view class="cell-top">
+        <view class="n">{{stats.total}}</view>
+      </view>
+      <view class="l">已学词</view>
+    </view>
+    <view class="cell white">
+      <view class="cell-top">
+        <view class="n">{{stats.mature}}</view>
+      </view>
+      <view class="l">熟练词</view>
+    </view>
+    <view class="cell peach">
+      <view class="cell-top">
+        <x-icon name="star" size="30" color="#F59E0B" />
+        <view class="n">{{stars}}</view>
+      </view>
+      <view class="l">星星</view>
+    </view>
+  </view>
+
   <view class="card">
-    <view class="stats">
-      <view class="st"><view class="n">{{streak}}</view><view class="l">连续天</view></view>
-      <view class="st"><view class="n">{{days}}</view><view class="l">学习天数</view></view>
-      <view class="st"><view class="n">{{totalMinutes}}</view><view class="l">总分钟</view></view>
-      <view class="st"><view class="n">{{stats.total}}</view><view class="l">已学词</view></view>
-      <view class="st"><view class="n">{{stats.mature}}</view><view class="l">熟练词</view></view>
-      <view class="st"><view class="n">{{quizzes}}</view><view class="l">小测次数</view></view>
+    <view class="row between">
+      <view class="card-title" style="margin-bottom:0">徽章墙</view>
+      <view class="muted">{{earnedCount}} / {{badges.length}}</view>
+    </view>
+    <view class="badges">
+      <view class="bd" wx:for="{{badges}}" wx:key="id">
+        <view class="bd-ic {{item.earned ? 'on' : ''}}">
+          <x-icon name="badge" size="52" color="{{item.earned ? '#C2410C' : '#E8DDD2'}}" />
+        </view>
+        <view class="bd-name {{item.earned ? '' : 'off'}}">{{item.name}}</view>
+        <view class="muted bd-hint" wx:if="{{!item.earned}}">{{item.hint}}</view>
+      </view>
     </view>
   </view>
 
@@ -14,44 +60,61 @@
     <view class="card-title">学习设置</view>
     <view class="row between list-item"><text>每日目标</text><view class="row"><slider class="sl" min="10" max="45" step="5" value="{{goal}}" bindchange="onGoal" show-value /><text>分钟</text></view></view>
     <view class="row between list-item"><text>每日新词上限</text><view class="row"><slider class="sl" min="3" max="20" value="{{newCards}}" bindchange="onNewCards" show-value /><text>个</text></view></view>
-    <view class="row between list-item"><text>计划开始日期</text><picker mode="date" value="{{startDate}}" bindchange="onStartDate"><text class="link">{{startDate}} ›</text></picker></view>
+    <view class="row between list-item"><text>计划开始日期</text><picker mode="date" value="{{startDate}}" bindchange="onStartDate"><view class="link row gap"><text>{{startDate}}</text><x-icon name="chevron-right" size="26" color="#C2410C" /></view></picker></view>
     <view class="row between list-item"><text>标准音</text>
       <radio-group class="row" bindchange="onVoice">
-        <label class="row" style="margin-left:24rpx"><radio value="female" color="#0f6e56" checked="{{voice === 'female'}}" /><text>女声</text></label>
-        <label class="row" style="margin-left:24rpx"><radio value="male" color="#0f6e56" checked="{{voice === 'male'}}" /><text>男声</text></label>
+        <label class="row" style="margin-left:24rpx"><radio value="female" color="#C2410C" checked="{{voice === 'female'}}" /><text>女声</text></label>
+        <label class="row" style="margin-left:24rpx"><radio value="male" color="#C2410C" checked="{{voice === 'male'}}" /><text>男声</text></label>
       </radio-group>
     </view>
     <view class="row between list-item"><text>语速</text>
       <radio-group class="row" bindchange="onRate">
-        <label class="row" style="margin-left:24rpx"><radio value="normal" color="#0f6e56" checked="{{rate === 'normal'}}" /><text>正常</text></label>
-        <label class="row" style="margin-left:24rpx"><radio value="slow" color="#0f6e56" checked="{{rate === 'slow'}}" /><text>慢速</text></label>
+        <label class="row" style="margin-left:24rpx"><radio value="normal" color="#C2410C" checked="{{rate === 'normal'}}" /><text>正常</text></label>
+        <label class="row" style="margin-left:24rpx"><radio value="slow" color="#C2410C" checked="{{rate === 'slow'}}" /><text>慢速</text></label>
       </radio-group>
     </view>
-    <view class="muted">修改开始日期可以回到某一周重学，或者跳到下一周。标准音和语速对所有朗读生效。</view>
+    <view class="muted" style="margin-top:12rpx">修改开始日期可以回到某一周重学，或者跳到下一周。标准音和语速对所有朗读生效。</view>
   </view>
 
   <view class="card">
-    <view class="card-title">云端同步（微信云开发 + DeepSeek）</view>
-    <view class="muted">{{cloudReady ? '✓ 已配置云环境，进度会自动同步' : '✗ 还没配置云环境，请管理员在 miniprogram/config.js 填写 cloudEnv'}}</view>
+    <view class="row between">
+      <view class="card-title" style="margin-bottom:0">云端同步</view>
+      <text class="tag {{cloudReady ? 'mint' : 'gray'}}">{{cloudReady ? '已连接' : '未配置'}}</text>
+    </view>
+    <view class="muted" style="margin-top:10rpx">{{cloudReady ? '微信云开发 + DeepSeek，进度会自动同步。' : '还没配置云环境，请管理员在 miniprogram/config.js 填写 cloudEnv。'}}</view>
     <view class="usage" wx:if="{{usage}}">
-      <view class="usage-line">今日用量：AI {{usage.ai.used}}/{{usage.ai.limit}} · 语音 {{usage.tts.used}}/{{usage.tts.limit}} · 评分 {{usage.stt.used}}/{{usage.stt.limit}}</view>
-      <view class="muted">本月语音字符 {{usage.monthChars.used}}/{{usage.monthChars.limit}}</view>
+      <view class="usage-row">
+        <view class="usage-cell">
+          <view class="usage-n">{{usage.ai.used}} / {{usage.ai.limit}}</view>
+          <view class="usage-l">AI</view>
+        </view>
+        <view class="usage-cell">
+          <view class="usage-n">{{usage.tts.used}} / {{usage.tts.limit}}</view>
+          <view class="usage-l">语音</view>
+        </view>
+        <view class="usage-cell">
+          <view class="usage-n">{{usage.stt.used}} / {{usage.stt.limit}}</view>
+          <view class="usage-l">评分</view>
+        </view>
+      </view>
+      <view class="muted">本月语音字符 {{usage.monthChars.used}} / {{usage.monthChars.limit}}</view>
     </view>
     <view class="divider"></view>
-    <view class="muted" style="margin-bottom:10rpx">换手机时先在旧手机"立即上传"，再在新手机"从云端恢复"。</view>
-    <view class="row">
-      <view class="btn outline small" bindtap="upload">立即上传</view>
-      <view style="width:12rpx"></view>
-      <view class="btn outline small" bindtap="download">从云端恢复</view>
+    <view class="muted">换手机时先在旧手机"立即上传"，再在新手机"从云端恢复"。</view>
+    <view class="row gap" style="margin-top:20rpx">
+      <view class="btn outline small grow" bindtap="upload">立即上传</view>
+      <view class="btn outline small grow" bindtap="download">从云端恢复</view>
     </view>
   </view>
 
   <view class="card" wx:if="{{isAdmin && team}}">
     <view class="card-title">团队用量（7 天）</view>
     <view class="team-row list-item" wx:for="{{team}}" wx:key="openid">
-      <view class="team-id">…{{item.short}}</view>
-      <view class="team-nums">AI {{item.ai}} · 语音 {{item.tts}} · 评分 {{item.stt}} · 字符 {{item.ttsChars}}</view>
-      <view class="team-date muted">{{item.lastActive}}</view>
+      <view class="row between">
+        <view class="team-id">…{{item.short}}</view>
+        <view class="team-date muted">{{item.lastActive}}</view>
+      </view>
+      <view class="team-nums muted-2">AI {{item.ai}} · 语音 {{item.tts}} · 评分 {{item.stt}} · 字符 {{item.ttsChars}}</view>
     </view>
     <view class="empty" wx:if="{{!team.length}}">还没有人使用</view>
   </view>
@@ -59,6 +122,6 @@
   <view class="card">
     <view class="card-title">关于</view>
     <view class="muted">AmharicLeander · 面向在埃塞俄比亚的中文使用者的阿姆哈拉语速成。学习计划依据成人学习特性设计：知道为什么学、自主导向、经验为本、问题驱动、微学习、间隔重复。</view>
-    <view class="btn outline" style="color:#c0392b;border-color:#c0392b" bindtap="resetAll">清空全部进度</view>
+    <view class="btn danger" bindtap="resetAll">清空全部进度</view>
   </view>
 </view>
