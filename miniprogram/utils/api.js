@@ -46,5 +46,8 @@ module.exports = {
   diagnose: (summary, planOutline) => call('ai.diagnose', { summary, planOutline }),
   adjustPlan: (summary, planOutline, diagnosis, request) => call('ai.adjustPlan', { summary, planOutline, diagnosis, request }),
   chat: (messages, summary) => call('ai.chat', { messages, summary }),
-  aiHistory: () => call('ai.history')
+  aiHistory: () => call('ai.history'),
+  ttsGet: (text, voice, rate) => call('tts.get', { text, voice, rate }),
+  ttsBatch: (items, voice, rate) => call('tts.batch', { items, voice, rate }),
+  sttScore: (fileID, target) => call('stt.score', { fileID, target })
 };

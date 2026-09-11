@@ -15,7 +15,19 @@
     <view class="row between list-item"><text>每日目标</text><view class="row"><slider class="sl" min="10" max="45" step="5" value="{{goal}}" bindchange="onGoal" show-value /><text>分钟</text></view></view>
     <view class="row between list-item"><text>每日新词上限</text><view class="row"><slider class="sl" min="3" max="20" value="{{newCards}}" bindchange="onNewCards" show-value /><text>个</text></view></view>
     <view class="row between list-item"><text>计划开始日期</text><picker mode="date" value="{{startDate}}" bindchange="onStartDate"><text class="link">{{startDate}} ›</text></picker></view>
-    <view class="muted">修改开始日期可以回到某一周重学，或者跳到下一周。</view>
+    <view class="row between list-item"><text>标准音</text>
+      <radio-group class="row" bindchange="onVoice">
+        <label class="row" style="margin-left:24rpx"><radio value="female" color="#0f6e56" checked="{{voice === 'female'}}" /><text>女声</text></label>
+        <label class="row" style="margin-left:24rpx"><radio value="male" color="#0f6e56" checked="{{voice === 'male'}}" /><text>男声</text></label>
+      </radio-group>
+    </view>
+    <view class="row between list-item"><text>语速</text>
+      <radio-group class="row" bindchange="onRate">
+        <label class="row" style="margin-left:24rpx"><radio value="normal" color="#0f6e56" checked="{{rate === 'normal'}}" /><text>正常</text></label>
+        <label class="row" style="margin-left:24rpx"><radio value="slow" color="#0f6e56" checked="{{rate === 'slow'}}" /><text>慢速</text></label>
+      </radio-group>
+    </view>
+    <view class="muted">修改开始日期可以回到某一周重学，或者跳到下一周。标准音和语速对所有朗读生效。</view>
   </view>
 
   <view class="card">

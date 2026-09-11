@@ -1,18 +1,22 @@
 const progress = require('../../utils/progress.js');
 const api = require('../../utils/api.js');
+const audio = require('../../utils/audio.js');
 
 Page({
-  data: { cloudReady: false, goal: 20, newCards: 10, startDate: '', stats: {}, streak: 0, totalMinutes: 0, days: 0, quizzes: 0 },
+  data: { cloudReady: false, goal: 20, newCards: 10, startDate: '', voice: 'female', rate: 'normal', stats: {}, streak: 0, totalMinutes: 0, days: 0, quizzes: 0 },
   onShow() {
     const p = progress.load();
     const totalMinutes = Object.values(p.logs).reduce((a, l) => a + (l.minutes || 0), 0);
+    const { voice, rate } = audio.getSettings();
     this.setData({
-      cloudReady: api.configured(), goal: p.dailyMinutesGoal, newCards: p.newCardsPerDay, startDate: p.startDate,
+      cloudReady: api.configured(), goal: p.dailyMinutesGoal, newCards: p.newCardsPerDay, startDate: p.startDate, voice, rate,
       stats: progress.srsStats(p), streak: progress.streak(p), totalMinutes,
       days: Object.keys(p.logs).filter((k) => p.logs[k].minutes > 0).length,
       quizzes: p.quizScores.length
     });
   },
+  onVoice(e) { const { voice } = audio.setSettings({ voice: e.detail.value }); this.setData({ voice }); },
+  onRate(e) { const { rate } = audio.setSettings({ rate: e.detail.value }); this.setData({ rate }); },
   onGoal(e) { const p = progress.load(); p.dailyMinutesGoal = e.detail.value; progress.save(p); this.setData({ goal: e.detail.value }); },
   onNewCards(e) { const p = progress.load(); p.newCardsPerDay = e.detail.value; progress.save(p); this.setData({ newCards: e.detail.value }); },
   onStartDate(e) { const p = progress.load(); p.startDate = e.detail.value; progress.save(p); this.setData({ startDate: e.detail.value }); },
