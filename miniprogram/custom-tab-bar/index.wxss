@@ -1,0 +1,10 @@
+.bar {
+  position: fixed; left: 40rpx; right: 40rpx; bottom: calc(24rpx + env(safe-area-inset-bottom));
+  height: 128rpx; background: #FFFFFF; border-radius: 999rpx;
+  display: flex; justify-content: space-around; align-items: center;
+  box-shadow: 0 20rpx 60rpx rgba(59, 47, 42, 0.14);
+  z-index: 100;
+}
+.item { display: flex; align-items: center; justify-content: center; gap: 10rpx; height: 84rpx; min-width: 84rpx; padding: 0 18rpx; border-radius: 999rpx; }
+.item.on { background: #C2410C; padding: 0 30rpx; }
+.label { color: #FFFFFF; font-size: 26rpx; font-weight: 800; }

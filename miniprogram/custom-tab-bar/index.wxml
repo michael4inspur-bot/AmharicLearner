@@ -1,0 +1,6 @@
+<view class="bar">
+  <view wx:for="{{list}}" wx:key="pagePath" class="item {{selected === index ? 'on' : ''}}" data-index="{{index}}" bindtap="switchTab">
+    <x-icon name="{{item.icon}}" size="40" color="{{selected === index ? '#FFFFFF' : '#B08A78'}}" />
+    <text wx:if="{{selected === index}}" class="label">{{item.text}}</text>
+  </view>
+</view>

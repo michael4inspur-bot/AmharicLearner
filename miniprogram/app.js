@@ -1,6 +1,7 @@
 const config = require('./config.js');
 const progress = require('./utils/progress.js');
 const sync = require('./utils/sync.js');
+const fonts = require('./utils/fonts.js');
 
 App({
   globalData: { version: '0.3.0' },
@@ -9,6 +10,7 @@ App({
       wx.cloud.init({ env: config.cloudEnv, traceUser: true });
     }
     progress.load();
+    fonts.loadFidelFont();
     // 每次进度保存后 3 秒内合并上传一次
     progress.setOnSaved(() => sync.scheduleSync(3000));
   },

@@ -40,10 +40,16 @@
         "pagePath": "pages/coach/coach",
         "text": "AI教练"
       }
-    ]
+    ],
+    "custom": true
   },
-  "networkTimeout": { "request": 60000 },
+  "networkTimeout": {
+    "request": 60000
+  },
   "style": "v2",
   "sitemapLocation": "sitemap.json",
-  "lazyCodeLoading": "requiredComponents"
+  "lazyCodeLoading": "requiredComponents",
+  "usingComponents": {
+    "x-icon": "/components/icon/index"
+  }
 }

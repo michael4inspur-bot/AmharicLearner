@@ -60,7 +60,8 @@ global.wx = {
   }
 };
 const pages = [];
-global.Page = (cfg) => pages.push(cfg);
+global.Page = (cfg) => { cfg.getTabBar = () => ({ setData() {} }); pages.push(cfg); };
+global.Component = () => {};
 global.App = (cfg) => { global.__app = cfg; };
 
 // 先填云环境，再加载依赖 config 的模块
