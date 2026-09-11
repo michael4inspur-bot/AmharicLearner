@@ -18,6 +18,17 @@
         <text class="muted" wx:if="{{!u.learned}}">›</text>
       </view>
     </view>
+    <view class="unit" wx:if="{{w.extraUnit}}" data-id="{{w.extraUnit.id}}" bindtap="open">
+      <view class="grow">
+        <view class="unit-title"><text class="tag gray">自选</text> {{w.extraUnit.title}} <text class="tag gray">{{w.extraUnit.count}} 词</text></view>
+        <view class="muted">{{w.extraUnit.scene}} · 时间充裕再学，不计入本周完成度</view>
+      </view>
+      <view class="unit-state">
+        <text class="tag" wx:if="{{w.extraUnit.learned}}">已学</text>
+        <text class="tag warn" wx:if="{{w.extraUnit.best !== undefined}}">小测 {{w.extraUnit.best}}%</text>
+        <text class="muted" wx:if="{{!w.extraUnit.learned}}">›</text>
+      </view>
+    </view>
     <view class="unit" data-group="{{w.fidelGroup}}" bindtap="goFidel">
       <view class="grow">
         <view class="unit-title">Fidel 字母 第 {{w.fidelGroup}} 批</view>

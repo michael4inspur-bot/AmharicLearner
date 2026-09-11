@@ -1,6 +1,6 @@
 <view class="page">
   <view class="card">
-    <view class="card-title">目标：8 周内在埃塞独立应对日常生活</view>
+    <view class="card-title">目标：8 周内用阿姆哈拉语完成日常工作沟通</view>
     <view class="muted">每天 {{goal}} 分钟：{{daily.reviewMinutes}}′ 闪卡复习 + {{daily.learnMinutes}}′ 新内容 + {{daily.practiceMinutes}}′ 小测/实战 · 每日新词上限 {{newCards}}</view>
     <view class="row" style="margin-top:16rpx">
       <view class="btn outline small" bindtap="togglePrinciples">{{showPrinciples ? '收起' : '为什么这样设计'}}</view>
@@ -35,6 +35,7 @@
       <view class="grow">
         <view class="wk-theme">{{w.theme}} <text class="tag" wx:if="{{w.status==='current'}}">本周</text><text class="tag gray" wx:if="{{w.reviewWeek}}">复习周</text></view>
         <view class="muted">{{w.unitTitles}}</view>
+        <view class="muted" wx:if="{{w.extraTitle}}">自选补充：{{w.extraTitle}}</view>
       </view>
     </view>
     <view class="wk-body">

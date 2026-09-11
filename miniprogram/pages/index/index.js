@@ -21,7 +21,9 @@ Page({
     const log = progress.todayLog(p);
     const stats = progress.srsStats(p);
     const tasks = plan.getDayTasks(pos.week, pos.day).map((t) => this.decorate(t, p, stats));
-    const doneCount = tasks.filter((t) => t.done).length;
+    const required = tasks.filter((t) => !t.optional);
+    const doneCount = required.filter((t) => t.done).length;
+    const requiredCount = required.length;
     const weekUnitsDone = week.units.filter((id) => p.unitsLearned[id]).length;
     const hour = new Date().getHours();
     const greet = GREETINGS[hour < 12 ? 1 : hour < 18 ? 2 : 0];
@@ -39,6 +41,7 @@ Page({
       total: stats.total,
       tasks,
       doneCount,
+      requiredCount,
       weekPct: week.units.length ? Math.round((weekUnitsDone / week.units.length) * 100) : Math.round((pos.day / 7) * 100),
       overrides: p.planOverrides
     });

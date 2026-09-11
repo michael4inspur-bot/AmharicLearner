@@ -12,6 +12,7 @@ Page({
       ...w,
       status: w.week < pos.week ? 'past' : w.week === pos.week ? 'current' : 'future',
       unitTitles: w.units.map((id) => vocab.getUnit(id).title).join(' · ') || '不加新词',
+      extraTitle: w.extra ? vocab.getUnit(w.extra).title : '',
       unitsDone: w.units.filter((id) => p.unitsLearned[id]).length,
       missionDone: !!p.missions[`w${w.week}`],
       adjustment: adj.find((a) => Number(a.week) === w.week) || null
@@ -23,11 +24,11 @@ Page({
   clearOverrides() {
     wx.showModal({
       title: '恢复默认计划',
-      content: '将移除 AI 的调整，恢复每日 20 分钟 / 10 新词。',
+      content: '将移除 AI 的调整，恢复每日 35 分钟 / 15 新词。',
       success: (r) => {
         if (!r.confirm) return;
         const p = progress.load();
-        p.planOverrides = null; p.dailyMinutesGoal = 20; p.newCardsPerDay = 10;
+        p.planOverrides = null; p.dailyMinutesGoal = 35; p.newCardsPerDay = 15;
         progress.save(p);
         this.onShow();
       }
