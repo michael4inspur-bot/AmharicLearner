@@ -29,8 +29,9 @@
     </view>
     <view class="muted" style="margin-top:12rpx">用户 ID：{{userId || '（未登录）'}}</view>
     <view class="divider"></view>
+    <view class="muted" style="margin-bottom:10rpx">配置后进度会自动同步；换手机时用"从服务器恢复"。</view>
     <view class="row">
-      <view class="btn outline small" bindtap="upload">上传进度</view>
+      <view class="btn outline small" bindtap="upload">立即上传</view>
       <view style="width:12rpx"></view>
       <view class="btn outline small" bindtap="download">从服务器恢复</view>
     </view>

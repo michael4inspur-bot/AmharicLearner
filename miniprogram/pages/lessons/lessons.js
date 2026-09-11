@@ -24,5 +24,6 @@ Page({
   },
   open(e) { wx.navigateTo({ url: `/pages/lesson/lesson?id=${e.currentTarget.dataset.id}` }); },
   goFidel(e) { wx.navigateTo({ url: `/pages/fidel/fidel?group=${e.currentTarget.dataset.group}` }); },
-  goPlan() { wx.navigateTo({ url: '/pages/plan/plan' }); }
+  goPlan() { wx.navigateTo({ url: '/pages/plan/plan' }); },
+  goSearch() { wx.navigateTo({ url: '/pages/search/search' }); }
 });

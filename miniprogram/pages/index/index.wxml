@@ -54,6 +54,14 @@
     <view class="muted">本周目标：{{week.goal}}</view>
   </view>
 
+  <view class="card row between" bindtap="goSearch">
+    <view>
+      <view class="card-title">查词句</view>
+      <view class="muted">现场急用：输中文马上找到怎么说</view>
+    </view>
+    <view class="am">🔍</view>
+  </view>
+
   <view class="card row between" bindtap="goFidel">
     <view>
       <view class="card-title">Fidel 字母表</view>

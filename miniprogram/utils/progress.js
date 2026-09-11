@@ -44,9 +44,13 @@ function load() {
   return cache;
 }
 
+let onSaved = null;
+function setOnSaved(fn) { onSaved = fn; }
+
 function save(p) {
   cache = p;
   try { wx.setStorageSync(KEY, p); } catch (e) { /* ignore */ }
+  if (onSaved) onSaved(p);
   return p;
 }
 
@@ -262,7 +266,7 @@ function summary(p) {
 }
 
 module.exports = {
-  todayStr, load, save, reset, replace, currentPosition, todayLog, addMinutes, streak,
+  todayStr, load, save, reset, replace, setOnSaved, currentPosition, todayLog, addMinutes, streak,
   learnUnit, dueCards, gradeCard, srsStats, recordQuiz, completeMission, completeFidelGroup,
   setSelfReport, pushAi, applyPlanOverrides, summary
 };

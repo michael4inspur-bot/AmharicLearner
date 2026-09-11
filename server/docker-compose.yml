@@ -1,0 +1,11 @@
+services:
+  api:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATA_FILE: /data/store.json
+    volumes:
+      - ./data:/data
+    ports:
+      - "3000:3000"

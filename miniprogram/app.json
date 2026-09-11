@@ -8,7 +8,8 @@
     "pages/plan/plan",
     "pages/coach/coach",
     "pages/fidel/fidel",
-    "pages/profile/profile"
+    "pages/profile/profile",
+    "pages/search/search"
   ],
   "window": {
     "navigationBarBackgroundColor": "#0f6e56",
@@ -22,10 +23,22 @@
     "backgroundColor": "#ffffff",
     "borderStyle": "black",
     "list": [
-      { "pagePath": "pages/index/index", "text": "今日" },
-      { "pagePath": "pages/lessons/lessons", "text": "课程" },
-      { "pagePath": "pages/review/review", "text": "复习" },
-      { "pagePath": "pages/coach/coach", "text": "AI教练" }
+      {
+        "pagePath": "pages/index/index",
+        "text": "今日"
+      },
+      {
+        "pagePath": "pages/lessons/lessons",
+        "text": "课程"
+      },
+      {
+        "pagePath": "pages/review/review",
+        "text": "复习"
+      },
+      {
+        "pagePath": "pages/coach/coach",
+        "text": "AI教练"
+      }
     ]
   },
   "style": "v2",

@@ -1,0 +1,26 @@
+<view class="page">
+  <input class="input" value="{{q}}" placeholder="输入中文 / 转写 / 阿姆哈拉语，例如：多少钱、sint、ውሃ" bindinput="onInput" bindconfirm="onConfirm" confirm-type="search" focus />
+  <view class="muted" style="margin:12rpx 0">长按可复制阿姆哈拉语原文给对方看。</view>
+
+  <view wx:if="{{!q && recent.length}}" class="card">
+    <view class="muted">最近搜索</view>
+    <view class="chips"><view class="chip" wx:for="{{recent}}" wx:key="*this" data-q="{{item}}" bindtap="useRecent">{{item}}</view></view>
+  </view>
+
+  <view class="card" wx:if="{{q && !results.length}}"><view class="empty">没找到。可以去"AI 教练"问一句。</view></view>
+
+  <view class="card res" wx:for="{{results}}" wx:key="id">
+    <view class="row between">
+      <view class="grow" data-text="{{item.am}}" bindlongpress="copy">
+        <view class="am">{{item.am}}</view>
+        <view class="rom">{{item.rom}}</view>
+        <view class="zh">{{item.zh}}</view>
+        <view class="muted" wx:if="{{item.note}}">{{item.note}}</view>
+      </view>
+      <view class="acts">
+        <view class="btn outline small" data-id="{{item.id}}" bindtap="addCard">+闪卡</view>
+        <view class="muted unit" data-unit="{{item.unit}}" bindtap="openUnit">{{item.unitTitle}} ›</view>
+      </view>
+    </view>
+  </view>
+</view>

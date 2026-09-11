@@ -103,5 +103,6 @@ Page({
 
   goPlan() { wx.navigateTo({ url: '/pages/plan/plan' }); },
   goProfile() { wx.navigateTo({ url: '/pages/profile/profile' }); },
+  goSearch() { wx.navigateTo({ url: '/pages/search/search' }); },
   goFidel() { wx.navigateTo({ url: `/pages/fidel/fidel?group=${this.data.week.fidelGroup}` }); }
 });

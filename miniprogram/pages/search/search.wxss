@@ -1,0 +1,5 @@
+.chips { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 10rpx; }
+.chip { background: #f1f4f2; border-radius: 999rpx; padding: 8rpx 20rpx; font-size: 26rpx; }
+.res { padding: 20rpx 28rpx; }
+.acts { text-align: right; flex-shrink: 0; margin-left: 16rpx; }
+.unit { font-size: 22rpx; margin-top: 10rpx; }

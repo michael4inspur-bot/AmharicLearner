@@ -4,3 +4,4 @@
 .unit-state { text-align: right; }
 .mission { margin-top: 16rpx; padding-top: 16rpx; border-top: 2rpx dashed var(--border); font-size: 26rpx; color: #5a615d; }
 .link { color: var(--primary); }
+.search-entry { background: #fff; border-radius: 999rpx; padding: 18rpx 28rpx; color: var(--muted); margin-bottom: 20rpx; font-size: 28rpx; }

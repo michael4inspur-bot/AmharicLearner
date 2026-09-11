@@ -14,7 +14,8 @@
 | Fidel | 33 个基础辅音 × 7 序全表，分 5 批渐进学习，认读自测 |
 | 计划 | 8 周计划、每周"为什么学"、实战任务、里程碑；展示 AI 调整 |
 | AI 教练 | DeepSeek 进度诊断（优势/薄弱/风险/建议/未来 7 天）、计划调整（按周改动 + 依据，可一键采纳）、随时问教练 |
-| 我的 | 每日目标、新词上限、开始日期、后台地址、进度上传/恢复 |
+| 查词句 | 现场急用：中文 / 转写 / 阿姆哈拉语模糊搜索全部词句，长按复制，可直接加入闪卡 |
+| 我的 | 每日目标、新词上限、开始日期、后台地址、进度自动同步 / 恢复 |
 
 ## 目录
 
@@ -26,7 +27,8 @@ miniprogram/          微信小程序（原生 WXML/WXSS/JS，无第三方依赖
   utils/srs.js        SM-2 算法
   utils/progress.js   进度存储、统计、给 AI 的摘要
   utils/api.js        后台请求与登录
-  pages/              9 个页面
+  utils/sync.js       进度自动同步
+  pages/              10 个页面
 server/               Node.js + Express 后台
   src/deepseek.js     DeepSeek Chat Completions 调用
   src/prompts.js      诊断 / 调整 / 教练提示词（含成人学习原则）
@@ -57,8 +59,15 @@ API（均以 `/api` 开头）：
 | POST | /ai/chat | `{messages, summary}` → 教练回复 |
 | GET | /ai/history | 最近的 AI 记录 |
 
-部署到公网时需要 HTTPS（可用 Nginx + Let's Encrypt 反代），并在微信公众平台
-「开发 → 开发设置 → 服务器域名」中把域名加入 request 合法域名。
+Docker 部署：
+
+```bash
+cd server && cp .env.example .env   # 填 DEEPSEEK_API_KEY
+docker compose up -d --build        # 数据持久化在 server/data/
+```
+
+部署到公网时需要 HTTPS（`server/nginx.example.conf` 是 Nginx + Let's Encrypt 反代示例），
+并在微信公众平台「开发 → 开发设置 → 服务器域名」中把域名加入 request 合法域名。
 
 ### 2. 小程序
 
