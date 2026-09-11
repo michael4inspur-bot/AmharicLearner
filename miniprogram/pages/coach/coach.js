@@ -63,7 +63,8 @@ Page({
     this.setData({ loading: '' });
     const msg = err.message || '请求失败';
     const hint = err.code === 'NO_ENV' ? '\n\n请管理员在 miniprogram/config.js 填写云开发环境 id。' : '';
-    wx.showModal({ title: 'AI 请求失败', content: msg + hint, showCancel: false });
+    const quota = /已用完/.test(String(err.message || '') + String(err.raw || ''));
+    wx.showModal({ title: quota ? '今日额度已用完' : 'AI 请求失败', content: msg + hint, showCancel: false });
   },
 
   async diagnose() {

@@ -33,6 +33,10 @@
   <view class="card">
     <view class="card-title">云端同步（微信云开发 + DeepSeek）</view>
     <view class="muted">{{cloudReady ? '✓ 已配置云环境，进度会自动同步' : '✗ 还没配置云环境，请管理员在 miniprogram/config.js 填写 cloudEnv'}}</view>
+    <view class="usage" wx:if="{{usage}}">
+      <view class="usage-line">今日用量：AI {{usage.ai.used}}/{{usage.ai.limit}} · 语音 {{usage.tts.used}}/{{usage.tts.limit}} · 评分 {{usage.stt.used}}/{{usage.stt.limit}}</view>
+      <view class="muted">本月语音字符 {{usage.monthChars.used}}/{{usage.monthChars.limit}}</view>
+    </view>
     <view class="divider"></view>
     <view class="muted" style="margin-bottom:10rpx">换手机时先在旧手机"立即上传"，再在新手机"从云端恢复"。</view>
     <view class="row">
@@ -40,6 +44,16 @@
       <view style="width:12rpx"></view>
       <view class="btn outline small" bindtap="download">从云端恢复</view>
     </view>
+  </view>
+
+  <view class="card" wx:if="{{isAdmin && team}}">
+    <view class="card-title">团队用量（7 天）</view>
+    <view class="team-row list-item" wx:for="{{team}}" wx:key="openid">
+      <view class="team-id">…{{item.short}}</view>
+      <view class="team-nums">AI {{item.ai}} · 语音 {{item.tts}} · 评分 {{item.stt}} · 字符 {{item.ttsChars}}</view>
+      <view class="team-date muted">{{item.lastActive}}</view>
+    </view>
+    <view class="empty" wx:if="{{!team.length}}">还没有人使用</view>
   </view>
 
   <view class="card">

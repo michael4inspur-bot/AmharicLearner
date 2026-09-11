@@ -49,5 +49,7 @@ module.exports = {
   aiHistory: () => call('ai.history'),
   ttsGet: (text, voice, rate) => call('tts.get', { text, voice, rate }),
   ttsBatch: (items, voice, rate) => call('tts.batch', { items, voice, rate }),
-  sttScore: (fileID, target) => call('stt.score', { fileID, target })
+  sttScore: (fileID, target) => call('stt.score', { fileID, target }),
+  usageGet: () => call('usage.get'),
+  adminUsage: () => call('admin.usage')
 };

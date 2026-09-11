@@ -87,8 +87,10 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 | `tts.get` | `{text, voice: 'female'\|'male', rate: 'normal'\|'slow'}` | 合成朗读，返回 `{url, key}`；命中 `tts_cache` 不再调 Azure |
 | `tts.batch` | `{items: [{id, text}], voice, rate}`（最多 40 条） | 批量取 url，返回 `{urls: {id: url}}`，缺失项并行生成 |
 | `stt.score` | `{fileID, target}` | 识别云存储里的录音并评分，返回 `{transcript, score, words}`；处理完删除录音 |
+| `usage.get` | 无 | 本人今日 AI / 语音 / 评分用量与上限，本月语音字符 |
+| `admin.usage` | 无 | 管理员（`ADMIN_OPENIDS`）查看最近 7 天各用户用量 |
 
-AI 动作（`ai.diagnose` / `ai.adjustPlan` / `ai.chat`）每人每天 20 次；`tts` 缓存未命中每人每天 300 次，`stt.score` 每人每天 100 次。DeepSeek 与 Azure 密钥只存在云函数环境变量里。
+每人每日上限默认：AI（`ai.diagnose` / `ai.adjustPlan` / `ai.chat`）20 次、`tts` 缓存未命中 300 次、`stt.score` 100 次；全体用户本月语音字符默认 40 万。可用云函数环境变量 `AI_DAILY_LIMIT`、`TTS_DAILY_LIMIT`、`STT_DAILY_LIMIT`、`TTS_MONTHLY_CHARS_LIMIT` 调整；`ADMIN_OPENIDS`（逗号分隔 openid）指定谁能在「我的」页看到团队用量。DeepSeek 与 Azure 密钥只存在云函数环境变量里。
 
 ## 学习计划概览
 

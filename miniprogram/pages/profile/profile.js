@@ -3,7 +3,7 @@ const api = require('../../utils/api.js');
 const audio = require('../../utils/audio.js');
 
 Page({
-  data: { cloudReady: false, goal: 20, newCards: 10, startDate: '', voice: 'female', rate: 'normal', stats: {}, streak: 0, totalMinutes: 0, days: 0, quizzes: 0 },
+  data: { cloudReady: false, goal: 20, newCards: 10, startDate: '', voice: 'female', rate: 'normal', stats: {}, streak: 0, totalMinutes: 0, days: 0, quizzes: 0, usage: null, isAdmin: false, team: null },
   onShow() {
     const p = progress.load();
     const totalMinutes = Object.values(p.logs).reduce((a, l) => a + (l.minutes || 0), 0);
@@ -14,6 +14,18 @@ Page({
       days: Object.keys(p.logs).filter((k) => p.logs[k].minutes > 0).length,
       quizzes: p.quizScores.length
     });
+    if (api.configured()) this.loadUsage();
+  },
+  async loadUsage() {
+    let usage;
+    try { usage = await api.usageGet(); } catch (e) { return; }
+    if (!usage) return;
+    this.setData({ usage, isAdmin: !!usage.isAdmin });
+    if (!usage.isAdmin) return;
+    try {
+      const { users } = await api.adminUsage();
+      this.setData({ team: (users || []).map((u) => ({ ...u, short: String(u.openid || '').slice(-6) })) });
+    } catch (e) { /* 静默 */ }
   },
   onVoice(e) { const { voice } = audio.setSettings({ voice: e.detail.value }); this.setData({ voice }); },
   onRate(e) { const { rate } = audio.setSettings({ rate: e.detail.value }); this.setData({ rate }); },
