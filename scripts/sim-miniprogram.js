@@ -24,7 +24,7 @@ global.wx = {
   getStorageSync: (k) => store[k],
   setStorageSync: (k, v) => { store[k] = JSON.parse(JSON.stringify(v)); },
   removeStorageSync: (k) => { delete store[k]; },
-  showToast() {}, showModal() {}, setNavigationBarTitle() {}, navigateTo() {}, switchTab() {},
+  showToast() {}, showModal() {}, showActionSheet() {}, setNavigationBarTitle() {}, navigateTo() {}, switchTab() {},
   navigateBack() {}, redirectTo() {}, setClipboardData() {},
   authorize({ success }) { if (success) success(); },
   createInnerAudioContext() {
@@ -75,9 +75,9 @@ const api = require(path.join(root, 'utils/api.js'));
 const sync = require(path.join(root, 'utils/sync.js'));
 const audio = require(path.join(root, 'utils/audio.js'));
 
-['index/index', 'lessons/lessons', 'lesson/lesson', 'review/review', 'quiz/quiz', 'plan/plan', 'coach/coach', 'fidel/fidel', 'profile/profile', 'search/search', 'speak/speak']
+['index/index', 'lessons/lessons', 'lesson/lesson', 'review/review', 'quiz/quiz', 'plan/plan', 'coach/coach', 'fidel/fidel', 'profile/profile', 'search/search', 'speak/speak', 'admin/admin']
   .forEach((p) => require(path.join(root, 'pages', p + '.js')));
-assert.equal(pages.length, 11, 'pages loaded');
+assert.equal(pages.length, 12, 'pages loaded');
 require(path.join(root, 'app.js'));
 global.__app.onLaunch();
 
@@ -188,6 +188,27 @@ async function main() {
   // 新学工作场景单元（放在同步断言之后，避免影响"未变化不重复上传"）
   progress.learnUnit('u14');
   assert.ok(progress.load().unitsLearned.u14, 'u14 已学');
+
+  // 管理端：昵称、公告、用户列表、系统面板、摘要同步
+  await assert.rejects(api.adminUsers(), (e) => /无权限/.test(e.message), '非管理员被拒');
+  await api.setProfile('李工');
+  process.env.ADMIN_OPENIDS = 'sim-user';
+  const adminList = await api.adminUsers();
+  const meRow = adminList.users.find((u) => u.isSelf);
+  assert.ok(meRow, '列表含本人');
+  assert.equal(meRow.nickname, '李工');
+  await api.adminSetAnnouncement('周五实战');
+  const ann = await api.announcement();
+  assert.equal(ann.text, '周五实战');
+  const sys = await api.adminSystem();
+  assert.equal(sys.aiDaily.length, 14);
+  assert.ok(typeof sys.ttsCache.count === 'number');
+  progress.addMinutes(1); // 触发进度变化后同步，带 meta
+  assert.equal(await sync.syncNow(), true, '进度变化后再次上传');
+  const userDoc = db._users.get('sim-user');
+  assert.ok(userDoc, 'users 摘要已写入');
+  assert.equal(userDoc.stars, progress.load().stars || 0, '摘要 stars 与本地一致');
+  delete process.env.ADMIN_OPENIDS;
 
   // 用量与配额
   const usage = await api.usageGet();

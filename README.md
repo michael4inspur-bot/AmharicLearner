@@ -16,6 +16,7 @@
 | AI 教练 | DeepSeek 进度诊断（优势/薄弱/风险/建议/未来 7 天）、计划调整（按周改动 + 依据，可一键采纳）、随时问教练 |
 | 查词句 | 现场急用：中文 / 转写 / 阿姆哈拉语模糊搜索全部词句，长按复制，可直接加入闪卡 |
 | 语音 | Azure 阿姆哈拉语朗读（课程、闪卡、搜索结果、教练回复，男 / 女声、正常 / 慢速）、小测与闪卡听力题、跟读录音、发音评分（分数 + 识别文字 + 逐词对错） |
+| 管理 | 管理员（`ADMIN_OPENIDS`）在小程序内管理用户账号（暂停 / 恢复 / 删除）、查看本月语音字符、14 天 AI 调用、语音缓存并清理、最近错误，发首页公告；用户自填昵称 |
 | 积分与徽章 | 复习清空 10 星、学完单元 30、小测 20（≥80% 再 +10）、实战 40、跟读评分 8、Fidel 批次 15；8 枚徽章（开口者、七日连续、电话达人、现场指挥、敬语大师…），首页提示下一枚 |
 | 我的 | 每日目标、新词上限、开始日期、声音与语速、云端同步状态、立即上传 / 从云端恢复 |
 
@@ -61,13 +62,15 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 
 1. 在 [mp.weixin.qq.com](https://mp.weixin.qq.com) 注册个人主体小程序（需大陆身份证、手机号、本人微信），把 AppID 填进 `project.config.json` 的 `appid`。
 2. 用微信开发者工具打开仓库根目录，点工具栏「云开发」，创建环境，把环境 id 填进 `miniprogram/config.js` 的 `cloudEnv`。云开发为付费套餐，个人最低档约每月 20 元，以控制台为准。
-3. 云开发控制台 → 数据库 → 新建集合 `progress`、`ai_logs` 和 `tts_cache`，权限选「仅创建者可读写」。
+3. 云开发控制台 → 数据库 → 新建集合 `progress`、`ai_logs`、`tts_cache`、`users`、`settings`、`error_logs`，权限选「仅创建者可读写」。
 4. 云开发控制台 → 云函数 → `api` → 配置 → 环境变量，添加 `DEEPSEEK_API_KEY`（[platform.deepseek.com](https://platform.deepseek.com) 申请）。可选 `DEEPSEEK_MODEL`，默认 `deepseek-chat`。
 5. 注册 [Azure](https://portal.azure.com) 账号，创建「语音服务」（Speech）资源，定价层选 F0 免费（每月 50 万字符合成、5 小时识别），区域建议 `southeastasia` 或 `eastasia`。
 6. 同一环境变量页添加 `AZURE_SPEECH_KEY`（资源的密钥）和 `AZURE_SPEECH_REGION`（如 `southeastasia`）。
 7. 语音音频缓存在云存储 `tts/` 目录和第 3 步的 `tts_cache` 集合里；跟读需要小程序录音权限，真机首次录音会弹授权。
 
 5. 可选：Fidel 专用字体。从 [Noto Sans Ethiopic](https://fonts.google.com/noto/specimen/Noto+Sans+Ethiopic) 下载 Bold 的 `.ttf`（或转成 `.woff`），上传到云存储任意目录，把文件的 fileID（`cloud://...`）填进 `miniprogram/config.js` 的 `fidelFontFileID`。不填则用手机系统自带的埃塞文字字体。
+
+6. 管理员：在小程序「我的」页长按“我的账号”复制自己的 openid，填入云函数环境变量 `ADMIN_OPENIDS`（多人用逗号分隔）。
 
 ### 3. 部署与分发
 
@@ -92,6 +95,10 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 | `stt.score` | `{fileID, target}` | 识别云存储里的录音并评分，返回 `{transcript, score, words}`；处理完删除录音 |
 | `usage.get` | 无 | 本人今日 AI / 语音 / 评分用量与上限，本月语音字符 |
 | `admin.usage` | 无 | 管理员（`ADMIN_OPENIDS`）查看最近 7 天各用户用量 |
+| `user.setProfile` / `user.me` | `{nickname}` / 无 | 设置昵称 / 查看自己的 openid 与状态 |
+| `announcement.get` | 无 | 首页公告 |
+| `admin.users` / `admin.setStatus` / `admin.deleteUser` | 见 spec | 用户列表、暂停 / 恢复、删除（需 `confirm: true`） |
+| `admin.system` / `admin.clearTtsCache` / `admin.setAnnouncement` | 见 spec | 系统面板、清理语音缓存（需 `confirm`）、发公告 |
 
 每人每日上限默认：AI（`ai.diagnose` / `ai.adjustPlan` / `ai.chat`）20 次、`tts` 缓存未命中 300 次、`stt.score` 100 次；全体用户本月语音字符默认 40 万。可用云函数环境变量 `AI_DAILY_LIMIT`、`TTS_DAILY_LIMIT`、`STT_DAILY_LIMIT`、`TTS_MONTHLY_CHARS_LIMIT` 调整；`ADMIN_OPENIDS`（逗号分隔 openid）指定谁能在「我的」页看到团队用量。DeepSeek 与 Azure 密钥只存在云函数环境变量里。
 
