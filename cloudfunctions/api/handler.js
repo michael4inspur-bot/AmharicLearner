@@ -1,8 +1,10 @@
 // 云函数纯逻辑。不直接依赖 wx-server-sdk，所有外部依赖通过 ctx 注入。
-// ctx = { openid, db, deepseek, now? }
+// ctx = { openid, db, deepseek, azure, storage, now? }
 const prompts = require('./prompts.js');
+const { handleSpeech } = require('./speech.js');
 
 const DAILY_AI_LIMIT = 20;
+const AI_LIMIT_TYPES = ['diagnosis', 'plan', 'chat']; // 每日 AI 上限只统计这三类，tts/stt 另计
 const HISTORY_LIMIT = 30;
 const CHAT_LOG_TTL_DAYS = 7;
 const EAT_OFFSET_HOURS = 3; // 东非时间 UTC+3
@@ -21,7 +23,7 @@ function dayStartIso(now) {
 
 async function withAi(ctx, now, type, request, run) {
   const { openid, db, deepseek } = ctx;
-  const used = await db.countAiSince(openid, dayStartIso(now));
+  const used = await db.countAiSince(openid, dayStartIso(now), AI_LIMIT_TYPES);
   if (used >= DAILY_AI_LIMIT) {
     return fail('BAD_REQUEST', `今天的 AI 次数已用完（${DAILY_AI_LIMIT} 次），明天再来`);
   }
@@ -51,6 +53,9 @@ async function handle(action, data, ctx) {
   const { openid, db, deepseek } = ctx;
   const now = ctx.now ? ctx.now() : new Date();
   data = data || {};
+
+  if (typeof action !== 'string') return fail('BAD_REQUEST', `未知 action: ${action}`);
+  if (action.startsWith('tts.') || action.startsWith('stt.')) return handleSpeech(action, data, ctx);
 
   switch (action) {
     case 'progress.get': {

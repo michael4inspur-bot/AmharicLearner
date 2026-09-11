@@ -118,3 +118,17 @@ test('chat 日志超过 7 天被清理', async () => {
   assert.equal(chats.length, 1);
   assert.equal(chats[0].request, 'new');
 });
+
+test('AI 上限只统计 diagnosis/plan/chat：写入 20 条 tts 日志后 ai.chat 仍成功', async () => {
+  const db = createFakeDb();
+  const ds = createFakeDeepseek(() => 'ok');
+  for (let i = 0; i < DAILY_AI_LIMIT; i++) {
+    await db.addAiLog({ openid: 'u1', type: 'tts', date: '2026-09-11T09:00:00.000Z', request: 'x', result: { chars: 1, key: String(i) } });
+  }
+  await db.addAiLog({ openid: 'u1', type: 'stt', date: '2026-09-11T09:00:00.000Z', request: 'x', result: { transcript: '', score: 0 } });
+  assert.equal(await db.countAiSince('u1', '2026-09-11T00:00:00.000Z'), DAILY_AI_LIMIT + 1);
+  assert.equal(await db.countAiSince('u1', '2026-09-11T00:00:00.000Z', ['tts']), DAILY_AI_LIMIT);
+  assert.equal(await db.countAiSince('u1', '2026-09-11T00:00:00.000Z', ['diagnosis', 'plan', 'chat']), 0);
+  const res = await handle('ai.chat', { messages: [{ role: 'user', content: 'hi' }] }, ctx('u1', db, ds));
+  assert.equal(res.ok, true);
+});

@@ -2,16 +2,18 @@
 function createFakeDb() {
   const progress = new Map();
   const logs = [];
+  const ttsCache = new Map();
   return {
     _logs: logs,
+    _ttsCache: ttsCache,
     async getProgress(openid) {
       return progress.has(openid) ? { ...progress.get(openid) } : null;
     },
     async putProgress(openid, doc) {
       progress.set(openid, { progress: doc.progress, updatedAt: doc.updatedAt });
     },
-    async countAiSince(openid, sinceIso) {
-      return logs.filter((l) => l.openid === openid && l.date >= sinceIso).length;
+    async countAiSince(openid, sinceIso, types) {
+      return logs.filter((l) => l.openid === openid && l.date >= sinceIso && (!types || types.includes(l.type))).length;
     },
     async addAiLog(entry) {
       logs.push({ ...entry, _id: String(logs.length + 1) });
@@ -22,6 +24,13 @@ function createFakeDb() {
         .sort((a, b) => b.date.localeCompare(a.date))
         .slice(0, limit)
         .map(({ type, date, request, result }) => ({ type, date, request, result }));
+    },
+    async getTtsCache(key) {
+      return ttsCache.has(key) ? { ...ttsCache.get(key) } : null;
+    },
+    async putTtsCache(doc) {
+      const { _id, ...rest } = doc;
+      ttsCache.set(_id, { _id, ...rest });
     },
     async pruneAiLogs(openid, { keep, chatBefore }) {
       for (let i = logs.length - 1; i >= 0; i--) {
