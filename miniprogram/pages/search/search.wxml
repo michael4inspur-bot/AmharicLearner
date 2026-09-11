@@ -1,27 +1,37 @@
-<view class="page">
-  <input class="input" value="{{q}}" placeholder="输入中文 / 转写 / 阿姆哈拉语，例如：多少钱、sint、ውሃ" bindinput="onInput" bindconfirm="onConfirm" confirm-type="search" focus />
-  <view class="muted" style="margin:12rpx 0">长按可复制阿姆哈拉语原文给对方看。</view>
+<view class="page no-tab">
+  <view class="searchbox">
+    <view class="search-icon"><x-icon name="search" size="34" color="#B08A78" /></view>
+    <input class="input search-input" value="{{q}}" placeholder="输入中文 / 转写 / 阿姆哈拉语，例如：多少钱、sint、ውሃ" bindinput="onInput" bindconfirm="onConfirm" confirm-type="search" focus />
+  </view>
+  <view class="hint">长按阿姆哈拉语原文可复制，直接给对方看。</view>
 
-  <view wx:if="{{!q && recent.length}}" class="card">
-    <view class="muted">最近搜索</view>
-    <view class="chips"><view class="chip" wx:for="{{recent}}" wx:key="*this" data-q="{{item}}" bindtap="useRecent">{{item}}</view></view>
+  <block wx:if="{{!q && recent.length}}">
+    <view class="section-title">最近搜索</view>
+    <view class="chips">
+      <view class="tag white chip" wx:for="{{recent}}" wx:key="*this" data-q="{{item}}" bindtap="useRecent">{{item}}</view>
+    </view>
+  </block>
+
+  <view class="card" wx:if="{{q && !results.length}}">
+    <view class="empty">没找到。可以去「AI 教练」问一句。</view>
   </view>
 
-  <view class="card" wx:if="{{q && !results.length}}"><view class="empty">没找到。可以去"AI 教练"问一句。</view></view>
-
-  <view class="card res" wx:for="{{results}}" wx:key="id">
-    <view class="row between">
-      <view class="grow" data-text="{{item.am}}" bindlongpress="copy">
-        <view class="am">{{item.am}}</view>
-        <view class="rom">{{item.rom}}</view>
-        <view class="zh">{{item.zh}}</view>
-        <view class="muted" wx:if="{{item.note}}">{{item.note}}</view>
+  <view class="word-row" wx:for="{{results}}" wx:key="id">
+    <view class="grow" data-text="{{item.am}}" bindlongpress="copy">
+      <view class="am word-am">{{item.am}}</view>
+      <view class="rom">{{item.rom}}</view>
+      <view class="zh">{{item.zh}}</view>
+      <view class="note" wx:if="{{item.note}}">{{item.note}}</view>
+      <view class="unit-link" data-unit="{{item.unit}}" catchtap="openUnit">
+        <text>{{item.unitTitle}}</text>
+        <x-icon name="chevron-right" size="22" color="#B08A78" />
       </view>
-      <view class="acts">
-        <view class="btn outline small" data-text="{{item.am}}" catchtap="play" style="width:64rpx;height:64rpx;padding:0;line-height:64rpx;border-radius:50%;margin-bottom:10rpx">🔊</view>
-        <view class="btn outline small" data-id="{{item.id}}" bindtap="addCard">+闪卡</view>
-        <view class="muted unit" data-unit="{{item.unit}}" bindtap="openUnit">{{item.unitTitle}} ›</view>
-      </view>
+    </view>
+    <view class="square mint" data-text="{{item.am}}" catchtap="play">
+      <x-icon name="speaker" size="36" color="#2F7A5E" />
+    </view>
+    <view class="square lav" data-id="{{item.id}}" catchtap="addCard">
+      <x-icon name="plus" size="36" color="#4C3D8F" />
     </view>
   </view>
 </view>

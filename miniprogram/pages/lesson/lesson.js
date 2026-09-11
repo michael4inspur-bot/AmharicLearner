@@ -1,4 +1,5 @@
 const progress = require('../../utils/progress.js');
+const points = require('../../utils/points.js');
 const vocab = require('../../data/vocab.js');
 const audio = require('../../utils/audio.js');
 
@@ -21,13 +22,22 @@ Page({
     if (min > 0) progress.addMinutes(Math.min(min, 30));
     audio.stop();
   },
+  back() { wx.navigateBack(); },
   switchTab(e) { this.setData({ tab: e.currentTarget.dataset.tab }); },
   toggleRom() { this.setData({ showRom: !this.data.showRom }); },
   toggleZh() { this.setData({ showZh: !this.data.showZh }); },
   learn() {
-    progress.learnUnit(this.data.unit.id);
+    const unit = this.data.unit;
+    const first = !progress.load().unitsLearned[unit.id];
+    progress.learnUnit(unit.id);
     this.setData({ learned: true });
-    wx.showToast({ title: `已加入复习 ${this.data.unit.items.length} 张卡`, icon: 'none' });
+    if (first) {
+      points.award('learn_unit');
+      points.celebrate();
+      wx.showToast({ title: `已加入闪卡 ${unit.items.length} 张 · +30 星`, icon: 'none' });
+    } else {
+      wx.showToast({ title: `已补齐新卡，共 ${unit.items.length} 张`, icon: 'none' });
+    }
   },
   quiz() { wx.navigateTo({ url: `/pages/quiz/quiz?scope=${this.data.unit.id}` }); },
   copy(e) {

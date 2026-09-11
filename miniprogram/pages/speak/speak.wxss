@@ -1,20 +1,75 @@
-.am.big { font-size: 56rpx; text-align: center; margin: 12rpx 0; }
-.rom, .zh { text-align: center; }
-.muted { text-align: center; }
-.hint { margin-top: 8rpx; font-size: 24rpx; }
-.btn.rec { margin-top: 20rpx; padding: 32rpx 0; font-size: 32rpx; user-select: none; }
-.btn.rec.on { background: var(--danger); }
-.acts { margin-top: 16rpx; }
-.gap { width: 16rpx; }
-.btn.dim { opacity: 0.5; }
-button.btn { width: 100%; }
-.score { font-size: 56rpx; font-weight: 700; }
-.score.good { color: var(--primary); }
-.score.mid { color: var(--accent); }
-.score.bad { color: var(--danger); }
-.transcript { font-size: 36rpx; margin-top: 8rpx; text-align: left; }
-.transcript.empty-text { font-size: 28rpx; color: var(--muted); }
-.words { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 8rpx; }
-.word { font-size: 34rpx; padding: 8rpx 20rpx; border-radius: 12rpx; }
-.word.ok { background: var(--primary-light); color: var(--primary); }
-.word.miss { background: #fbe9e7; color: var(--danger); text-decoration: line-through; }
+/* 跟读评分 · 方案 C */
+.page.no-tab { padding-top: 40rpx; padding-bottom: 80rpx; }
+
+.crumb { display: flex; align-items: center; gap: 8rpx; font-size: 24rpx; color: var(--muted); }
+.crumb:active { opacity: 0.6; }
+.crumb-text { margin-left: 8rpx; }
+
+/* 词句白卡 */
+.word-card {
+  margin-top: 24rpx;
+  padding: 48rpx 40rpx;
+  text-align: center;
+  border-radius: 56rpx;
+}
+.am.big { font-size: 68rpx; line-height: 1.25; }
+.word-card .rom { margin-top: 12rpx; }
+.big-zh { font-size: 36rpx; font-weight: 800; margin-top: 8rpx; }
+.note { font-size: 24rpx; color: var(--muted); margin-top: 8rpx; }
+.chips { display: flex; justify-content: center; flex-wrap: wrap; gap: 16rpx; margin-top: 24rpx; }
+.chip {
+  height: 80rpx; padding: 0 28rpx; border-radius: 999rpx;
+  display: flex; align-items: center; gap: 12rpx;
+  font-size: 26rpx; font-weight: 800;
+}
+.chip.mint { background: var(--mint); color: var(--mint-deep); }
+.chip.lav { background: var(--lav); color: var(--lav-ink); }
+.chip.peach { background: var(--peach); color: var(--accent); }
+.chip.dim { opacity: 0.45; }
+.chip:active { transform: scale(0.95); }
+
+/* 波形装饰 */
+.wave {
+  display: flex; align-items: flex-end; justify-content: center;
+  gap: 10rpx; height: 104rpx; margin: 36rpx 0 28rpx;
+}
+.bar { width: 12rpx; border-radius: 6rpx; background: var(--accent); }
+.bar.o1 { opacity: 0.28; }
+.bar.o2 { opacity: 0.6; }
+.bar.o3 { opacity: 1; }
+
+/* 录音圆钮 */
+.rec-wrap { display: flex; flex-direction: column; align-items: center; gap: 20rpx; margin: 28rpx 0 8rpx; }
+.rec {
+  width: 192rpx; height: 192rpx; border-radius: 999rpx;
+  background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 0 28rpx var(--peach), 0 32rpx 68rpx rgba(194, 65, 12, 0.35);
+}
+.rec.on { background: #8A2C08; transform: scale(0.96); }
+.rec-hint { font-size: 24rpx; font-weight: 700; color: var(--muted); }
+
+.score-btn { width: 100%; margin-top: 48rpx; }
+.hint { text-align: center; font-size: 26rpx; color: var(--muted); margin: 40rpx 0; }
+
+/* 结果白卡 */
+.result { margin-top: 32rpx; }
+.res-top { display: flex; align-items: center; gap: 28rpx; }
+.ring {
+  width: 136rpx; height: 136rpx; border-radius: 999rpx;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.ring-in {
+  width: 108rpx; height: 108rpx; border-radius: 999rpx; background: var(--card);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 44rpx; font-weight: 800; color: var(--mint-deep);
+}
+.res-meta { display: flex; flex-direction: column; gap: 8rpx; }
+.res-title { font-size: 32rpx; font-weight: 800; }
+.res-sub { font-size: 24rpx; color: var(--muted); }
+
+.words { display: flex; flex-wrap: wrap; gap: 16rpx; margin-top: 24rpx; }
+.word { font-size: 36rpx; padding: 12rpx 24rpx; border-radius: 24rpx; }
+.word.ok { background: var(--mint); color: var(--mint-deep); }
+.word.miss { background: var(--peach); color: var(--accent); text-decoration: line-through; }
+.res-tip { font-size: 24rpx; color: var(--muted-2); line-height: 1.6; margin-top: 20rpx; }

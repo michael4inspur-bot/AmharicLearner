@@ -1,59 +1,83 @@
-<view class="page">
-  <view class="card">
-    <view class="muted">场景</view>
-    <view class="zh">{{unit.scene}}</view>
-    <view class="muted" style="margin-top:12rpx">为什么学</view>
-    <view class="zh">{{unit.why}}</view>
+<view class="page no-tab">
+  <view class="hero">
+    <view class="hero-blob"></view>
+    <view class="hero-back row" bindtap="back">
+      <x-icon name="chevron-left" size="30" color="#7C5A4C" />
+      <text class="hero-back-text">第 {{unit.week}} 周 · 单元</text>
+    </view>
+    <view class="hero-title">{{unit.title}}</view>
+    <view class="hero-scene">{{unit.scene}}</view>
+    <view class="hero-why">
+      <text class="why-label">为什么学 · </text>
+      <text>{{unit.why}}</text>
+    </view>
+    <view class="metas">
+      <view class="meta">{{unit.items.length}} 词</view>
+      <view class="meta">{{unit.dialog.length}} 句对话</view>
+      <view class="meta">约 15 分钟</view>
+      <view class="meta stars">
+        <x-icon name="star" size="26" color="#F59E0B" />
+        <text>+30</text>
+      </view>
+    </view>
   </view>
 
   <view class="tabs">
-    <view class="tab {{tab==='words'?'on':''}}" data-tab="words" bindtap="switchTab">词句 {{unit.items.length}}</view>
+    <view class="tab {{tab==='words'?'on':''}}" data-tab="words" bindtap="switchTab">词句</view>
     <view class="tab {{tab==='dialog'?'on':''}}" data-tab="dialog" bindtap="switchTab">对话</view>
     <view class="tab {{tab==='tips'?'on':''}}" data-tab="tips" bindtap="switchTab">用法提示</view>
   </view>
 
   <block wx:if="{{tab==='words'}}">
-    <view class="row" style="margin-bottom:12rpx">
-      <view class="btn outline small" bindtap="toggleRom">{{showRom?'隐藏':'显示'}}转写</view>
-      <view style="width:16rpx"></view>
-      <view class="btn outline small" bindtap="toggleZh">{{showZh?'隐藏':'显示'}}中文</view>
+    <view class="row gap toggles">
+      <view class="tag white" bindtap="toggleRom">{{showRom?'隐藏':'显示'}}转写</view>
+      <view class="tag white" bindtap="toggleZh">{{showZh?'隐藏':'显示'}}中文</view>
     </view>
-    <view class="card">
-      <view class="list-item row" wx:for="{{unit.items}}" wx:key="id" data-text="{{item.am}}" bindlongpress="copy">
-        <view class="grow">
-          <view class="am">{{item.am}}</view>
-          <view class="rom" wx:if="{{showRom}}">{{item.rom}}</view>
-          <view class="zh" wx:if="{{showZh}}">{{item.zh}}</view>
-          <view class="muted" wx:if="{{item.note && showZh}}">{{item.note}}</view>
-        </view>
-        <view class="acts">
-          <view class="icon-btn" data-text="{{item.am}}" catchtap="play">🔊</view>
-          <view class="icon-btn" data-id="{{item.id}}" catchtap="speakPage">🎤</view>
-        </view>
+    <view class="word-row" wx:for="{{unit.items}}" wx:key="id" data-text="{{item.am}}" bindlongpress="copy">
+      <view class="grow">
+        <view class="am word-am">{{item.am}}</view>
+        <view class="rom" wx:if="{{showRom}}">{{item.rom}}</view>
+        <view class="zh" wx:if="{{showZh}}">{{item.zh}}</view>
+        <view class="note" wx:if="{{item.note && showZh}}">{{item.note}}</view>
+      </view>
+      <view class="square mint" data-text="{{item.am}}" catchtap="play">
+        <x-icon name="speaker" size="36" color="#2F7A5E" />
+      </view>
+      <view class="square lav" data-id="{{item.id}}" catchtap="speakPage">
+        <x-icon name="mic" size="36" color="#4C3D8F" />
       </view>
     </view>
   </block>
 
-  <view class="card" wx:if="{{tab==='dialog'}}">
-    <view class="muted" style="margin-bottom:12rpx">先看着转写读，再遮住转写读，最后只看中文说出来。</view>
+  <block wx:if="{{tab==='dialog'}}">
+    <view class="dialog-hint">先看着转写读，再遮住转写读，最后只看中文说出来。</view>
     <view class="line {{item.who==='A'?'a':'b'}}" wx:for="{{unit.dialog}}" wx:key="index">
       <view class="who">{{item.who}}</view>
       <view class="bubble">
         <view class="row">
           <view class="am grow">{{item.am}}</view>
-          <view class="icon-btn" data-text="{{item.am}}" catchtap="play">🔊</view>
+          <view class="mini" data-text="{{item.am}}" catchtap="play">
+            <x-icon name="speaker" size="28" color="{{item.who==='A'?'#1E5C45':'#4C3D8F'}}" />
+          </view>
         </view>
         <view class="rom" wx:if="{{showRom}}">{{item.rom}}</view>
         <view class="zh">{{item.zh}}</view>
       </view>
     </view>
-    <view class="btn outline small" bindtap="toggleRom" style="margin-top:12rpx">{{showRom?'遮住':'显示'}}转写</view>
-  </view>
+    <view class="toggles">
+      <view class="tag white" bindtap="toggleRom">{{showRom?'遮住':'显示'}}转写</view>
+    </view>
+  </block>
 
   <view class="card" wx:if="{{tab==='tips'}}">
-    <view class="tip" wx:for="{{unit.tips}}" wx:key="index">• {{item}}</view>
+    <view class="tip" wx:for="{{unit.tips}}" wx:key="index">
+      <view class="tip-dot"></view>
+      <view class="grow">{{item}}</view>
+    </view>
   </view>
 
-  <view class="btn {{learned?'outline':''}}" bindtap="learn">{{learned ? '已加入复习（再点可补齐新卡）' : '学完了，加入闪卡复习'}}</view>
-  <view class="btn accent" bindtap="quiz">做 10 题小测</view>
+  <view class="footbar">
+    <view class="foot-main" bindtap="learn">{{learned ? '已加入闪卡，可补齐新卡' : '学完了，加入闪卡'}}</view>
+    <view class="foot-sub" bindtap="quiz">10 题小测</view>
+  </view>
 </view>

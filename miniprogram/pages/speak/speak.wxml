@@ -1,47 +1,79 @@
-<view class="page">
-  <view class="card" wx:if="{{item}}">
+<view class="page no-tab">
+  <view class="crumb" bindtap="back">
+    <x-icon name="chevron-left" size="28" color="#B08A78" />
+    <text class="crumb-text">跟读练习</text>
+  </view>
+
+  <view class="card word-card" wx:if="{{item}}">
     <view class="am big">{{item.am}}</view>
     <view class="rom">{{item.rom}}</view>
-    <view class="zh">{{item.zh}}</view>
-    <view class="muted" wx:if="{{item.note}}">{{item.note}}</view>
-  </view>
-
-  <view class="card">
-    <view class="btn outline" bindtap="playStandard">🔊 听标准音</view>
-
-    <view class="hint muted" wx:if="{{!canRecord}}">当前环境不支持录音，无法跟读评分。</view>
-    <block wx:else>
-      <view class="btn rec {{recording?'on':''}}" bindtouchstart="startRecord" bindtouchend="stopRecord" bindtouchcancel="stopRecord">
-        {{recording ? '🔴 录音中…松开结束' : '🎤 按住录音'}}
+    <view class="zh big-zh">{{item.zh}}</view>
+    <view class="note" wx:if="{{item.note}}">{{item.note}}</view>
+    <view class="chips">
+      <view class="chip mint" bindtap="playStandard">
+        <x-icon name="speaker" size="32" color="#1E5C45" />
+        <text>标准音</text>
       </view>
-      <view class="muted hint">最长 10 秒，说完松开</view>
-
-      <view class="row acts">
-        <view class="btn outline grow {{tempFilePath?'':'dim'}}" bindtap="playMine">▶ 听我的</view>
-        <view class="gap"></view>
-        <view class="btn outline grow {{tempFilePath?'':'dim'}}" bindtap="compare">🔁 交替对比</view>
+      <view class="chip lav {{tempFilePath?'':'dim'}}" bindtap="playMine">
+        <x-icon name="play" size="30" color="#4C3D8F" />
+        <text>听我的</text>
       </view>
-
-      <button class="btn accent" bindtap="score" disabled="{{loading || !tempFilePath}}" loading="{{loading}}">
-        {{loading ? '评分中…' : '评分'}}
-      </button>
-    </block>
-  </view>
-
-  <view class="card" wx:if="{{result}}">
-    <view class="row between">
-      <view class="card-title">得分</view>
-      <view class="score {{scoreClass}}">{{result.score}}</view>
+      <view class="chip peach {{tempFilePath?'':'dim'}}" bindtap="compare">
+        <x-icon name="swap" size="30" color="#C2410C" />
+        <text>交替</text>
+      </view>
     </view>
-    <view class="divider"></view>
-    <view class="muted">识别到的内容</view>
-    <view class="transcript" wx:if="{{result.transcript}}">{{result.transcript}}</view>
-    <view class="transcript empty-text" wx:else>{{noTranscriptText}}</view>
-    <block wx:if="{{result.words.length}}">
-      <view class="muted" style="margin-top:16rpx">逐词对照</view>
-      <view class="words">
-        <view class="word {{item.ok?'ok':'miss'}}" wx:for="{{result.words}}" wx:key="index">{{item.w}}</view>
+  </view>
+
+  <view class="wave {{recording?'pulse':''}}">
+    <view class="bar o1" style="height:24rpx"></view>
+    <view class="bar o2" style="height:48rpx"></view>
+    <view class="bar o3" style="height:80rpx"></view>
+    <view class="bar o3" style="height:104rpx"></view>
+    <view class="bar o2" style="height:60rpx"></view>
+    <view class="bar o3" style="height:88rpx"></view>
+    <view class="bar o2" style="height:40rpx"></view>
+    <view class="bar o2" style="height:72rpx"></view>
+    <view class="bar o3" style="height:100rpx"></view>
+    <view class="bar o2" style="height:52rpx"></view>
+    <view class="bar o1" style="height:28rpx"></view>
+    <view class="bar o2" style="height:64rpx"></view>
+    <view class="bar o3" style="height:92rpx"></view>
+    <view class="bar o2" style="height:44rpx"></view>
+    <view class="bar o1" style="height:20rpx"></view>
+  </view>
+
+  <view class="hint muted" wx:if="{{!canRecord}}">当前环境不支持录音，无法跟读评分。</view>
+  <block wx:else>
+    <view class="rec-wrap">
+      <view class="rec {{recording?'on':''}}" bindtouchstart="startRecord" bindtouchend="stopRecord" bindtouchcancel="stopRecord">
+        <x-icon name="mic" size="76" color="#FFFFFF" />
       </view>
-    </block>
+      <view class="rec-hint">{{recording ? '松开结束' : '按住录音，松开结束'}}</view>
+    </view>
+
+    <button class="btn accent score-btn" bindtap="score" disabled="{{loading || !tempFilePath}}" loading="{{loading}}">
+      {{loading ? '评分中…' : '评分'}}
+    </button>
+  </block>
+
+  <view class="card result" wx:if="{{result}}">
+    <view class="res-top">
+      <view class="ring" style="background: conic-gradient(#2F7A5E 0deg {{result.deg}}deg, #DDF3EA {{result.deg}}deg 360deg)">
+        <view class="ring-in">{{result.score}}</view>
+      </view>
+      <view class="grow res-meta">
+        <view class="res-title">{{result.title}}</view>
+        <view class="res-sub">识别出 {{result.okCount}} / {{result.total}} 个词</view>
+        <view class="stars">
+          <x-icon name="star" size="26" color="#F59E0B" />
+          <text>+8</text>
+        </view>
+      </view>
+    </view>
+    <view class="words" wx:if="{{result.words.length}}">
+      <view class="am word {{item.ok?'ok':'miss'}}" wx:for="{{result.words}}" wx:key="index">{{item.w}}</view>
+    </view>
+    <view class="res-tip">{{result.tip}}</view>
   </view>
 </view>

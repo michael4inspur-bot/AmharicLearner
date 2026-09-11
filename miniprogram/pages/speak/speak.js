@@ -1,6 +1,7 @@
 // 跟读与评分：听标准音 → 按住录音 → 回放 / 交替对比 → 上传云存储评分。
 // 所有 wx.* 在 Node 模拟环境可能不存在，涉及录音、上传的调用都做存在性判断或 try/catch。
 const progress = require('../../utils/progress.js');
+const points = require('../../utils/points.js');
 const vocab = require('../../data/vocab.js');
 const audio = require('../../utils/audio.js');
 const api = require('../../utils/api.js');
@@ -18,6 +19,20 @@ function scoreClass(score) {
   return 'bad';
 }
 
+function scoreTitle(score) {
+  if (score >= 80) return '很接近了！';
+  if (score >= 50) return '有进步';
+  return '再来一次';
+}
+
+function scoreTip(score, transcript, words) {
+  if (!transcript) return NO_TRANSCRIPT;
+  const miss = words.filter((w) => !w.ok).map((w) => w.w);
+  if (miss.length) return `桃色标出的「${miss[0]}」没读准，放慢一点，把音节拆开再读一遍。`;
+  if (score >= 80) return '发音已经很稳了，试着连读一次，让语速更自然。';
+  return '词都对上了，注意重音和尾音的长度，再录一次会更好。';
+}
+
 Page({
   data: {
     item: null,
@@ -26,8 +41,7 @@ Page({
     tempFilePath: '',
     loading: false,
     result: null,
-    scoreClass: '',
-    noTranscriptText: NO_TRANSCRIPT
+    scoreClass: ''
   },
 
   onLoad(q) {
@@ -37,6 +51,8 @@ Page({
     this.setData({ item });
     this.setupRecorder();
   },
+
+  back() { if (has('navigateBack')) wx.navigateBack(); },
 
   onUnload() {
     audio.stop();
@@ -194,13 +210,24 @@ Page({
       .then((res) => {
         res = res || {};
         const score = Math.max(0, Math.min(100, Math.round(Number(res.score) || 0)));
+        const transcript = String(res.transcript || '');
+        const words = Array.isArray(res.words)
+          ? res.words.map((x) => ({ w: String((x && x.w) || ''), ok: !!(x && x.ok) }))
+          : [];
+        const okCount = words.filter((w) => w.ok).length;
         const result = {
           score,
-          transcript: String(res.transcript || ''),
-          words: Array.isArray(res.words) ? res.words.map((x) => ({ w: String((x && x.w) || ''), ok: !!(x && x.ok) })) : []
+          transcript,
+          words,
+          okCount,
+          total: words.length,
+          deg: Math.round((score / 100) * 360),
+          title: scoreTitle(score),
+          tip: scoreTip(score, transcript, words)
         };
         this.setData({ loading: false, result, scoreClass: scoreClass(score) });
         try { progress.addMinutes(1); } catch (e) { /* ignore */ }
+        try { points.award('score'); } catch (e) { /* ignore */ }
       })
       .catch((err) => {
         this.setData({ loading: false });

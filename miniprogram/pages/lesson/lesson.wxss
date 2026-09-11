@@ -1,13 +1,120 @@
-.tabs { display: flex; background: #fff; border-radius: 16rpx; margin-bottom: 20rpx; overflow: hidden; }
-.tab { flex: 1; text-align: center; padding: 18rpx 0; font-size: 28rpx; color: var(--muted); }
-.tab.on { color: var(--primary); font-weight: 600; border-bottom: 4rpx solid var(--primary); }
-.line { display: flex; margin-bottom: 20rpx; }
+/* 单元详情 · 方案 C */
+.page.no-tab { padding-bottom: 220rpx; }
+
+/* 桃色头部（相对 .page 左右 40rpx / 上 24rpx 内边距做整幅出血） */
+.hero {
+  margin: -24rpx -40rpx 0;
+  padding: 88rpx 40rpx 40rpx;
+  background: var(--peach);
+  border-radius: 0 0 72rpx 72rpx;
+  position: relative;
+  overflow: hidden;
+}
+.hero-blob {
+  position: absolute; right: -80rpx; top: 40rpx;
+  width: 320rpx; height: 320rpx; border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.35);
+}
+.hero-back { position: relative; font-size: 24rpx; color: var(--muted-2); gap: 8rpx; }
+.hero-back:active { opacity: 0.6; }
+.hero-back-text { margin-left: 8rpx; }
+.hero-title { position: relative; font-size: 56rpx; font-weight: 800; line-height: 1.2; margin-top: 16rpx; }
+.hero-scene { position: relative; font-size: 26rpx; color: var(--muted-2); margin-top: 10rpx; }
+.hero-why {
+  position: relative;
+  background: var(--card);
+  border-radius: 36rpx;
+  padding: 24rpx 28rpx;
+  margin-top: 20rpx;
+  font-size: 26rpx;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.why-label { font-weight: 800; color: var(--accent); }
+.metas { position: relative; display: flex; flex-wrap: wrap; gap: 16rpx; margin-top: 20rpx; }
+.meta {
+  font-size: 22rpx; font-weight: 700;
+  padding: 12rpx 20rpx; border-radius: 999rpx;
+  background: var(--card); color: var(--muted-2);
+}
+.meta.stars { color: var(--accent); gap: 8rpx; }
+
+/* 胶囊 Tab */
+.tabs { display: flex; gap: 16rpx; margin: 32rpx 0 24rpx; }
+.tab {
+  padding: 16rpx 32rpx; border-radius: 999rpx;
+  background: var(--card); color: var(--muted);
+  font-size: 26rpx; font-weight: 700;
+  box-shadow: var(--shadow-sm);
+}
+.tab.on { background: var(--accent); color: #fff; font-weight: 800; box-shadow: 0 12rpx 32rpx rgba(194, 65, 12, 0.26); }
+.tab:active { transform: scale(0.96); }
+
+.toggles { margin-bottom: 20rpx; }
+.toggles .tag { padding: 12rpx 24rpx; font-size: 24rpx; box-shadow: var(--shadow-sm); }
+
+/* 词句行 */
+.word-row {
+  background: var(--card);
+  border-radius: 44rpx;
+  padding: 28rpx 32rpx;
+  margin-bottom: 20rpx;
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  box-shadow: var(--shadow-sm);
+  animation: rise 280ms ease-out both;
+}
+.word-am { font-size: 48rpx; line-height: 1.25; }
+.word-row .rom { margin-top: 4rpx; }
+.word-row .zh { margin-top: 4rpx; }
+.note { font-size: 24rpx; color: var(--muted); margin-top: 4rpx; }
+
+/* 对话气泡 */
+.dialog-hint { font-size: 24rpx; color: var(--muted); margin-bottom: 20rpx; }
+.line { display: flex; align-items: flex-start; margin-bottom: 20rpx; }
 .line.b { flex-direction: row-reverse; }
-.who { width: 48rpx; height: 48rpx; border-radius: 50%; background: var(--primary-light); color: var(--primary); text-align: center; line-height: 48rpx; font-size: 24rpx; margin: 0 12rpx; flex-shrink: 0; }
-.line.b .who { background: #fdf0e3; color: var(--accent); }
-.bubble { background: #f7f9f8; border-radius: 16rpx; padding: 16rpx 20rpx; max-width: 80%; }
-.tip { padding: 10rpx 0; }
-.acts { display: flex; flex-direction: column; gap: 12rpx; flex-shrink: 0; margin-left: 16rpx; }
-.icon-btn { width: 64rpx; height: 64rpx; border-radius: 50%; background: var(--primary-light); display: flex; align-items: center; justify-content: center; font-size: 30rpx; flex-shrink: 0; }
-.icon-btn:active { opacity: 0.6; }
-.bubble .icon-btn { width: 52rpx; height: 52rpx; font-size: 26rpx; margin-left: 12rpx; }
+.who {
+  width: 56rpx; height: 56rpx; border-radius: 999rpx;
+  text-align: center; line-height: 56rpx; font-size: 24rpx; font-weight: 800;
+  margin: 0 16rpx; flex-shrink: 0;
+  background: var(--mint); color: var(--mint-deep);
+}
+.line.b .who { background: var(--lav); color: var(--lav-ink); }
+.bubble {
+  background: var(--mint);
+  border-radius: 36rpx;
+  padding: 24rpx 28rpx;
+  max-width: 78%;
+  animation: rise 280ms ease-out both;
+}
+.line.b .bubble { background: var(--lav); }
+.bubble .am { font-size: 36rpx; line-height: 1.3; }
+.bubble .zh { margin-top: 6rpx; }
+.mini {
+  width: 48rpx; height: 48rpx; border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-left: 16rpx;
+}
+.mini:active { transform: scale(0.9); }
+
+/* 用法提示 */
+.tip { display: flex; align-items: flex-start; padding: 12rpx 0; font-size: 28rpx; line-height: 1.55; }
+.tip-dot { width: 14rpx; height: 14rpx; border-radius: 999rpx; background: var(--accent); margin: 18rpx 18rpx 0 0; flex-shrink: 0; }
+
+/* 底部固定按钮区 */
+.footbar {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  padding: 28rpx 40rpx 56rpx;
+  display: flex; gap: 20rpx;
+  background: linear-gradient(180deg, rgba(255, 247, 238, 0) 0%, var(--bg) 30%);
+}
+.foot-main, .foot-sub {
+  height: 108rpx; border-radius: 999rpx;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30rpx; font-weight: 800;
+}
+.foot-main { flex: 1; background: var(--accent); color: #fff; box-shadow: 0 20rpx 48rpx rgba(194, 65, 12, 0.3); }
+.foot-sub { width: 236rpx; background: var(--mint); color: var(--mint-deep); }
+.foot-main:active, .foot-sub:active { transform: scale(0.97); }
