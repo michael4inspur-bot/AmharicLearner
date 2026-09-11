@@ -1,0 +1,34 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/lessons/lessons",
+    "pages/lesson/lesson",
+    "pages/review/review",
+    "pages/quiz/quiz",
+    "pages/plan/plan",
+    "pages/coach/coach",
+    "pages/fidel/fidel",
+    "pages/profile/profile"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#0f6e56",
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "AmharicLeander",
+    "backgroundColor": "#f4f6f4"
+  },
+  "tabBar": {
+    "color": "#8a8f8c",
+    "selectedColor": "#0f6e56",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      { "pagePath": "pages/index/index", "text": "今日" },
+      { "pagePath": "pages/lessons/lessons", "text": "课程" },
+      { "pagePath": "pages/review/review", "text": "复习" },
+      { "pagePath": "pages/coach/coach", "text": "AI教练" }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

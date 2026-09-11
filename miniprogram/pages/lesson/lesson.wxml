@@ -1,0 +1,50 @@
+<view class="page">
+  <view class="card">
+    <view class="muted">场景</view>
+    <view class="zh">{{unit.scene}}</view>
+    <view class="muted" style="margin-top:12rpx">为什么学</view>
+    <view class="zh">{{unit.why}}</view>
+  </view>
+
+  <view class="tabs">
+    <view class="tab {{tab==='words'?'on':''}}" data-tab="words" bindtap="switchTab">词句 {{unit.items.length}}</view>
+    <view class="tab {{tab==='dialog'?'on':''}}" data-tab="dialog" bindtap="switchTab">对话</view>
+    <view class="tab {{tab==='tips'?'on':''}}" data-tab="tips" bindtap="switchTab">用法提示</view>
+  </view>
+
+  <block wx:if="{{tab==='words'}}">
+    <view class="row" style="margin-bottom:12rpx">
+      <view class="btn outline small" bindtap="toggleRom">{{showRom?'隐藏':'显示'}}转写</view>
+      <view style="width:16rpx"></view>
+      <view class="btn outline small" bindtap="toggleZh">{{showZh?'隐藏':'显示'}}中文</view>
+    </view>
+    <view class="card">
+      <view class="list-item" wx:for="{{unit.items}}" wx:key="id" data-text="{{item.am}}" bindlongpress="copy">
+        <view class="am">{{item.am}}</view>
+        <view class="rom" wx:if="{{showRom}}">{{item.rom}}</view>
+        <view class="zh" wx:if="{{showZh}}">{{item.zh}}</view>
+        <view class="muted" wx:if="{{item.note && showZh}}">{{item.note}}</view>
+      </view>
+    </view>
+  </block>
+
+  <view class="card" wx:if="{{tab==='dialog'}}">
+    <view class="muted" style="margin-bottom:12rpx">先看着转写读，再遮住转写读，最后只看中文说出来。</view>
+    <view class="line {{item.who==='A'?'a':'b'}}" wx:for="{{unit.dialog}}" wx:key="index">
+      <view class="who">{{item.who}}</view>
+      <view class="bubble">
+        <view class="am">{{item.am}}</view>
+        <view class="rom" wx:if="{{showRom}}">{{item.rom}}</view>
+        <view class="zh">{{item.zh}}</view>
+      </view>
+    </view>
+    <view class="btn outline small" bindtap="toggleRom" style="margin-top:12rpx">{{showRom?'遮住':'显示'}}转写</view>
+  </view>
+
+  <view class="card" wx:if="{{tab==='tips'}}">
+    <view class="tip" wx:for="{{unit.tips}}" wx:key="index">• {{item}}</view>
+  </view>
+
+  <view class="btn {{learned?'outline':''}}" bindtap="learn">{{learned ? '已加入复习（再点可补齐新卡）' : '学完了，加入闪卡复习'}}</view>
+  <view class="btn accent" bindtap="quiz">做 10 题小测</view>
+</view>

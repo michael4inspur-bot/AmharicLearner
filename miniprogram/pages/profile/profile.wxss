@@ -1,0 +1,6 @@
+.stats { display: flex; flex-wrap: wrap; }
+.st { width: 33.33%; text-align: center; padding: 14rpx 0; }
+.n { font-size: 40rpx; font-weight: 700; color: var(--primary); }
+.l { font-size: 22rpx; color: var(--muted); }
+.sl { width: 260rpx; margin: 0 12rpx 0 0; }
+.link { color: var(--primary); }

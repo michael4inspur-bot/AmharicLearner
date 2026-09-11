@@ -1,0 +1,11 @@
+.qcard { text-align: center; padding: 40rpx 28rpx; }
+.q-am { font-size: 56rpx; }
+.q-zh { font-size: 40rpx; font-weight: 500; }
+.opt { background: #fff; border: 3rpx solid var(--border); border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; font-size: 32rpx; }
+.opt.right { border-color: var(--primary); background: var(--primary-light); }
+.opt.wrong { border-color: var(--danger); background: #fbe9e7; }
+.opt.dim { opacity: 0.5; }
+.ok { color: var(--primary); font-weight: 600; }
+.no { color: var(--danger); font-weight: 600; }
+.result { text-align: center; padding: 20rpx 0 30rpx; }
+.score { font-size: 64rpx; font-weight: 700; color: var(--primary); margin: 10rpx 0; }

@@ -1,0 +1,35 @@
+<view class="page">
+  <block wx:if="{{!finished}}">
+    <view class="row between muted" style="margin-bottom:12rpx">
+      <text>{{idx + 1}} / {{questions.length}}</text>
+      <text>得分 {{score}}</text>
+    </view>
+    <view class="progress-bar" style="margin-bottom:24rpx"><view class="fill" style="width:{{(idx) / questions.length * 100}}%"></view></view>
+
+    <view class="card qcard">
+      <view class="muted">{{current.promptAm ? '这是什么意思？' : '阿姆哈拉语怎么说？'}}</view>
+      <view class="am q-am" wx:if="{{current.promptAm}}">{{current.promptAm}}</view>
+      <view class="rom" wx:if="{{current.promptRom}}">{{current.promptRom}}</view>
+      <view class="q-zh" wx:if="{{current.promptZh}}">{{current.promptZh}}</view>
+    </view>
+
+    <view class="opt {{picked ? (item.id === current.answer ? 'right' : (item.id === picked ? 'wrong' : 'dim')) : ''}}"
+          wx:for="{{current.options}}" wx:key="id" data-id="{{item.id}}" bindtap="pick">{{item.text}}</view>
+
+    <view class="card" wx:if="{{picked}}">
+      <view class="{{correct ? 'ok' : 'no'}}">{{correct ? '✓ 正确' : '✗ 答错了'}}</view>
+      <view class="muted">{{current.explain}}</view>
+      <view class="btn" bindtap="next">{{idx + 1 >= questions.length ? '看结果' : '下一题'}}</view>
+    </view>
+  </block>
+
+  <view class="card" wx:else>
+    <view class="result">
+      <view class="am">{{pct >= 80 ? 'በጣም ጥሩ!' : pct >= 60 ? 'ጥሩ ነው' : 'ችግር የለም'}}</view>
+      <view class="score">{{score}} / {{questions.length}}</view>
+      <view class="muted">{{pct >= 80 ? '非常好，可以进入下一单元。' : pct >= 60 ? '不错。错的词已排到更早复习。' : '没关系，错题会更频繁出现在闪卡里，明天再测一次。'}}</view>
+    </view>
+    <view class="btn" bindtap="again">再测一次</view>
+    <view class="btn outline" bindtap="back">返回</view>
+  </view>
+</view>

@@ -1,0 +1,45 @@
+<view class="page">
+  <view class="muted" style="margin-bottom:12rpx">每个辅音有 7 个"序"（元音变体）：先记基础字（1 序），再看同一行的规律。</view>
+  <scroll-view scroll-x class="groups">
+    <view class="gbtn {{group===g?'on':''}}" wx:for="{{[1,2,3,4,5]}}" wx:for-item="g" wx:key="*this" data-g="{{g}}" bindtap="pickGroup">第 {{g}} 批</view>
+    <view class="gbtn {{group===0?'on':''}}" data-g="0" bindtap="pickGroup">全部</view>
+  </scroll-view>
+
+  <block wx:if="{{mode==='table'}}">
+    <view class="card">
+      <view class="tag" wx:if="{{done}}">本批已通过自测</view>
+      <scroll-view scroll-x>
+        <view class="grid">
+          <view class="hrow">
+            <view class="hcell first">辅音</view>
+            <view class="hcell" wx:for="{{orderLabels}}" wx:key="*this">{{item}}</view>
+          </view>
+          <view class="frow" wx:for="{{rows}}" wx:for-item="c" wx:key="base">
+            <view class="cell first"><view class="c-name">{{c.name}}</view><view class="muted tiny">{{c.example}}</view></view>
+            <view class="cell" wx:for="{{c.forms}}" wx:for-item="f" wx:key="ch">
+              <view class="f-ch">{{f.ch}}</view>
+              <view class="f-rom">{{f.rom}}</view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+    <view class="btn" bindtap="startQuiz">认读自测（10 题）</view>
+  </block>
+
+  <block wx:if="{{mode==='quiz'}}">
+    <view class="muted" style="text-align:center">{{qIdx + 1}} / {{qTotal}} · 得分 {{qScore}}</view>
+    <view class="card qbox"><view class="big">{{q.ch}}</view><view class="muted">这个字怎么读？</view></view>
+    <view class="opt {{qPicked ? (item.rom === q.rom ? 'right' : (item.rom === qPicked ? 'wrong' : 'dim')) : ''}}"
+          wx:for="{{q.options}}" wx:key="rom" data-rom="{{item.rom}}" bindtap="pickQ">{{item.rom}}</view>
+  </block>
+
+  <view class="card" wx:if="{{mode==='result'}}">
+    <view class="qbox">
+      <view class="am">{{pct >= 70 ? 'ጥሩ ስራ!' : 'ችግር የለም'}}</view>
+      <view class="big2">{{pct}}%</view>
+      <view class="muted">{{pct >= 70 ? '本批字母已掌握，计划里会打钩。' : '再看一遍表格，明天再测。'}}</view>
+    </view>
+    <view class="btn outline" bindtap="backTable">回到字母表</view>
+  </view>
+</view>

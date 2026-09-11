@@ -1,0 +1,44 @@
+<view class="page">
+  <view class="card">
+    <view class="stats">
+      <view class="st"><view class="n">{{streak}}</view><view class="l">连续天</view></view>
+      <view class="st"><view class="n">{{days}}</view><view class="l">学习天数</view></view>
+      <view class="st"><view class="n">{{totalMinutes}}</view><view class="l">总分钟</view></view>
+      <view class="st"><view class="n">{{stats.total}}</view><view class="l">已学词</view></view>
+      <view class="st"><view class="n">{{stats.mature}}</view><view class="l">熟练词</view></view>
+      <view class="st"><view class="n">{{quizzes}}</view><view class="l">小测次数</view></view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">学习设置</view>
+    <view class="row between list-item"><text>每日目标</text><view class="row"><slider class="sl" min="10" max="45" step="5" value="{{goal}}" bindchange="onGoal" show-value /><text>分钟</text></view></view>
+    <view class="row between list-item"><text>每日新词上限</text><view class="row"><slider class="sl" min="3" max="20" value="{{newCards}}" bindchange="onNewCards" show-value /><text>个</text></view></view>
+    <view class="row between list-item"><text>计划开始日期</text><picker mode="date" value="{{startDate}}" bindchange="onStartDate"><text class="link">{{startDate}} ›</text></picker></view>
+    <view class="muted">修改开始日期可以回到某一周重学，或者跳到下一周。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">后台服务器（DeepSeek）</view>
+    <input class="input" value="{{baseUrl}}" placeholder="https://你的域名/api" bindinput="onBaseUrl" />
+    <view class="row" style="margin-top:12rpx">
+      <view class="btn small" bindtap="saveBaseUrl">保存</view>
+      <view style="width:12rpx"></view>
+      <view class="btn outline small" bindtap="testServer">测试连接</view>
+      <text class="muted" style="margin-left:16rpx" wx:if="{{serverOk !== null}}">{{serverOk ? '✓ 已连通' : '✗ 未连通'}}</text>
+    </view>
+    <view class="muted" style="margin-top:12rpx">用户 ID：{{userId || '（未登录）'}}</view>
+    <view class="divider"></view>
+    <view class="row">
+      <view class="btn outline small" bindtap="upload">上传进度</view>
+      <view style="width:12rpx"></view>
+      <view class="btn outline small" bindtap="download">从服务器恢复</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">关于</view>
+    <view class="muted">AmharicLeander · 面向在埃塞俄比亚的中文使用者的阿姆哈拉语速成。学习计划依据成人学习特性设计：知道为什么学、自主导向、经验为本、问题驱动、微学习、间隔重复。</view>
+    <view class="btn outline" style="color:#c0392b;border-color:#c0392b" bindtap="resetAll">清空全部进度</view>
+  </view>
+</view>

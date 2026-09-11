@@ -1,0 +1,6 @@
+.card.current { border: 3rpx solid var(--primary); }
+.unit { display: flex; align-items: center; padding: 18rpx 0; border-top: 2rpx solid var(--border); }
+.unit-title { font-size: 30rpx; font-weight: 500; }
+.unit-state { text-align: right; }
+.mission { margin-top: 16rpx; padding-top: 16rpx; border-top: 2rpx dashed var(--border); font-size: 26rpx; color: #5a615d; }
+.link { color: var(--primary); }

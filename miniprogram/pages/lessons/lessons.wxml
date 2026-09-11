@@ -1,0 +1,29 @@
+<view class="page">
+  <view class="muted" style="margin-bottom:16rpx">按在埃塞的真实场景排序，可以跳着学；点"看计划"了解每周为什么这样安排。 <text class="link" bindtap="goPlan">看计划 ›</text></view>
+  <view class="card {{w.current ? 'current' : ''}}" wx:for="{{weeks}}" wx:for-item="w" wx:key="week">
+    <view class="row between">
+      <view class="card-title">第 {{w.week}} 周 · {{w.theme}}</view>
+      <text class="tag" wx:if="{{w.current}}">本周</text>
+    </view>
+    <view class="muted">{{w.goal}}</view>
+    <view class="unit" wx:for="{{w.unitList}}" wx:for-item="u" wx:key="id" data-id="{{u.id}}" bindtap="open">
+      <view class="grow">
+        <view class="unit-title">{{u.title}} <text class="tag gray">{{u.count}} 词</text></view>
+        <view class="muted">{{u.scene}}</view>
+      </view>
+      <view class="unit-state">
+        <text class="tag" wx:if="{{u.learned}}">已学</text>
+        <text class="tag warn" wx:if="{{u.best !== undefined}}">小测 {{u.best}}%</text>
+        <text class="muted" wx:if="{{!u.learned}}">›</text>
+      </view>
+    </view>
+    <view class="unit" data-group="{{w.fidelGroup}}" bindtap="goFidel">
+      <view class="grow">
+        <view class="unit-title">Fidel 字母 第 {{w.fidelGroup}} 批</view>
+        <view class="muted">和本周词汇绑定认读</view>
+      </view>
+      <view class="am">ፊ</view>
+    </view>
+    <view class="mission"><text class="tag warn">实战</text>{{w.mission}}</view>
+  </view>
+</view>

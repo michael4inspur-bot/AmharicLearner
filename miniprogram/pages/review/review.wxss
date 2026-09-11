@@ -1,0 +1,16 @@
+.flashcard {
+  background: #fff; border-radius: 24rpx; padding: 60rpx 32rpx; min-height: 420rpx;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.06); margin-bottom: 24rpx;
+}
+.fc-am { font-size: 64rpx; font-weight: 600; }
+.fc-rom { color: var(--primary); font-size: 30rpx; margin-top: 8rpx; }
+.fc-zh { font-size: 36rpx; margin-top: 8rpx; }
+.fc-zh.big { font-size: 44rpx; }
+.fc-answer { margin-top: 28rpx; padding-top: 24rpx; border-top: 2rpx dashed var(--border); width: 100%; }
+.grades { display: flex; gap: 16rpx; margin-bottom: 24rpx; }
+.g { flex: 1; text-align: center; color: #fff; border-radius: 16rpx; padding: 22rpx 0; font-size: 30rpx; }
+.g .sub { display: block; font-size: 22rpx; opacity: 0.85; }
+.g.bad { background: var(--danger); }
+.g.mid { background: var(--accent); }
+.g.good { background: var(--primary); }

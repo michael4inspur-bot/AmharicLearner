@@ -1,0 +1,15 @@
+{
+  "description": "AmharicLeander 阿姆哈拉语学习小程序",
+  "miniprogramRoot": "miniprogram/",
+  "compileType": "miniprogram",
+  "libVersion": "3.4.0",
+  "appid": "touristappid",
+  "projectname": "AmharicLeander",
+  "setting": {
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "urlCheck": false
+  }
+}

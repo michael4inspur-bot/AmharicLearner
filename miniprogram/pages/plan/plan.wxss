@@ -1,0 +1,14 @@
+.pr { padding: 10rpx 0; }
+.pr-title { font-weight: 600; }
+.week { background: #fff; border-radius: 20rpx; margin-bottom: 20rpx; overflow: hidden; }
+.week.past { opacity: 0.7; }
+.week.current { border: 3rpx solid var(--primary); }
+.wk-head { display: flex; align-items: center; padding: 22rpx 28rpx; background: #f7f9f8; }
+.wk-num { width: 80rpx; height: 80rpx; border-radius: 16rpx; background: var(--primary); color: #fff; text-align: center; line-height: 80rpx; font-weight: 700; margin-right: 20rpx; flex-shrink: 0; }
+.week.future .wk-num { background: #b9c4bf; }
+.wk-theme { font-size: 30rpx; font-weight: 600; }
+.wk-body { padding: 20rpx 28rpx; }
+.mission { margin: 14rpx 0; font-size: 26rpx; color: #5a615d; }
+.ok { color: var(--primary); }
+.adj { margin-top: 14rpx; background: #fdf6ec; border-left: 6rpx solid var(--accent); padding: 14rpx 18rpx; border-radius: 8rpx; font-size: 26rpx; }
+.adj-title { font-weight: 600; color: var(--accent); }

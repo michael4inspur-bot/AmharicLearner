@@ -1,0 +1,26 @@
+.hero {
+  background: linear-gradient(135deg, #0f6e56, #178a6b);
+  color: #fff;
+  border-radius: 24rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+}
+.hero-am { font-size: 48rpx; font-weight: 600; }
+.hero-rom { opacity: 0.85; font-size: 26rpx; margin-top: 4rpx; }
+.streak { text-align: center; background: rgba(255,255,255,0.15); border-radius: 16rpx; padding: 12rpx 24rpx; }
+.streak-num { font-size: 44rpx; font-weight: 700; line-height: 1.1; }
+.streak-label { font-size: 22rpx; opacity: 0.85; }
+.hero-week { margin-top: 28rpx; background: rgba(255,255,255,0.12); border-radius: 16rpx; padding: 20rpx; font-size: 26rpx; }
+.hero-theme { font-size: 32rpx; font-weight: 600; margin: 8rpx 0 14rpx; }
+.link { opacity: 0.85; }
+.progress-bar.light { background: rgba(255,255,255,0.25); }
+.progress-bar.light .fill { background: #fff; }
+.task { display: flex; align-items: center; padding: 20rpx 0; border-bottom: 2rpx solid var(--border); }
+.task:last-child { border-bottom: none; }
+.task-check {
+  width: 44rpx; height: 44rpx; border-radius: 50%; border: 3rpx solid var(--primary);
+  margin-right: 20rpx; text-align: center; line-height: 40rpx; color: #fff; font-size: 26rpx; flex-shrink: 0;
+}
+.task.done .task-check { background: var(--primary); }
+.task.done .task-title { color: var(--muted); text-decoration: line-through; }
+.task-title { font-size: 30rpx; font-weight: 500; }
