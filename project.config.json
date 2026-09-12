@@ -1,11 +1,11 @@
 {
-  "description": "AmharicLeander 阿姆哈拉语学习小程序",
+  "description": "阿姆哈拉语速成",
   "miniprogramRoot": "miniprogram/",
   "cloudfunctionRoot": "cloudfunctions/",
   "compileType": "miniprogram",
   "libVersion": "3.4.0",
-  "appid": "touristappid",
-  "projectname": "AmharicLeander",
+  "appid": "wx1b182a4e82a61d84",
+  "projectname": "AmharicLearner",
   "setting": {
     "es6": true,
     "enhance": true,
