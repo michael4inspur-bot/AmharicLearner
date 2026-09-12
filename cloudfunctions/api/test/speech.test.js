@@ -71,6 +71,28 @@ test('tts.get 第二次同 key 不调 azure，不写日志', async () => {
   assert.equal(c.azure.synthCalls[2].rate, 'slow');
 });
 
+test('tts.get / tts.batch 同时返回 fileID，供小程序走云存储下载（免域名白名单）', async () => {
+  {
+    const db = createFakeDb();
+    const storage = createFakeStorage();
+    const azure = createFakeAzure({ synth: () => Buffer.from('mp3') });
+    const one = await handle('tts.get', { text: 'ሰላም', voice: 'female', rate: 'normal' }, ctx({ db, storage, azure }));
+    assert.equal(one.ok, true);
+    assert.ok(one.data.fileID, '单条返回 fileID');
+    assert.ok(storage._files.has(one.data.fileID), 'fileID 指向已上传的文件');
+
+    const many = await handle('tts.batch', {
+      items: [{ id: 'a', text: 'ሰላም' }, { id: 'b', text: 'ውሃ' }],
+      voice: 'female',
+      rate: 'normal'
+    }, ctx({ db, storage, azure }));
+    assert.equal(many.ok, true);
+    assert.deepEqual(Object.keys(many.data.files).sort(), ['a', 'b']);
+    assert.equal(many.data.files.a, one.data.fileID, '已缓存条目复用同一个 fileID');
+    assert.deepEqual(Object.keys(many.data.urls).sort(), ['a', 'b'], 'urls 仍然返回');
+  }
+});
+
 test('tts.get 参数校验：voice / rate 非法、文本空或超长 → BAD_REQUEST', async () => {
   const c = ctx();
   for (const data of [
@@ -176,7 +198,7 @@ test('tts.batch 校验：超过 40 条、items 非数组、voice 非法 → BAD_
   assert.equal((await handleSpeech('tts.batch', { items: [{ id: 'a', text: 'x' }], voice: 'x', rate: 'normal' }, c)).code, 'BAD_REQUEST');
   assert.equal(c.azure.synthCalls.length, 0);
   const empty = await handleSpeech('tts.batch', { items: [], voice: 'female', rate: 'normal' }, c);
-  assert.deepEqual(empty, { ok: true, data: { urls: {} } });
+  assert.deepEqual(empty, { ok: true, data: { urls: {}, files: {} } });
 });
 
 test('stt.score 成功路径：文件被删除、score 100、逐词、日志 stt', async () => {

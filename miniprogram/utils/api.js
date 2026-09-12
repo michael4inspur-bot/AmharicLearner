@@ -33,9 +33,23 @@ function call(action, data) {
         reject(err);
       },
       fail: (e) => {
-        const msg = (e && e.errMsg) || '';
-        const err = new Error(/timeout/i.test(msg) ? MESSAGES.TIMEOUT : `网络错误：${msg}`);
-        err.code = /timeout/i.test(msg) ? 'TIMEOUT' : 'NETWORK';
+        // 云函数本身的失败信息很长（含 callId、trace），原样弹出没法读，按类型归成一句话
+        const msg = String((e && e.errMsg) || '');
+        let text = `网络错误：${msg.slice(0, 100)}`;
+        let code = 'NETWORK';
+        if (/-504003|TIME_LIMIT_EXCEEDED|timed out|timeout/i.test(msg)) {
+          text = '云函数执行超时。请在云开发控制台把 api 函数的超时时间调到 60 秒。';
+          code = 'TIMEOUT';
+        } else if (/-504002|FUNCTION_NOT_FOUND|not exist/i.test(msg)) {
+          text = '找不到云函数 api。请在开发者工具里右键 cloudfunctions/api，选「上传并部署」。';
+          code = 'NOT_DEPLOYED';
+        } else if (/-501007|INVALID_ENV|env/i.test(msg) && /not exist|invalid/i.test(msg)) {
+          text = '云环境 id 不对。请核对 miniprogram/config.js 里的 cloudEnv。';
+          code = 'BAD_ENV';
+        }
+        const err = new Error(text);
+        err.code = code;
+        err.raw = msg;
         reject(err);
       }
     });

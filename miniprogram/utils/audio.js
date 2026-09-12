@@ -1,5 +1,5 @@
 // 语音播放与本地缓存：所有页面只调用这里。
-// 云端合成（api.ttsGet / ttsBatch）→ wx.downloadFile 到 USER_DATA_PATH/tts/ → 单例 InnerAudioContext 播放。
+// 云端合成（api.ttsGet / ttsBatch）→ 优先 wx.cloud.downloadFile（免域名白名单）落到 USER_DATA_PATH/tts/ → 单例 InnerAudioContext 播放。
 // 注意：Node 模拟脚本也会加载本模块，wx 上可能缺少 env / createInnerAudioContext / getFileSystemManager / downloadFile，
 // 所以每个 wx.* 调用都做存在性判断或 try/catch，模块加载本身不能抛错。
 const api = require('./api.js');
@@ -116,8 +116,48 @@ function cachedPath(key) {
   return '';
 }
 
+/** 记录映射并 resolve 路径 */
+function remember(key, saved, resolve) {
+  if (!saved) { resolve(''); return; }
+  loadMap()[key] = saved;
+  saveMap();
+  resolve(saved);
+}
+
+/**
+ * 优先用云存储专用下载（wx.cloud.downloadFile）：它不受 downloadFile 合法域名限制，
+ * 省掉在公众平台配置云存储域名这一步。拿到临时文件后再落到 USER_DATA_PATH 持久化。
+ * 不可用时回退到普通 wx.downloadFile。任何失败都 resolve('')，不抛错。
+ */
+function downloadViaCloud(fileID, key) {
+  return new Promise((resolve) => {
+    if (!fileID || !w() || !wx.cloud || typeof wx.cloud.downloadFile !== 'function' || !ensureDir()) { resolve(''); return; }
+    const filePath = localPath(key);
+    try {
+      wx.cloud.downloadFile({
+        fileID,
+        success: (res) => {
+          const temp = res && res.tempFilePath;
+          if (!temp) { resolve(''); return; }
+          try {
+            const fs = wx.getFileSystemManager();
+            fs.saveFile({
+              tempFilePath: temp,
+              filePath,
+              success: (r) => remember(key, (r && r.savedFilePath) || filePath, resolve),
+              // 存不下就直接用临时路径，本次会话内仍能秒播
+              fail: () => remember(key, temp, resolve)
+            });
+          } catch (e) { remember(key, temp, resolve); }
+        },
+        fail: () => resolve('')
+      });
+    } catch (e) { resolve(''); }
+  });
+}
+
 /** 下载到本地并记录映射；任何失败都 resolve('')，不抛错 */
-function download(url, key) {
+function downloadViaUrl(url, key) {
   return new Promise((resolve) => {
     if (!url || !w() || typeof wx.downloadFile !== 'function' || !ensureDir()) { resolve(''); return; }
     const filePath = localPath(key);
@@ -139,6 +179,11 @@ function download(url, key) {
       });
     } catch (e) { resolve(''); }
   });
+}
+
+/** 先试云存储下载，失败再试临时链接 */
+function download(url, key, fileID) {
+  return downloadViaCloud(fileID, key).then((p) => (p ? p : downloadViaUrl(url, key)));
 }
 
 // ---------- 播放 ----------
@@ -193,7 +238,7 @@ function speak(text, opts) {
       const url = res && res.url;
       if (!url) { toast(); return; }
       play(url);
-      download(url, key);
+      download(url, key, res && res.fileID);
     })
     .catch(() => { toast(); });
 }
@@ -205,7 +250,7 @@ function downloadQueue(jobs) {
   function next() {
     if (i >= jobs.length) return Promise.resolve();
     const job = jobs[i++];
-    return download(job.url, job.key).then(next, next);
+    return download(job.url, job.key, job.fileID).then(next, next);
   }
   const workers = [];
   for (let n = 0; n < Math.min(DOWNLOAD_CONCURRENCY, jobs.length); n++) workers.push(next());
@@ -239,7 +284,10 @@ function prefetch(items) {
         .then(() => api.ttsBatch(batch.map(({ id, text }) => ({ id, text })), s.voice, s.rate))
         .then((res) => {
           const urls = (res && res.urls) || {};
-          const jobs = batch.filter((b) => urls[b.id]).map((b) => ({ url: urls[b.id], key: b.key }));
+          const files = (res && res.files) || {};
+          const jobs = batch
+            .filter((b) => urls[b.id] || files[b.id])
+            .map((b) => ({ url: urls[b.id], key: b.key, fileID: files[b.id] }));
           return downloadQueue(jobs);
         })
         .catch(() => { /* 静默 */ });

@@ -42,7 +42,7 @@ function cleanText(text) {
 /**
  * 取一条文本的音频 url：缓存命中直接取临时链接；未命中检查每日次数与本月全体字符上限 → 合成 → 上传 → 缓存 → 日志。
  * 抛出的错误由调用方映射。
- * @returns {Promise<{url: string, key: string} | {limited: 'day' | 'month', limit: number}>}
+ * @returns {Promise<{url: string, key: string, fileID: string} | {limited: 'day' | 'month', limit: number}>}
  */
 async function ensureTts(ctx, now, text, voice, rate) {
   const { openid, db, azure, storage } = ctx;
@@ -73,7 +73,7 @@ async function ensureTts(ctx, now, text, voice, rate) {
     err.code = 'UPSTREAM';
     throw err;
   }
-  return { url, key };
+  return { url, key, fileID: cached.fileID };
 }
 
 /** 简单 worker 池：并发最多 limit 个执行 fn(item)。 */
@@ -104,7 +104,7 @@ async function ttsGet(data, ctx, now) {
   }
   if (r.limited === 'month') return fail('BAD_REQUEST', '本月语音额度已用完，下月恢复');
   if (r.limited) return fail('BAD_REQUEST', `今天的语音合成次数已用完（${r.limit} 次），明天再来`);
-  return ok({ url: r.url, key: r.key });
+  return ok({ url: r.url, key: r.key, fileID: r.fileID });
 }
 
 async function ttsBatch(data, ctx, now) {
@@ -114,6 +114,7 @@ async function ttsBatch(data, ctx, now) {
   if (!Array.isArray(items)) return fail('BAD_REQUEST', 'items 必须是数组');
   if (items.length > MAX_BATCH_ITEMS) return fail('BAD_REQUEST', `items 最多 ${MAX_BATCH_ITEMS} 条`);
   const urls = {};
+  const files = {};
   const valid = items
     .filter((it) => it && (typeof it.id === 'string' || typeof it.id === 'number'))
     .map((it) => ({ id: String(it.id), text: cleanText(it.text) }))
@@ -121,13 +122,13 @@ async function ttsBatch(data, ctx, now) {
   await runPool(valid, BATCH_CONCURRENCY, async (it) => {
     try {
       const r = await ensureTts(ctx, now, it.text, voice, rate);
-      if (!r.limited) urls[it.id] = r.url;
+      if (!r.limited) { urls[it.id] = r.url; files[it.id] = r.fileID; }
     } catch (err) {
       // 单条失败不影响其他：Azure/存储类错误静默省略该 id，其他异常向上抛
       if (!(err && UPSTREAM_CODES.includes(err.code))) throw err;
     }
   });
-  return ok({ urls });
+  return ok({ urls, files });
 }
 
 async function sttScore(data, ctx, now) {

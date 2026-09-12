@@ -221,6 +221,14 @@ async function main() {
   assert.equal(team.users[0].openid, 'sim-user');
   delete process.env.ADMIN_OPENIDS;
 
+  // 云函数失败信息归一成一句可照做的提示
+  const realCall = wx.cloud.callFunction;
+  wx.cloud.callFunction = ({ fail }) => fail({ errMsg: 'cloud.callFunction:fail Error: errCode: -504003 | errMsg: Invoking task timed out after 3 seconds (callId: x) (trace: y)' });
+  await assert.rejects(api.diagnose({}, {}), (e) => e.code === 'TIMEOUT' && /超时时间调到 60 秒/.test(e.message) && e.message.length < 60);
+  wx.cloud.callFunction = ({ fail }) => fail({ errMsg: 'cloud.callFunction:fail Error: errCode: -504002 | errMsg: FUNCTION_NOT_FOUND' });
+  await assert.rejects(api.diagnose({}, {}), (e) => e.code === 'NOT_DEPLOYED');
+  wx.cloud.callFunction = realCall;
+
   // 未配置云环境时的失败路径
   require(path.join(root, 'config.js')).cloudEnv = '';
   await assert.rejects(api.diagnose(s, {}), (e) => e.code === 'NO_ENV');
