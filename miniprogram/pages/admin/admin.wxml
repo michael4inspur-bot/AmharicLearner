@@ -100,7 +100,7 @@
       <view class="card">
         <view class="card-title">发布公告</view>
         <view class="muted">最多 500 字，所有人在首页看到；清空后发布即撤下。</view>
-        <textarea class="input notice-input" value="{{noticeText}}" maxlength="500" placeholder="写给所有人的一句话" bindinput="onNoticeInput"></textarea>
+        <textarea class="input on-card notice-input" value="{{noticeText}}" maxlength="500" placeholder="写给所有人的一句话" placeholder-class="ph" bindinput="onNoticeInput"></textarea>
         <view class="muted notice-count">{{noticeText.length}} / 500</view>
         <button class="btn" bindtap="publishNotice" loading="{{publishing}}" disabled="{{publishing}}">发布</button>
       </view>

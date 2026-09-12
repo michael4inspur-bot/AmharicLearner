@@ -48,19 +48,7 @@
 /* 昵称 */
 .nick-head { margin-bottom: 14rpx; }
 .nick-hint { font-size: 22rpx; flex-shrink: 0; margin-left: 16rpx; }
-/* 米色底，和白色卡片区分开；固定高度让文字垂直居中，不会贴边或被裁 */
-.nick-input {
-  width: 100%;
-  box-sizing: border-box;
-  height: 88rpx;
-  line-height: 88rpx;
-  padding: 0 24rpx;
-  background: var(--bg);
-  border-radius: 28rpx;
-  font-size: 28rpx;
-  color: var(--ink);
-}
-.nick-ph { color: var(--muted); font-size: 26rpx; }
+.nick-input { min-height: 88rpx; }
 
 /* 管理入口 */
 .admin-card { align-items: center; }

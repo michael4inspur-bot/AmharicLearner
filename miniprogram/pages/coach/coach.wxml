@@ -11,7 +11,7 @@
       <view class="card-title">让 DeepSeek 看一眼你的学习数据</view>
       <view class="muted">会上传：当前周/天、连续天数、已学单元、小测成绩、复习正确率、最近 14 天时长、最常忘的词。不上传聊天记录。</view>
       <view class="section-title">自述（可选）：最近哪里卡住、想优先解决什么</view>
-      <textarea class="input" value="{{selfReport}}" placeholder="例如：数字听不清；工作要和司机沟通；晚上没时间…" bindinput="onSelfReport" maxlength="500"></textarea>
+      <textarea class="input on-card" value="{{selfReport}}" placeholder="例如：数字听不清；工作要和司机沟通；晚上没时间…" placeholder-class="ph" bindinput="onSelfReport" maxlength="500"></textarea>
       <button class="btn" bindtap="diagnose" loading="{{loading==='diagnose'}}" disabled="{{!!loading}}">开始诊断</button>
     </view>
 
@@ -88,7 +88,7 @@
       <view class="card-title">让 AI 修改学习计划</view>
       <view class="muted">AI 会结合数据{{diagnosis ? '和最近一次诊断' : ''}}，只做必要调整，并给出每条改动的依据。你可以选择采纳或忽略。</view>
       <view class="section-title">你的诉求（可选）</view>
-      <textarea class="input" value="{{request}}" placeholder="例如：下周要和本地团队开会，想优先学工作用语；每天只有 10 分钟…" bindinput="onRequest" maxlength="500"></textarea>
+      <textarea class="input on-card" value="{{request}}" placeholder="例如：下周要和本地团队开会，想优先学工作用语；每天只有 10 分钟…" placeholder-class="ph" bindinput="onRequest" maxlength="500"></textarea>
       <button class="btn" bindtap="adjust" loading="{{loading==='adjust'}}" disabled="{{!!loading}}">生成调整建议</button>
     </view>
 
@@ -169,7 +169,7 @@
     </scroll-view>
 
     <view class="composer">
-      <input class="input grow" value="{{input}}" placeholder="用中文或阿姆哈拉语提问…" bindinput="onInput" confirm-type="send" bindconfirm="send" />
+      <input class="input grow" value="{{input}}" placeholder="用中文或阿姆哈拉语提问…" placeholder-class="ph" bindinput="onInput" confirm-type="send" bindconfirm="send" />
       <view class="send" bindtap="send">
         <x-icon name="chevron-right" size="36" color="#FFFFFF" />
       </view>

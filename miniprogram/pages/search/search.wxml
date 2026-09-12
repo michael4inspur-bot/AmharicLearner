@@ -1,7 +1,7 @@
 <view class="page no-tab">
   <view class="searchbox">
     <view class="search-icon"><x-icon name="search" size="34" color="#B08A78" /></view>
-    <input class="input search-input" value="{{q}}" placeholder="输入中文 / 转写 / 阿姆哈拉语，例如：多少钱、sint、ውሃ" bindinput="onInput" bindconfirm="onConfirm" confirm-type="search" focus />
+    <input class="input search-input" value="{{q}}" placeholder="输入中文 / 转写 / 阿姆哈拉语，例如：多少钱、sint、ውሃ" placeholder-class="ph" bindinput="onInput" bindconfirm="onConfirm" confirm-type="search" focus />
   </view>
   <view class="hint">长按阿姆哈拉语原文可复制，直接给对方看。</view>
 

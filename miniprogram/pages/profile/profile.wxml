@@ -63,7 +63,7 @@
         <text class="set-label">昵称</text>
         <text class="muted nick-hint">{{nickname ? '同事能认出你' : '还没填'}}</text>
       </view>
-      <input type="nickname" class="nick-input" value="{{nickname}}" placeholder="填个昵称，方便同事认出你" placeholder-class="nick-ph" bindblur="onNickname" maxlength="20" />
+      <input type="nickname" class="input on-card nick-input" value="{{nickname}}" placeholder="填个昵称，方便同事认出你" placeholder-class="ph" bindblur="onNickname" maxlength="20" />
     </view>
     <view class="row between list-item">
       <text class="set-label">每日目标</text>

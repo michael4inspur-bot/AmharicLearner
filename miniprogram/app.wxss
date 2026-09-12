@@ -115,6 +115,9 @@ textarea.input, input.input {
   box-shadow: var(--shadow-sm);
 }
 textarea.input { min-height: 160rpx; }
+/* 白卡片里的输入框：底色换成页面米色，否则白底叠白底看不出这里可以填 */
+textarea.input.on-card, input.input.on-card { background: var(--bg); box-shadow: none; }
+.ph { color: var(--muted); font-size: 26rpx; }
 
 /* 图标方块与圆钮 */
 .square {
