@@ -1,4 +1,7 @@
 // DeepSeek 使用 OpenAI 兼容的 Chat Completions 接口。配置全部来自环境变量。
+// 云函数可能跑在 Node 16（没有全局 fetch），缺失时补上内置实现。
+require('./fetch-polyfill.js').installFetch();
+
 class DeepSeekError extends Error {
   constructor(message, code) {
     super(message);

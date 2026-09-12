@@ -1,5 +1,7 @@
 // Azure Speech REST 适配器（TTS / STT）。配置全部来自环境变量，错误类复用 deepseek.js 的 DeepSeekError。
 const { DeepSeekError } = require('./deepseek.js');
+// 云函数可能跑在 Node 16（没有全局 fetch），缺失时补上内置实现。
+require('./fetch-polyfill.js').installFetch();
 
 const OUTPUT_FORMAT = 'audio-24khz-48kbitrate-mono-mp3';
 const TIMEOUT_MS = 20000;
