@@ -6,3 +6,6 @@
 .err { color: var(--danger); font-size: 26rpx; margin-top: 12rpx; }
 .center { text-align: center; margin-top: 20rpx; }
 .link { color: var(--accent); font-weight: 700; font-size: 26rpx; }
+/* 小程序原生 input 默认只有 1.4em 高，加上内边距后文字会被下面的按钮压住，这里给足高度并拉开按钮间距 */
+.login-input { min-height: 88rpx; margin-bottom: 8rpx; }
+.login-btn { margin-top: 28rpx; }

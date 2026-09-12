@@ -66,7 +66,7 @@ async function synthesize(text, voiceName, rate) {
       'Ocp-Apim-Subscription-Key': apiKey,
       'Content-Type': 'application/ssml+xml',
       'X-Microsoft-OutputFormat': OUTPUT_FORMAT,
-      'User-Agent': 'AmharicLeander'
+      'User-Agent': 'AmharicLearner'
     },
     ssml,
     'TTS'
