@@ -24,7 +24,10 @@ function call(action, data) {
       success: (res) => {
         const r = res.result || {};
         if (r.ok) { resolve(r.data); return; }
-        const err = new Error(MESSAGES[r.code] || r.error || '请求失败');
+        // 友好文案 + 服务端的真实原因，方便自己排查（几个同事内部用，可见性比措辞重要）
+        const friendly = MESSAGES[r.code];
+        const detail = r.error && r.error !== friendly ? String(r.error).slice(0, 120) : '';
+        const err = new Error(friendly ? (detail ? `${friendly}\n（${detail}）` : friendly) : (r.error || '请求失败'));
         err.code = r.code || 'UNKNOWN';
         err.raw = r.error;
         reject(err);

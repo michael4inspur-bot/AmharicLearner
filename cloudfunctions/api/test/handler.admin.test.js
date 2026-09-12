@@ -190,6 +190,17 @@ test('admin.deleteUser：进度与日志被删，users 文档变 blocked 且保�
   });
 });
 
+test('users 集合读不到时不阻断 AI 与进度同步（容错放行）', async () => {
+  const db = createFakeDb();
+  // 模拟集合尚未创建：getUser 抛错
+  db.getUser = async () => { throw new Error('database collection not exists'); };
+  const deepseek = createFakeDeepseek(() => 'ሰላም');
+  const chat = await handle('ai.chat', { messages: [{ role: 'user', content: 'hi' }] }, ctx({ openid: 'u1', db, deepseek }));
+  assert.equal(chat.ok, true, 'AI 仍可用');
+  const put = await handle('progress.put', { progress: { streak: 1 } }, ctx({ openid: 'u1', db }));
+  assert.equal(put.ok, true, '进度同步仍可用');
+});
+
 test('admin.system：结构完整，aiDaily 14 项按东非日升序，aiToday 为东非当天', async () => {
   await withEnv({ ADMIN_OPENIDS: 'u1', TTS_MONTHLY_CHARS_LIMIT: '1000' }, async () => {
     const db = createFakeDb();

@@ -16,6 +16,13 @@ const ERRORS = 'error_logs';
 const AI_TYPES = ['diagnosis', 'plan', 'chat']; // countAiByDay 只统计这三类
 const PRUNE_BATCH = 100; // 单次裁剪最多删除的条数
 
+/** 集合尚未在控制台创建时云数据库报 -502005，视为空集合而不是错误。 */
+function isMissingCollection(err) {
+  if (!err) return false;
+  if (err.errCode === -502005) return true;
+  return /collection not exists/i.test(String(err.errMsg || err.message || ''));
+}
+
 module.exports = {
   async getProgress(openid) {
     const r = await db.collection(PROGRESS).where({ _id: openid }).limit(1).get();
@@ -97,8 +104,13 @@ module.exports = {
   },
   /** @returns {Promise<object|null>} users 文档（_id = openid） */
   async getUser(openid) {
-    const r = await db.collection(USERS).where({ _id: openid }).limit(1).get();
-    return r.data[0] || null;
+    try {
+      const r = await db.collection(USERS).where({ _id: openid }).limit(1).get();
+      return r.data[0] || null;
+    } catch (err) {
+      if (isMissingCollection(err)) return null;
+      throw err;
+    }
   },
   /** 合并写入：先读已有文档，再用 patch 覆盖后整体 set（doc.set 会替换整个文档）。 */
   async putUser(openid, patch) {

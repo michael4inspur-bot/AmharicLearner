@@ -122,8 +122,15 @@ async function handle(action, data, ctx) {
   const isGated = GATED_PREFIXES.some((p) => action.startsWith(p));
   const isProgress = action === 'progress.get' || action === 'progress.put';
   if (isGated || isProgress) {
-    const user = await db.getUser(openid);
-    const status = user && user.status;
+    // 账号状态是管理便利，不是安全边界：users 集合缺失或数据库抖动时放行，
+    // 否则一次读失败会让所有人的学习功能全部瘫痪。
+    let status = null;
+    try {
+      const user = await db.getUser(openid);
+      status = user && user.status;
+    } catch (err) {
+      console.error('读取账号状态失败，按正常账号放行', err);
+    }
     if (isGated && status && status !== 'active') return fail('BAD_REQUEST', '账号已被管理员暂停');
     if (isProgress && status === 'blocked') return fail('BAD_REQUEST', '账号已停用');
   }
@@ -141,7 +148,12 @@ async function handle(action, data, ctx) {
       if (!data.progress || typeof data.progress !== 'object') return fail('BAD_REQUEST', 'progress 必须是对象');
       const updatedAt = now.toISOString();
       await db.putProgress(openid, { progress: data.progress, updatedAt });
-      await putUserSummary(ctx, now, data.meta);
+      // 摘要只服务于管理端列表，写失败不能让已经存好的进度上传变成失败
+      try {
+        await putUserSummary(ctx, now, data.meta);
+      } catch (err) {
+        console.error('写入用户摘要失败', err);
+      }
       return ok({ updatedAt });
     }
     case 'ai.diagnose': {
