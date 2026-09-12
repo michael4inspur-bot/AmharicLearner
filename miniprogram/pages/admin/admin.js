@@ -3,6 +3,7 @@ const api = require('../../utils/api.js');
 
 const STATUS = {
   active: { label: '正常', tag: 'mint' },
+  pending: { label: '待批准', tag: 'warn' },
   paused: { label: '已暂停', tag: '' },
   blocked: { label: '已停用', tag: 'gray' }
 };
@@ -129,7 +130,7 @@ Page({
     const list = this.data.users.filter((u) => u.openid === openid);
     const user = list[0];
     if (!user || user.isSelf) return;
-    const toggle = user.status === 'active' ? '暂停账号' : '恢复账号';
+    const toggle = user.status === 'active' ? '暂停账号' : (user.status === 'pending' ? '批准账号' : '恢复账号');
     wx.showActionSheet({
       itemList: [toggle, '删除用户'],
       success: (res) => {
@@ -143,7 +144,7 @@ Page({
   async setStatus(user, status) {
     try {
       await api.adminSetStatus(user.openid, status);
-      wx.showToast({ title: status === 'active' ? '已恢复' : '已暂停', icon: 'none' });
+      wx.showToast({ title: status === 'active' ? (user.status === 'pending' ? '已批准' : '已恢复') : '已暂停', icon: 'none' });
       await this.loadUsers();
     } catch (e) {
       this.fail(e);

@@ -11,7 +11,8 @@
     "pages/profile/profile",
     "pages/search/search",
     "pages/speak/speak",
-    "pages/admin/admin"
+    "pages/admin/admin",
+    "pages/login/login"
   ],
   "window": {
     "navigationBarBackgroundColor": "#0f6e56",
@@ -40,6 +41,10 @@
       {
         "pagePath": "pages/coach/coach",
         "text": "AI教练"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的"
       }
     ],
     "custom": true

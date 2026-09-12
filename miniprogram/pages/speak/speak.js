@@ -232,6 +232,14 @@ Page({
       .catch((err) => {
         this.setData({ loading: false });
         const msg = (err && err.message) || '请稍后再试';
+        if (/登录/.test(msg)) {
+          wx.showModal({ title: '请先登录', content: '到「我的」页点“微信登录”，登录后即可使用跟读评分。', showCancel: false });
+          return;
+        }
+        if (/批准/.test(msg)) {
+          wx.showModal({ title: '等待管理员批准', content: '管理员批准后即可使用语音功能。', showCancel: false });
+          return;
+        }
         if (/暂停|停用/.test(msg)) {
           wx.showModal({ title: '账号已被管理员暂停', content: '请联系管理员', showCancel: false });
           return;

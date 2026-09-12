@@ -5,7 +5,8 @@ Component({
       { pagePath: '/pages/index/index', text: '今日', icon: 'home' },
       { pagePath: '/pages/lessons/lessons', text: '课程', icon: 'book' },
       { pagePath: '/pages/review/review', text: '复习', icon: 'cards' },
-      { pagePath: '/pages/coach/coach', text: 'AI 教练', icon: 'spark' }
+      { pagePath: '/pages/coach/coach', text: 'AI 教练', icon: 'spark' },
+      { pagePath: '/pages/profile/profile', text: '我的', icon: 'user' }
     ]
   },
   methods: {

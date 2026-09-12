@@ -2,7 +2,7 @@
 // ctx = { openid, db, deepseek, azure, storage, now? }
 const prompts = require('./prompts.js');
 const { handleSpeech } = require('./speech.js');
-const { handleAdmin } = require('./admin.js');
+const { handleAdmin, isAdminUser } = require('./admin.js');
 const { getLimits, isAdmin, DEFAULT_LIMITS } = require('./limits.js');
 const { dayStartIso, monthStartIso } = require('./time.js');
 
@@ -65,14 +65,14 @@ async function usageGet(ctx, now) {
     tts: { used: tts, limit: limits.tts },
     stt: { used: stt, limit: limits.stt },
     monthChars: { used: monthChars, limit: limits.ttsMonthlyChars },
-    isAdmin: isAdmin(openid)
+    isAdmin: await isAdminUser(openid, db)
   });
 }
 
 /** admin.usage：最近 7 天按用户汇总，按 ai 次数降序。仅 ADMIN_OPENIDS 中的用户可用。 */
 async function adminUsage(ctx, now) {
   const { openid, db } = ctx;
-  if (!isAdmin(openid)) return fail('BAD_REQUEST', '无权限');
+  if (!(await isAdminUser(openid, db))) return fail('BAD_REQUEST', '无权限');
   const since = new Date(now.getTime() - ADMIN_USAGE_DAYS * DAY_MS).toISOString();
   const logs = await db.listLogsSince(since, ADMIN_LOG_LIMIT);
   const byUser = new Map();
@@ -96,11 +96,13 @@ async function adminUsage(ctx, now) {
   return ok({ users, since });
 }
 
-/** progress.put 成功后 upsert users 摘要；meta = {week, streak, stars}，缺省为 0。createdAt 仅首次写入。 */
+/** progress.put 成功后更新已注册用户的摘要；meta = {week, streak, stars}，缺省为 0。createdAt 仅首次写入。 */
 async function putUserSummary(ctx, now, meta) {
   const { openid, db } = ctx;
   const m = meta || {};
   const existing = await db.getUser(openid);
+  // 只更新已登录（注册）的用户；未注册的不在这里创建，否则进度同步会绕过登录门槛
+  if (!existing) return;
   const patch = {
     lastActive: now.toISOString(),
     week: Number(m.week) || 0,
@@ -124,14 +126,20 @@ async function handle(action, data, ctx) {
   if (isGated || isProgress) {
     // 账号状态是管理便利，不是安全边界：users 集合缺失或数据库抖动时放行，
     // 否则一次读失败会让所有人的学习功能全部瘫痪。
-    let status = null;
+    let user = null;
+    let readFailed = false;
     try {
-      const user = await db.getUser(openid);
-      status = user && user.status;
+      user = await db.getUser(openid);
     } catch (err) {
+      readFailed = true;
       console.error('读取账号状态失败，按正常账号放行', err);
     }
-    if (isGated && status && status !== 'active') return fail('BAD_REQUEST', '账号已被管理员暂停');
+    const status = user && user.status;
+    if (isGated && !readFailed) {
+      if (!user) return fail('BAD_REQUEST', '请先在「我的」页完成微信登录');
+      if (status === 'pending') return fail('BAD_REQUEST', '账号等待管理员批准');
+      if (status && status !== 'active') return fail('BAD_REQUEST', '账号已被管理员暂停');
+    }
     if (isProgress && status === 'blocked') return fail('BAD_REQUEST', '账号已停用');
   }
 

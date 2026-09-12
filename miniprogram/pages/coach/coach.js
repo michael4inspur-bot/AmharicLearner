@@ -71,6 +71,14 @@ Page({
   fail(err) {
     this.setData({ loading: '' });
     const msg = err.message || '请求失败';
+    if (/登录/.test(msg)) {
+      wx.showModal({ title: '请先登录', content: '到「我的」页点“微信登录”，登录后即可使用 AI 教练。', showCancel: false });
+      return;
+    }
+    if (/批准/.test(msg)) {
+      wx.showModal({ title: '等待管理员批准', content: '你的账号已登记，管理员批准后即可使用 AI 与语音。', showCancel: false });
+      return;
+    }
     if (/暂停|停用/.test(msg)) {
       wx.showModal({ title: '账号已被管理员暂停', content: '请联系管理员', showCancel: false });
       return;

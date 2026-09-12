@@ -12,7 +12,8 @@ const { createFakeStorage } = require(path.join(fnRoot, 'test', 'fakeStorage.js'
 
 const DIAG = { overall_level: '入门', score: 50, summary: '模拟诊断', strengths: ['坚持'], weaknesses: [], risks: [],
   recommendations: [], plan_changes: [], daily_minutes_suggestion: 30, next_7_days: [], encouragement: '继续' };
-const db = createFakeDb();
+const db = createFakeDb({ registered: false }); // 严格：必须先登录（注册）才能用 AI / 语音
+let simOpenid = 'sim-user';
 const deepseek = createFakeDeepseek((messages, opts) => (opts && opts.json ? JSON.stringify(DIAG) : 'ሰላም! 模拟回复'));
 const azure = createFakeAzure({ synth: () => Buffer.from('mp3'), recog: () => ({ status: 'Success', text: 'ሰላም' }) });
 const storage = createFakeStorage();
@@ -42,13 +43,14 @@ global.wx = {
       accessSync(p) { if (!localFiles.has(p)) throw new Error('nofile'); }
     };
   },
+  getNetworkType({ success }) { success({ networkType: global.__net || 'wifi' }); },
   getRecorderManager() {
     return { start() {}, stop() {}, onStop() {}, onError() {} };
   },
   cloud: {
     init() {},
     callFunction({ data, success, fail }) {
-      handle(data.action, data.data, { openid: 'sim-user', db, deepseek, azure, storage })
+      handle(data.action, data.data, { openid: simOpenid, db, deepseek, azure, storage })
         .then((result) => success({ result }))
         .catch((e) => fail({ errMsg: e.message }));
     },
@@ -62,6 +64,8 @@ global.wx = {
 const pages = [];
 global.Page = (cfg) => { cfg.getTabBar = () => ({ setData() {} }); pages.push(cfg); };
 global.Component = () => {};
+global.getApp = () => ({ globalData: {} });
+global.getCurrentPages = () => [];
 global.App = (cfg) => { global.__app = cfg; };
 
 // 先填云环境，再加载依赖 config 的模块
@@ -75,9 +79,9 @@ const api = require(path.join(root, 'utils/api.js'));
 const sync = require(path.join(root, 'utils/sync.js'));
 const audio = require(path.join(root, 'utils/audio.js'));
 
-['index/index', 'lessons/lessons', 'lesson/lesson', 'review/review', 'quiz/quiz', 'plan/plan', 'coach/coach', 'fidel/fidel', 'profile/profile', 'search/search', 'speak/speak', 'admin/admin']
+['index/index', 'lessons/lessons', 'lesson/lesson', 'review/review', 'quiz/quiz', 'plan/plan', 'coach/coach', 'fidel/fidel', 'profile/profile', 'search/search', 'speak/speak', 'admin/admin', 'login/login']
   .forEach((p) => require(path.join(root, 'pages', p + '.js')));
-assert.equal(pages.length, 12, 'pages loaded');
+assert.equal(pages.length, 13, 'pages loaded');
 require(path.join(root, 'app.js'));
 global.__app.onLaunch();
 
@@ -126,6 +130,18 @@ async function main() {
   assert.equal(await sync.syncNow(), false, '未变化不重复上传');
   const fetched = await api.fetchProgress();
   assert.equal(fetched.progress.unitsLearned.u01, progress.load().unitsLearned.u01);
+
+  // 登录门槛：未登录不能用 AI / 语音；微信登录（注册）后可用；第一个登录者自动成为管理员
+  await assert.rejects(api.chat([{ role: 'user', content: 'hi' }], s), (e) => /登录/.test(e.message), '未登录被拒');
+  await assert.rejects(api.ttsGet('ሰላም', 'female', 'normal'), (e) => /登录/.test(e.message), '未登录不能朗读');
+  const me0 = await api.me();
+  assert.equal(me0.registered, false);
+  const reg = await api.register('李工');
+  assert.equal(reg.registered, true);
+  assert.equal(reg.nickname, '李工');
+  assert.equal(reg.isAdmin, true, '环境变量没配管理员时，第一个登录的人成为管理员');
+  const me1 = await api.me();
+  assert.equal(me1.isAdmin, true);
 
   // 云函数链路：AI
   const diag = await api.diagnose(s, plan.planOutline());
@@ -190,10 +206,13 @@ async function main() {
   assert.ok(progress.load().unitsLearned.u14, 'u14 已学');
 
   // 管理端：昵称、公告、用户列表、系统面板、摘要同步
+  simOpenid = 'colleague';
   await assert.rejects(api.adminUsers(), (e) => /无权限/.test(e.message), '非管理员被拒');
-  await api.setProfile('李工');
-  process.env.ADMIN_OPENIDS = 'sim-user';
+  const reg2 = await api.register('王工');
+  assert.equal(reg2.isAdmin, false, '第二个登录者不是管理员');
+  simOpenid = 'sim-user';
   const adminList = await api.adminUsers();
+  assert.equal(adminList.users.length, 2, '管理员能看到两个用户');
   const meRow = adminList.users.find((u) => u.isSelf);
   assert.ok(meRow, '列表含本人');
   assert.equal(meRow.nickname, '李工');
@@ -208,18 +227,29 @@ async function main() {
   const userDoc = db._users.get('sim-user');
   assert.ok(userDoc, 'users 摘要已写入');
   assert.equal(userDoc.stars, progress.load().stars || 0, '摘要 stars 与本地一致');
-  delete process.env.ADMIN_OPENIDS;
 
   // 用量与配额
   const usage = await api.usageGet();
   assert.ok(usage.ai && typeof usage.ai.used === 'number' && usage.ai.limit === 20, 'usage.get 结构');
-  assert.equal(usage.isAdmin, false);
+  assert.equal(usage.isAdmin, true, '引导产生的管理员身份在 usage.get 里可见');
+  simOpenid = 'colleague';
   await assert.rejects(api.adminUsage(), (e) => /无权限/.test(e.message));
-  process.env.ADMIN_OPENIDS = 'sim-user';
+  simOpenid = 'sim-user';
   const team = await api.adminUsage();
-  assert.equal(team.users.length, 1);
-  assert.equal(team.users[0].openid, 'sim-user');
+  assert.ok(team.users.some((u) => u.openid === 'sim-user'));
+  // 环境变量名单一旦配置则优先于数据库引导
+  process.env.ADMIN_OPENIDS = 'someone-else';
+  assert.equal((await api.me()).isAdmin, false, '环境变量指定了别人，引导管理员失效');
   delete process.env.ADMIN_OPENIDS;
+
+  // 网络：断网时预检直接提示；连接失败归成一句网络提示
+  global.__net = 'none';
+  await assert.rejects(api.diagnose({}, {}), (e) => e.code === 'OFFLINE' && /没有网络/.test(e.message));
+  global.__net = 'wifi';
+  const realCall0 = wx.cloud.callFunction;
+  wx.cloud.callFunction = ({ fail }) => fail({ errMsg: 'cloud.callFunction:fail Error: errCode: -601001 | errMsg: request:fail -2:net::ERR_NAME_NOT_RESOLVED' });
+  await assert.rejects(api.diagnose({}, {}), (e) => e.code === 'NETWORK' && /网络连接失败/.test(e.message));
+  wx.cloud.callFunction = realCall0;
 
   // 云函数失败信息归一成一句可照做的提示
   const realCall = wx.cloud.callFunction;

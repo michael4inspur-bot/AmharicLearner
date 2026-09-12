@@ -43,9 +43,16 @@ Page({
 
   /** 公告与昵称提示：云端没准备好时静默跳过，不打扰用户 */
   loadNotices() {
-    const nickname = String((readStorage(PROFILE_KEY) || {}).nickname || '');
+    const profile = readStorage(PROFILE_KEY) || {};
+    const nickname = String(profile.nickname || '');
     const configured = api.configured();
     this.setData({ needNickname: configured && !nickname });
+    // 首次进入且已配置云环境：引导微信登录，每次启动只弹一次；跳过的用户不再打扰
+    const app = getApp();
+    if (configured && !profile.registered && !profile.skipped && app && !app.globalData.loginPrompted) {
+      app.globalData.loginPrompted = true;
+      wx.navigateTo({ url: '/pages/login/login' });
+    }
     if (!configured) { this.setData({ announce: null }); return; }
     api.announcement()
       .then((a) => {
@@ -162,7 +169,7 @@ Page({
   },
 
   goPlan() { wx.navigateTo({ url: '/pages/plan/plan' }); },
-  goProfile() { wx.navigateTo({ url: '/pages/profile/profile' }); },
+  goProfile() { wx.switchTab({ url: '/pages/profile/profile' }); },
   goSearch() { wx.navigateTo({ url: '/pages/search/search' }); },
   goReview() { wx.switchTab({ url: '/pages/review/review' }); },
   goFidel() { wx.navigateTo({ url: `/pages/fidel/fidel?group=${this.data.week.fidelGroup}` }); }

@@ -10,13 +10,18 @@ function loadNickname() {
   try { return String((wx.getStorageSync(PROFILE_KEY) || {}).nickname || ''); } catch (e) { return ''; }
 }
 
+function readProfile() {
+  try { return wx.getStorageSync(PROFILE_KEY) || {}; } catch (e) { return {}; }
+}
+
 function saveNickname(nickname) {
   try { wx.setStorageSync(PROFILE_KEY, { ...(wx.getStorageSync(PROFILE_KEY) || {}), nickname }); } catch (e) { /* 忽略 */ }
 }
 
 Page({
-  data: { cloudReady: false, goal: 20, newCards: 10, startDate: '', voice: 'female', rate: 'normal', stats: {}, streak: 0, totalMinutes: 0, days: 0, quizzes: 0, stars: 0, badges: [], earnedCount: 0, usage: null, isAdmin: false, nickname: '', openid: '' },
+  data: { cloudReady: false, goal: 20, newCards: 10, startDate: '', voice: 'female', rate: 'normal', stats: {}, streak: 0, totalMinutes: 0, days: 0, quizzes: 0, stars: 0, badges: [], earnedCount: 0, usage: null, isAdmin: false, nickname: '', openid: '', registered: false, status: 'active' },
   onShow() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().setData({ selected: 4 });
     const p = progress.load();
     const totalMinutes = Object.values(p.logs).reduce((a, l) => a + (l.minutes || 0), 0);
     const { voice, rate } = audio.getSettings();
@@ -29,7 +34,10 @@ Page({
       stars: p.stars || 0,
       badges,
       earnedCount: badges.filter((b) => b.earned).length,
-      nickname: loadNickname()
+      nickname: loadNickname(),
+      registered: !!readProfile().registered,
+      isAdmin: !!readProfile().isAdmin,
+      status: readProfile().status || 'active'
     });
     if (api.configured()) { this.loadUsage(); this.loadMe(); }
   },
@@ -43,8 +51,9 @@ Page({
     try {
       const me = await api.me();
       if (!me) return;
-      const d = { openid: me.openid || '' };
+      const d = { openid: me.openid || '', registered: !!me.registered, isAdmin: !!me.isAdmin, status: me.status || 'active' };
       if (me.nickname && !this.data.nickname) { saveNickname(me.nickname); d.nickname = me.nickname; }
+      try { wx.setStorageSync(PROFILE_KEY, { ...readProfile(), registered: !!me.registered, isAdmin: !!me.isAdmin, status: me.status || 'active' }); } catch (e) { /* ignore */ }
       this.setData(d);
     } catch (e) { this.setData({ openid: '' }); }
   },
@@ -62,6 +71,7 @@ Page({
     wx.showToast({ title: '已复制', icon: 'none' });
   },
   goAdmin() { wx.navigateTo({ url: '/pages/admin/admin' }); },
+  goLogin() { wx.navigateTo({ url: '/pages/login/login' }); },
   onVoice(e) { const { voice } = audio.setSettings({ voice: e.detail.value }); this.setData({ voice }); },
   onRate(e) { const { rate } = audio.setSettings({ rate: e.detail.value }); this.setData({ rate }); },
   onGoalMoving(e) { this.setData({ goal: e.detail.value }); },

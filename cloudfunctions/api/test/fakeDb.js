@@ -2,7 +2,12 @@
 const { eatDayKey } = require('../time.js');
 const AI_TYPES = ['diagnosis', 'plan', 'chat']; // countAiByDay 只统计这三类
 
-function createFakeDb() {
+/**
+ * @param {{registered?: boolean}} [opts] registered 默认 true：未显式写入的 openid 也视为已注册的正常账号，
+ * 让只关心 AI / 语音逻辑的测试不必先注册；传 false 则严格按 _users 判断（测登录与注册流程用）。
+ */
+function createFakeDb(opts) {
+  const autoRegistered = !opts || opts.registered !== false;
   const progress = new Map();
   const logs = [];
   const ttsCache = new Map();
@@ -65,7 +70,8 @@ function createFakeDb() {
       for (let i = logs.length - 1; i >= 0; i--) if (drop.has(logs[i]._id)) logs.splice(i, 1);
     },
     async getUser(openid) {
-      return users.has(openid) ? { ...users.get(openid) } : null;
+      if (users.has(openid)) return { ...users.get(openid) };
+      return autoRegistered ? { _id: openid, status: 'active', _auto: true } : null;
     },
     /** 合并写入：已有字段保留，patch 覆盖。 */
     async putUser(openid, patch) {

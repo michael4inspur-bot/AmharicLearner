@@ -69,3 +69,10 @@
 1. 云开发控制台新建集合 `users`、`settings`、`error_logs`（仅创建者可读写）。
 2. 重新部署云函数。
 3. 在"我的"页复制自己的 openid，填入云函数环境变量 `ADMIN_OPENIDS`。
+
+## 8. 补充（2026-09-12）
+
+- 新增 `user.register`（小程序「微信登录」）：创建 `users` 记录；未注册用户调用 `ai.*`/`tts.*`/`stt.*` 返回 `BAD_REQUEST`"请先在「我的」页完成微信登录"；进度同步不受影响，且不再顺带创建用户记录。
+- 管理员引导：`ADMIN_OPENIDS` 为空时，第一个注册者写入 `settings/admin`，成为管理员；环境变量一旦配置则优先。
+- 状态新增 `pending`：`REQUIRE_APPROVAL=1` 时新用户为 pending，管理页可「批准」；管理员本人始终 active。
+- 「我的」改为底部第 5 个 Tab；首页首次进入引导登录页，可跳过。

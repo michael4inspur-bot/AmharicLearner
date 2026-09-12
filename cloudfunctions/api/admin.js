@@ -4,7 +4,8 @@
 const { getLimits, isAdmin } = require('./limits.js');
 const { dayStartIso, monthStartIso, eatDayKey } = require('./time.js');
 
-const USER_STATUSES = ['active', 'paused', 'blocked'];
+const USER_STATUSES = ['active', 'pending', 'paused', 'blocked'];
+const ADMIN_SETTING_ID = 'admin';
 const AI_TYPES = ['diagnosis', 'plan', 'chat'];
 const MAX_NICKNAME = 20;
 const MAX_ANNOUNCEMENT = 500;
@@ -29,6 +30,63 @@ function publicUser(openid, doc) {
   };
 }
 
+/** 环境变量里是否配置了管理员名单 */
+function envAdminConfigured() {
+  const raw = process.env.ADMIN_OPENIDS;
+  return typeof raw === 'string' && raw.split(',').some((x) => x.trim());
+}
+
+/**
+ * 管理员判定：环境变量名单优先；名单为空时，以数据库 settings/admin 记录的
+ * 第一个注册者为管理员（user.register 时自动写入），免去复制 openid 配环境变量。
+ */
+async function isAdminUser(openid, db) {
+  if (isAdmin(openid)) return true;
+  if (envAdminConfigured()) return false;
+  try {
+    const doc = await db.getSetting(ADMIN_SETTING_ID);
+    return !!doc && doc.openid === openid;
+  } catch (err) {
+    return false;
+  }
+}
+
+/**
+ * 微信登录 = 注册：首次调用创建 users 记录；环境变量未配管理员且尚无管理员记录时，
+ * 第一个注册者成为管理员。REQUIRE_APPROVAL=1 时新用户为 pending，需管理员批准（管理员本人除外）。
+ */
+async function register(data, ctx, now) {
+  const { openid, db } = ctx;
+  let nickname = null;
+  if (data.nickname != null) {
+    if (typeof data.nickname !== 'string') return fail('BAD_REQUEST', 'nickname 必须是字符串');
+    nickname = data.nickname.trim().slice(0, MAX_NICKNAME);
+  }
+  const existing = await db.getUser(openid);
+  if (!existing) {
+    let bootstrappedAdmin = false;
+    if (!envAdminConfigured()) {
+      const adm = await db.getSetting(ADMIN_SETTING_ID);
+      if (!adm || !adm.openid) {
+        await db.putSetting(ADMIN_SETTING_ID, { openid, createdAt: now.toISOString() });
+        bootstrappedAdmin = true;
+      }
+    }
+    const admin = bootstrappedAdmin || (await isAdminUser(openid, db));
+    const status = !admin && process.env.REQUIRE_APPROVAL === '1' ? 'pending' : 'active';
+    await db.putUser(openid, {
+      status,
+      createdAt: now.toISOString(),
+      lastActive: now.toISOString(),
+      ...(nickname ? { nickname } : {})
+    });
+  } else if (nickname) {
+    await db.putUser(openid, { nickname });
+  }
+  const doc = await db.getUser(openid);
+  return ok({ ...publicUser(openid, doc), registered: true, isAdmin: await isAdminUser(openid, db) });
+}
+
 /** 校验非空字符串入参；返回字符串或 null。 */
 function cleanId(raw) {
   return typeof raw === 'string' && raw.trim() ? raw.trim() : null;
@@ -45,7 +103,8 @@ async function setProfile(data, ctx) {
 
 async function me(ctx) {
   const { openid, db } = ctx;
-  return ok(publicUser(openid, await db.getUser(openid)));
+  const doc = await db.getUser(openid);
+  return ok({ ...publicUser(openid, doc), registered: !!doc, isAdmin: await isAdminUser(openid, db) });
 }
 
 async function announcementGet(ctx) {
@@ -177,13 +236,14 @@ async function handleAdmin(action, data, ctx) {
   const now = ctx.now ? ctx.now() : new Date();
   data = data || {};
   switch (action) {
+    case 'user.register': return register(data, ctx, now);
     case 'user.setProfile': return setProfile(data, ctx);
     case 'user.me': return me(ctx);
     case 'announcement.get': return announcementGet(ctx);
     default: break;
   }
   if (!action.startsWith('admin.')) return fail('BAD_REQUEST', `未知 action: ${action}`);
-  if (!isAdmin(ctx.openid)) return fail('BAD_REQUEST', '无权限');
+  if (!(await isAdminUser(ctx.openid, ctx.db))) return fail('BAD_REQUEST', '无权限');
   switch (action) {
     case 'admin.users': return listUsers(ctx, now);
     case 'admin.setStatus': return setStatus(data, ctx);
@@ -195,4 +255,4 @@ async function handleAdmin(action, data, ctx) {
   }
 }
 
-module.exports = { handleAdmin, USER_STATUSES, MAX_NICKNAME, MAX_ANNOUNCEMENT };
+module.exports = { handleAdmin, isAdminUser, USER_STATUSES, MAX_NICKNAME, MAX_ANNOUNCEMENT };

@@ -61,10 +61,10 @@ test('user.setProfile：昵称去空白后写入，超长 / 空 / 非字符串�
 test('user.me：无记录视为 active 且昵称为空；设置昵称后返回昵称与状态', async () => {
   await withEnv({}, async () => {
     const c = ctx();
-    assert.deepEqual((await handle('user.me', {}, c)).data, { openid: 'u1', nickname: '', status: 'active' });
+    assert.deepEqual((await handle('user.me', {}, c)).data, { openid: 'u1', nickname: '', status: 'active', registered: true, isAdmin: false });
     await handle('user.setProfile', { nickname: '李工' }, c);
     await c.db.putUser('u1', { status: 'paused' });
-    assert.deepEqual((await handle('user.me', {}, c)).data, { openid: 'u1', nickname: '李工', status: 'paused' });
+    assert.deepEqual((await handle('user.me', {}, c)).data, { openid: 'u1', nickname: '李工', status: 'paused', registered: true, isAdmin: false });
   });
 });
 
@@ -151,7 +151,7 @@ test('admin.setStatus：非法值、缺 openid、对自己被拒；正常修改�
   await withEnv({ ADMIN_OPENIDS: 'u1' }, async () => {
     const db = createFakeDb();
     const c = ctx({ openid: 'u1', db });
-    assert.deepEqual(USER_STATUSES, ['active', 'paused', 'blocked']);
+    assert.deepEqual(USER_STATUSES, ['active', 'pending', 'paused', 'blocked']);
     assert.match((await handle('admin.setStatus', { openid: 'u2', status: 'nope' }, c)).error, /status/);
     assert.equal((await handle('admin.setStatus', { status: 'paused' }, c)).code, 'BAD_REQUEST');
     assert.deepEqual(await handle('admin.setStatus', { openid: 'u1', status: 'paused' }, c), { ok: false, code: 'BAD_REQUEST', error: '不能操作自己的账号' });
@@ -199,6 +199,70 @@ test('users 集合读不到时不阻断 AI 与进度同步（容错放行）', a
   assert.equal(chat.ok, true, 'AI 仍可用');
   const put = await handle('progress.put', { progress: { streak: 1 } }, ctx({ openid: 'u1', db }));
   assert.equal(put.ok, true, '进度同步仍可用');
+});
+
+test('user.register：首次注册创建记录；环境变量没配管理员时第一个注册的人成为管理员', async () => {
+  await withEnv({ ADMIN_OPENIDS: '' }, async () => {
+    const db = createFakeDb({ registered: false });
+    const first = await handle('user.register', { nickname: '李工' }, ctx({ openid: 'u1', db }));
+    assert.equal(first.ok, true);
+    assert.equal(first.data.nickname, '李工');
+    assert.equal(first.data.status, 'active');
+    assert.equal(first.data.isAdmin, true, '第一个注册者成为管理员');
+    assert.equal((await db.getSetting('admin')).openid, 'u1');
+    const second = await handle('user.register', {}, ctx({ openid: 'u2', db }));
+    assert.equal(second.data.isAdmin, false, '第二个人不是管理员');
+    // 再次注册不改昵称、不换管理员
+    const again = await handle('user.register', {}, ctx({ openid: 'u1', db }));
+    assert.equal(again.data.nickname, '李工');
+    assert.equal((await db.getSetting('admin')).openid, 'u1');
+    // 管理员身份对 admin.* 生效
+    const list = await handle('admin.users', {}, ctx({ openid: 'u1', db }));
+    assert.equal(list.ok, true);
+    const denied = await handle('admin.users', {}, ctx({ openid: 'u2', db }));
+    assert.equal(denied.code, 'BAD_REQUEST');
+  });
+});
+
+test('user.register：REQUIRE_APPROVAL=1 时新用户为 pending，管理员仍为 active', async () => {
+  await withEnv({ ADMIN_OPENIDS: '', REQUIRE_APPROVAL: '1' }, async () => {
+    const db = createFakeDb({ registered: false });
+    const admin = await handle('user.register', {}, ctx({ openid: 'u1', db }));
+    assert.equal(admin.data.status, 'active');
+    const u2 = await handle('user.register', {}, ctx({ openid: 'u2', db }));
+    assert.equal(u2.data.status, 'pending');
+    const chat = await handle('ai.chat', { messages: [{ role: 'user', content: 'hi' }] }, ctx({ openid: 'u2', db }));
+    assert.equal(chat.code, 'BAD_REQUEST');
+    assert.match(chat.error, /批准/);
+    const approve = await handle('admin.setStatus', { openid: 'u2', status: 'active' }, ctx({ openid: 'u1', db }));
+    assert.equal(approve.ok, true);
+    const chat2 = await handle('ai.chat', { messages: [{ role: 'user', content: 'hi' }] }, ctx({ openid: 'u2', db }));
+    assert.equal(chat2.ok, true);
+  });
+});
+
+test('未注册用户不能用 AI 与语音，但进度同步不受影响', async () => {
+  const db = createFakeDb({ registered: false });
+  const chat = await handle('ai.chat', { messages: [{ role: 'user', content: 'hi' }] }, ctx({ openid: 'ghost', db }));
+  assert.equal(chat.code, 'BAD_REQUEST');
+  assert.match(chat.error, /登录/);
+  const tts = await handle('tts.get', { text: 'ሰላም', voice: 'female', rate: 'normal' }, ctx({ openid: 'ghost', db }));
+  assert.match(tts.error, /登录/);
+  const put = await handle('progress.put', { progress: { streak: 1 } }, ctx({ openid: 'ghost', db }));
+  assert.equal(put.ok, true);
+});
+
+test('user.me 返回 registered 与 isAdmin', async () => {
+  await withEnv({ ADMIN_OPENIDS: 'u9' }, async () => {
+    const db = createFakeDb();
+    const me = await handle('user.me', {}, ctx({ openid: 'u9', db }));
+    assert.equal(me.data.isAdmin, true);
+    assert.equal(me.data.registered, true);
+    const strict = createFakeDb({ registered: false });
+    const ghost = await handle('user.me', {}, ctx({ openid: 'nobody', db: strict }));
+    assert.equal(ghost.data.registered, false);
+    assert.equal(ghost.data.isAdmin, false);
+  });
 });
 
 test('admin.system：结构完整，aiDaily 14 项按东非日升序，aiToday 为东非当天', async () => {

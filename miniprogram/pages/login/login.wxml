@@ -1,0 +1,18 @@
+<view class="login">
+  <view class="hero">
+    <view class="am hero-am">ሰላም!</view>
+    <view class="hero-title">AmharicLeander</view>
+    <view class="hero-sub">在埃塞工作的你，8 周学会用阿姆哈拉语沟通工作</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">微信登录</view>
+    <view class="muted">用微信身份登记后即可使用 AI 教练、朗读、跟读评分，进度会自动同步到云端。不登录也能离线学习课程、闪卡和小测。</view>
+    <view class="section-title">昵称（可选，方便同事认出你）</view>
+    <input type="nickname" class="input on-card" value="{{nickname}}" placeholder="例如：李工" placeholder-class="ph" bindblur="onNickname" maxlength="20" />
+    <view class="err" wx:if="{{error}}">{{error}}</view>
+    <button class="btn" bindtap="login" loading="{{loading}}" disabled="{{loading || !configured}}">微信登录并开始</button>
+    <view class="muted center" wx:if="{{!configured}}">还没配置云环境，暂时只能离线学习</view>
+    <view class="link center" bindtap="skip">先离线用，稍后再登录</view>
+  </view>
+</view>

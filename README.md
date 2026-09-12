@@ -18,7 +18,7 @@
 | 语音 | Azure 阿姆哈拉语朗读（课程、闪卡、搜索结果、教练回复，男 / 女声、正常 / 慢速）、小测与闪卡听力题、跟读录音、发音评分（分数 + 识别文字 + 逐词对错） |
 | 管理 | 管理员（`ADMIN_OPENIDS`）在小程序内管理用户账号（暂停 / 恢复 / 删除）、查看本月语音字符、14 天 AI 调用、语音缓存并清理、最近错误，发首页公告；用户自填昵称 |
 | 积分与徽章 | 复习清空 10 星、学完单元 30、小测 20（≥80% 再 +10）、实战 40、跟读评分 8、Fidel 批次 15；8 枚徽章（开口者、七日连续、电话达人、现场指挥、敬语大师…），首页提示下一枚 |
-| 我的 | 每日目标、新词上限、开始日期、声音与语速、云端同步状态、立即上传 / 从云端恢复 |
+| 我的 | 底部第 5 个 Tab：微信登录、昵称、每日目标、新词上限、开始日期、声音与语速、云端同步与用量、徽章墙、管理入口 |
 
 ## 目录
 
@@ -65,7 +65,7 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 3. 云开发控制台 → 数据库 → 新建集合 `progress`、`ai_logs`、`tts_cache`、`users`、`settings`、`error_logs`，权限都选「仅创建者可读写」。
 4. 云开发控制台 → 云函数 → `api` → 配置 → 环境变量，添加 `DEEPSEEK_API_KEY`（[platform.deepseek.com](https://platform.deepseek.com) 申请）。可选 `DEEPSEEK_MODEL`，默认 `deepseek-chat`。
 5. 可选：Fidel 专用字体。从 [Noto Sans Ethiopic](https://fonts.google.com/noto/specimen/Noto+Sans+Ethiopic) 下载 Bold 的 `.ttf`（或转成 `.woff`），上传到云存储任意目录，把文件的 fileID（`cloud://...`）填进 `miniprogram/config.js` 的 `fidelFontFileID`。不填则用手机系统自带的埃塞文字字体。
-6. 管理员：在小程序「我的」页长按“我的账号”复制自己的 openid，填入云函数环境变量 `ADMIN_OPENIDS`（多人用逗号分隔）。
+6. 登录与管理员：小程序首次打开会引导「微信登录」，登录即在云端登记本人 openid，未登录的用户不能用 AI 与语音，本地学习不受影响。**第一个登录的人自动成为管理员**（记录在数据库 `settings/admin`），所以部署好后请你先登录。如需指定或更换管理员，填云函数环境变量 `ADMIN_OPENIDS`（逗号分隔 openid，在「我的」页长按“我的账号”可复制），它优先于数据库记录。可选 `REQUIRE_APPROVAL=1`：新登录的用户先为「待批准」，管理员在管理页点「批准」后才能用 AI 与语音。
 
 ### 3. 配置 Azure 语音（朗读与发音评分）
 
@@ -112,6 +112,7 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 - 报 `NO_API_KEY`：两个环境变量有一个没填，或者填完没重新部署。
 - 报 `UPSTREAM` 且日志里有 401：密钥错了，或者密钥和区域不是同一个资源的。
 - 报 `TIMEOUT`：Azure 区域选得太远，换 `southeastasia` 重建资源。
+- 提示「网络连接失败」或「当前没有网络连接」：手机或开发者工具连不上微信云服务，先检查网络；在埃塞访问微信服务不稳定时可换网络或开代理。
 - 报 `-504003` 或「执行超时」：云函数超时时间还是默认的 3 秒，按上面的表改成 60 秒。
 - 音频下载报「不在 downloadFile 合法域名列表中」：代码已改为走 `wx.cloud.downloadFile`，重新上传小程序代码即可；开发者工具里也可勾选「不校验合法域名」临时绕过。
 - 报 `fetch is not defined`：云函数跑在 Node 16 上。代码已自带兼容实现，重新部署一次即可；也可在云开发控制台把 `api` 的运行环境改成 Nodejs18.15（微信目前最高到 18，没有 22）。
@@ -146,12 +147,13 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 | `stt.score` | `{fileID, target}` | 识别云存储里的录音并评分，返回 `{transcript, score, words}`；处理完删除录音 |
 | `usage.get` | 无 | 本人今日 AI / 语音 / 评分用量与上限，本月语音字符 |
 | `admin.usage` | 无 | 管理员（`ADMIN_OPENIDS`）查看最近 7 天各用户用量 |
-| `user.setProfile` / `user.me` | `{nickname}` / 无 | 设置昵称 / 查看自己的 openid 与状态 |
+| `user.register` | `{nickname?}` | 微信登录：登记本人；首个登记者成为管理员；`REQUIRE_APPROVAL=1` 时新用户为待批准 |
+| `user.setProfile` / `user.me` | `{nickname}` / 无 | 设置昵称 / 查看自己的 openid、是否已登录、是否管理员 |
 | `announcement.get` | 无 | 首页公告 |
 | `admin.users` / `admin.setStatus` / `admin.deleteUser` | 见 spec | 用户列表、暂停 / 恢复、删除（需 `confirm: true`） |
 | `admin.system` / `admin.clearTtsCache` / `admin.setAnnouncement` | 见 spec | 系统面板、清理语音缓存（需 `confirm`）、发公告 |
 
-每人每日上限默认：AI（`ai.diagnose` / `ai.adjustPlan` / `ai.chat`）20 次、`tts` 缓存未命中 300 次、`stt.score` 100 次；全体用户本月语音字符默认 40 万。可用云函数环境变量 `AI_DAILY_LIMIT`、`TTS_DAILY_LIMIT`、`STT_DAILY_LIMIT`、`TTS_MONTHLY_CHARS_LIMIT` 调整；`ADMIN_OPENIDS`（逗号分隔 openid）指定谁能在「我的」页看到团队用量。DeepSeek 与 Azure 密钥只存在云函数环境变量里。
+每人每日上限默认：AI（`ai.diagnose` / `ai.adjustPlan` / `ai.chat`）20 次、`tts` 缓存未命中 300 次、`stt.score` 100 次；全体用户本月语音字符默认 40 万。可用云函数环境变量 `AI_DAILY_LIMIT`、`TTS_DAILY_LIMIT`、`STT_DAILY_LIMIT`、`TTS_MONTHLY_CHARS_LIMIT` 调整；管理员默认是第一个登录的人，`ADMIN_OPENIDS`（逗号分隔 openid）可覆盖。DeepSeek 与 Azure 密钥只存在云函数环境变量里。
 
 ## 学习计划概览
 
