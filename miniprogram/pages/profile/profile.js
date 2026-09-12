@@ -72,6 +72,7 @@ Page({
   },
   goAdmin() { wx.navigateTo({ url: '/pages/admin/admin' }); },
   goLogin() { wx.navigateTo({ url: '/pages/login/login' }); },
+  goPrivacy() { wx.navigateTo({ url: '/pages/privacy/privacy' }); },
   onVoice(e) { const { voice } = audio.setSettings({ voice: e.detail.value }); this.setData({ voice }); },
   onRate(e) { const { rate } = audio.setSettings({ rate: e.detail.value }); this.setData({ rate }); },
   onGoalMoving(e) { this.setData({ goal: e.detail.value }); },

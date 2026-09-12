@@ -28,6 +28,8 @@ global.wx = {
   showToast() {}, showModal() {}, showActionSheet() {}, setNavigationBarTitle() {}, navigateTo() {}, switchTab() {},
   navigateBack() {}, redirectTo() {}, setClipboardData() {},
   authorize({ success }) { if (success) success(); },
+  requirePrivacyAuthorize({ success, fail }) { global.__privacyCalls = (global.__privacyCalls || 0) + 1; if (global.__privacyReject) return fail({ errMsg: 'requirePrivacyAuthorize:fail user reject' }); success(); },
+  openPrivacyContract() {},
   createInnerAudioContext() {
     const ctx = { src: '', played: 0, play() { this.played += 1; }, stop() {}, onEnded() {}, onError() {}, destroy() {} };
     global.__audioCtx = ctx;
@@ -79,9 +81,9 @@ const api = require(path.join(root, 'utils/api.js'));
 const sync = require(path.join(root, 'utils/sync.js'));
 const audio = require(path.join(root, 'utils/audio.js'));
 
-['index/index', 'lessons/lessons', 'lesson/lesson', 'review/review', 'quiz/quiz', 'plan/plan', 'coach/coach', 'fidel/fidel', 'profile/profile', 'search/search', 'speak/speak', 'admin/admin', 'login/login']
+['index/index', 'lessons/lessons', 'lesson/lesson', 'review/review', 'quiz/quiz', 'plan/plan', 'coach/coach', 'fidel/fidel', 'profile/profile', 'search/search', 'speak/speak', 'admin/admin', 'login/login', 'privacy/privacy']
   .forEach((p) => require(path.join(root, 'pages', p + '.js')));
-assert.equal(pages.length, 13, 'pages loaded');
+assert.equal(pages.length, 14, 'pages loaded');
 require(path.join(root, 'app.js'));
 global.__app.onLaunch();
 
@@ -136,6 +138,16 @@ async function main() {
   await assert.rejects(api.ttsGet('ሰላም', 'female', 'normal'), (e) => /登录/.test(e.message), '未登录不能朗读');
   const me0 = await api.me();
   assert.equal(me0.registered, false);
+  // 登录页：先弹微信隐私授权，用户拒绝则不登记
+  const loginPage = pages[12];
+  loginPage.data = { ...loginPage.data, configured: true };
+  loginPage.setData = function (d) { Object.assign(this.data, d); };
+  global.__privacyReject = true;
+  await loginPage.login();
+  assert.equal(global.__privacyCalls, 1, '登录前调用了 requirePrivacyAuthorize');
+  assert.ok(/隐私/.test(loginPage.data.error), '拒绝隐私授权时提示');
+  assert.equal((await api.me()).registered, false, '拒绝隐私授权后未登记');
+  global.__privacyReject = false;
   const reg = await api.register('李工');
   assert.equal(reg.registered, true);
   assert.equal(reg.nickname, '李工');

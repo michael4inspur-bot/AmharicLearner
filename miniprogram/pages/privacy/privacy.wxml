@@ -1,0 +1,33 @@
+<view class="page no-tab privacy">
+  <view class="card peach">
+    <view class="card-title">我们收集什么、用来做什么</view>
+    <view class="muted">AmharicLearner 只为学习本身收集必要信息。不登录也能离线学习，只有 AI 教练、朗读与跟读评分需要登记微信身份。</view>
+  </view>
+
+  <view class="card">
+    <view class="item" wx:for="{{items}}" wx:key="type">
+      <view class="item-type">{{item.type}}</view>
+      <view class="item-use">{{item.use}}</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">第三方服务</view>
+    <view class="item" wx:for="{{thirdParties}}" wx:key="name">
+      <view class="item-type">{{item.name}}</view>
+      <view class="item-use">{{item.data}}</view>
+    </view>
+  </view>
+
+  <view class="card lav">
+    <view class="card-title">AI 生成内容声明</view>
+    <view class="li" wx:for="{{aigc}}" wx:key="*this">
+      <view class="li-dot"></view>
+      <view class="grow zh">{{item}}</view>
+    </view>
+  </view>
+
+  <button class="btn outline" bindtap="openContract">查看完整《用户隐私保护指引》</button>
+  <button class="btn ghost" open-type="feedback">意见反馈</button>
+  <view class="muted-2 center">更新日期 {{updated}}</view>
+</view>

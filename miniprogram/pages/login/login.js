@@ -10,6 +10,22 @@ function writeProfile(patch) {
   try { wx.setStorageSync(PROFILE_KEY, { ...readProfile(), ...patch }); } catch (e) { /* ignore */ }
 }
 
+// 登记前先弹微信官方隐私授权框（后台「用户隐私保护指引」）。用户拒绝则不登记；旧基础库或开发者工具没有此接口时直接放行。
+function requirePrivacy() {
+  if (!wx.requirePrivacyAuthorize) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    wx.requirePrivacyAuthorize({
+      success: resolve,
+      fail: (res) => {
+        const msg = (res && res.errMsg) || '';
+        // 接口不存在 / 后台没配指引：不阻塞登录
+        if (/not support|no privacy|privacy contract|:fail (api|not)/i.test(msg) && !/user reject|refuse/i.test(msg)) return resolve();
+        reject(new Error('需要同意隐私指引才能登录'));
+      }
+    });
+  });
+}
+
 Page({
   data: { nickname: '', loading: false, configured: false, error: '' },
   onLoad() {
@@ -21,6 +37,7 @@ Page({
     if (this.data.loading) return;
     this.setData({ loading: true, error: '' });
     try {
+      await requirePrivacy();
       const me = await api.register(this.data.nickname);
       writeProfile({ registered: true, nickname: me.nickname || this.data.nickname, isAdmin: !!me.isAdmin, status: me.status || 'active' });
       wx.showToast({ title: me.isAdmin ? '已登录（管理员）' : '已登录', icon: 'none' });
@@ -29,6 +46,7 @@ Page({
       this.setData({ loading: false, error: (err && err.message) || '登录失败' });
     }
   },
+  goPrivacy() { wx.navigateTo({ url: '/pages/privacy/privacy' }); },
   skip() {
     writeProfile({ skipped: true });
     this.back();

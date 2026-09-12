@@ -24,10 +24,12 @@
           <view class="grow">
             <view class="card-title">{{diagnosis.overall_level}}</view>
             <view class="muted">综合评分 {{diagnosis.score}} / 100</view>
+            <text class="tag ai">AI 生成</text>
           </view>
         </view>
         <view class="zh" style="margin-top:20rpx">{{diagnosis.summary}}</view>
         <view class="enc">{{diagnosis.encouragement}}</view>
+        <view class="ai-note">以上由 AI 根据你的学习数据生成，仅供参考。<button class="fb" open-type="feedback">反馈</button></view>
       </view>
 
       <view class="card">
@@ -94,7 +96,7 @@
 
     <block wx:if="{{adjustment}}">
       <view class="card">
-        <view class="card-title">调整思路</view>
+        <view class="row between"><view class="card-title">调整思路</view><text class="tag ai">AI 生成</text></view>
         <view class="zh">{{adjustment.summary}}</view>
         <view class="row gap" style="margin-top:16rpx;flex-wrap:wrap">
           <text class="tag">每日 {{adjustment.daily_minutes}} 分钟</text>
@@ -121,6 +123,7 @@
         <view class="card-title">本周实战任务</view>
         <view class="zh">{{adjustment.mission_this_week}}</view>
         <view class="muted" style="margin-top:8rpx">检查点：{{adjustment.checkpoint}}</view>
+        <view class="ai-note">调整建议由 AI 生成，采纳前请自行判断。<button class="fb" open-type="feedback">反馈</button></view>
         <view class="btn accent" bindtap="applyAdjustment">采纳这份调整</view>
       </view>
     </block>
@@ -148,6 +151,7 @@
         <view class="msg {{m.role}}" wx:for="{{messages}}" wx:for-item="m" wx:key="index" id="m{{index}}">
           <view class="bubble-wrap">
             <view class="bubble" data-text="{{m.content}}" bindlongpress="copy">{{m.content}}</view>
+            <view class="ai-mark" wx:if="{{m.role === 'assistant'}}">AI 生成 · 仅供参考</view>
             <view class="am-chips" wx:if="{{m.am && m.am.length}}">
               <view class="am-chip" wx:for="{{m.am}}" wx:for-item="seg" wx:key="*this" data-text="{{seg}}" catchtap="playAm">
                 <x-icon name="speaker" size="24" color="#1E5C45" />
@@ -164,6 +168,7 @@
       </scroll-view>
     </view>
 
+    <view class="ai-note chat-note">回复由 AI 生成，可能有错漏。<button class="fb" open-type="feedback">反馈</button></view>
     <scroll-view scroll-x class="quick">
       <view class="qbtn" wx:for="{{quick}}" wx:key="*this" data-q="{{item}}" bindtap="quickAsk">{{item}}</view>
     </scroll-view>

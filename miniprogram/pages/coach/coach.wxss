@@ -74,3 +74,10 @@
 }
 .send:active { transform: scale(0.92); }
 .clear-chat { text-align: right; padding: 20rpx 8rpx 0; }
+/* AI 生成内容标识与反馈入口（AIGC 合规） */
+.tag.ai { background: var(--lav); color: var(--lav-ink); margin-top: 8rpx; }
+.ai-mark { font-size: 20rpx; color: var(--muted-2); margin: 4rpx 0 0 8rpx; }
+.ai-note { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; font-size: 22rpx; color: var(--muted-2); margin-top: 16rpx; line-height: 1.5; }
+.chat-note { margin: 0 0 8rpx; }
+.fb { margin: 0; padding: 4rpx 18rpx; font-size: 22rpx; line-height: 1.6; background: var(--lav); color: var(--lav-ink); border-radius: 999rpx; flex-shrink: 0; }
+.fb::after { border: none; }

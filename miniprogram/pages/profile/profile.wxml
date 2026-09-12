@@ -155,6 +155,11 @@
         <view class="btn small" style="margin-top:12rpx" bindtap="goLogin">微信登录</view>
       </block>
     </view>
+    <view class="list-item row between" bindtap="goPrivacy">
+      <text>隐私指引与 AI 内容声明</text>
+      <x-icon name="chevron-right" size="28" color="#9C8C82" />
+    </view>
+    <button class="btn ghost" open-type="feedback">意见反馈</button>
     <view class="btn danger" bindtap="resetAll">清空全部进度</view>
   </view>
 </view>

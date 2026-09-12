@@ -75,5 +75,6 @@
       <view class="am word {{item.ok?'ok':'miss'}}" wx:for="{{result.words}}" wx:key="index">{{item.w}}</view>
     </view>
     <view class="res-tip">{{result.tip}}</view>
+    <view class="res-tip">分数由语音识别自动判定，仅供参考。</view>
   </view>
 </view>

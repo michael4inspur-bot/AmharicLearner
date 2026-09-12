@@ -12,7 +12,8 @@
     "pages/search/search",
     "pages/speak/speak",
     "pages/admin/admin",
-    "pages/login/login"
+    "pages/login/login",
+    "pages/privacy/privacy"
   ],
   "window": {
     "navigationBarBackgroundColor": "#0f6e56",
@@ -57,5 +58,6 @@
   "lazyCodeLoading": "requiredComponents",
   "usingComponents": {
     "x-icon": "/components/icon/index"
-  }
+  },
+  "__usePrivacyCheck__": true
 }
