@@ -3,6 +3,7 @@ const api = require('../../utils/api.js');
 const audio = require('../../utils/audio.js');
 const points = require('../../utils/points.js');
 const sync = require('../../utils/sync.js');
+const update = require('../../utils/update.js');
 
 const PROFILE_KEY = 'profile_v1';
 
@@ -19,7 +20,7 @@ function saveNickname(nickname) {
 }
 
 Page({
-  data: { version: '0.3.0', buildTag: require('../../config.js').buildTag, cloudReady: false, goal: 20, newCards: 10, startDate: '', voice: 'female', rate: 'normal', stats: {}, streak: 0, totalMinutes: 0, days: 0, quizzes: 0, stars: 0, badges: [], earnedCount: 0, usage: null, isAdmin: false, nickname: '', openid: '', registered: false, status: 'active' },
+  data: { version: '0.3.0', buildTag: require('../../config.js').buildTag, updateText: '', cloudReady: false, goal: 20, newCards: 10, startDate: '', voice: 'female', rate: 'normal', stats: {}, streak: 0, totalMinutes: 0, days: 0, quizzes: 0, stars: 0, badges: [], earnedCount: 0, usage: null, isAdmin: false, nickname: '', openid: '', registered: false, status: 'active' },
   onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().setData({ selected: 4 });
     const p = progress.load();
@@ -39,7 +40,14 @@ Page({
       isAdmin: !!readProfile().isAdmin,
       status: readProfile().status || 'active'
     });
+    this.setData({ updateText: update.describe() });
     if (api.configured()) { this.loadUsage(); this.loadMe(); }
+  },
+  /** 微信只在冷启动时检查新版本，这里汇报本次检查结果；新版已就绪则直接问要不要重启 */
+  checkUpdate() {
+    const text = update.checkNow();
+    this.setData({ updateText: text });
+    if (update.status() !== 'ready') wx.showToast({ title: text, icon: 'none' });
   },
   async loadUsage() {
     let usage;
