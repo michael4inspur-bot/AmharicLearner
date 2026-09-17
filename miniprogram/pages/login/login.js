@@ -18,8 +18,9 @@ function requirePrivacy() {
       success: resolve,
       fail: (res) => {
         const msg = (res && res.errMsg) || '';
-        // 接口不存在 / 后台没配指引：不阻塞登录
-        if (/not support|no privacy|privacy contract|:fail (api|not)/i.test(msg) && !/user reject|refuse/i.test(msg)) return resolve();
+        const refused = /user reject|refuse|deny/i.test(msg);
+        // 用户主动拒绝才拦；接口不存在、后台还没配指引、scope 未声明等一律放行，避免登录卡死
+        if (!refused) return resolve();
         reject(new Error('需要同意隐私指引才能登录'));
       }
     });

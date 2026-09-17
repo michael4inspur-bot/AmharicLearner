@@ -3,6 +3,6 @@
   "private": true,
   "description": "Amharic Learner 阿姆哈拉语学习小程序（含微信云函数）",
   "scripts": {
-    "test": "node --test cloudfunctions/api/test/*.test.js && node scripts/sim-miniprogram.js"
+    "test": "node --test cloudfunctions/api/test/*.test.js && node scripts/check-privacy-scopes.js && node scripts/sim-miniprogram.js"
   }
 }

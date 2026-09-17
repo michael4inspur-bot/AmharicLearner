@@ -9,7 +9,7 @@
     <view class="card-title">微信登录</view>
     <view class="muted">用微信身份登记后即可使用 AI 教练、朗读、跟读评分，进度会自动同步到云端。不登录也能离线学习课程、闪卡和小测。</view>
     <view class="section-title">昵称（可选，方便同事认出你）</view>
-    <input type="nickname" class="input on-card login-input" value="{{nickname}}" placeholder="例如：李工" placeholder-class="ph" bindblur="onNickname" maxlength="20" />
+    <input type="text" class="input on-card login-input" value="{{nickname}}" placeholder="例如：李工" placeholder-class="ph" bindblur="onNickname" maxlength="20" />
     <view class="err" wx:if="{{error}}">{{error}}</view>
     <button class="btn login-btn" bindtap="login" loading="{{loading}}" disabled="{{loading || !configured}}">微信登录并开始</button>
     <view class="consent muted-2">登录即表示你已阅读并同意<text class="link-inline" catchtap="goPrivacy">《隐私指引与 AI 内容声明》</text>：我们收集微信 openid、自填昵称和学习行为数据，用于学习进度记录、AI 教练个性化建议与语音评分。</view>
