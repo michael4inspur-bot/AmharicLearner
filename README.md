@@ -133,7 +133,12 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 
 ### 5. 隐私指引与 AIGC 合规（提审前在 mp.weixin.qq.com 配置）
 
-小程序已在 `app.json` 打开 `__usePrivacyCheck__`：登录前会先弹微信官方隐私授权框，昵称输入框也会走隐私接口。后台没配置指引时真机会报「隐私接口未声明」，所以提审前要做两件事。正文和小程序内「我的 → 隐私指引与 AI 内容声明」页（`miniprogram/utils/privacy.js`）一致，改一处请同步另一处。
+登录前会调用 `wx.requirePrivacyAuthorize` 弹微信官方隐私授权框。正文和小程序内「我的 → 隐私指引与 AI 内容声明」页（`miniprogram/utils/privacy.js`）一致，改一处请同步另一处。
+
+两个和开发者工具直接相关的约定：
+
+- **昵称输入框用普通 `<input type="text">`，不用 `type="nickname"`**。微信昵称控件要在指引里额外声明「微信昵称」scope，没声明时渲染层报 `showNicknameAccessory:fail ... errno:112`，模拟器随后可能失去响应。昵称本来就由用户自己填，不需要这个控件。`npm test` 里的 `scripts/check-privacy-scopes.js` 会拦住这类写法。
+- **`app.json` 默认不写 `__usePrivacyCheck__`**。它会在开发者工具和体验版里强制校验隐私指引，后台还没配置时会直接报错。等下面两步配置完成、要验证隐私弹窗时，再临时把 `"__usePrivacyCheck__": true` 加回 `app.json`。
 
 **(1) 设置 → 基本设置 → 用户隐私保护指引**，按下表逐项添加：
 

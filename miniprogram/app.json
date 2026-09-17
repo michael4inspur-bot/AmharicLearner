@@ -58,6 +58,5 @@
   "lazyCodeLoading": "requiredComponents",
   "usingComponents": {
     "x-icon": "/components/icon/index"
-  },
-  "__usePrivacyCheck__": true
+  }
 }
