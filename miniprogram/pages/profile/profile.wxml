@@ -137,7 +137,7 @@
 
   <view class="card">
     <view class="card-title">关于</view>
-    <view class="muted">AmharicLearner · 面向在埃塞俄比亚的中文使用者的阿姆哈拉语速成。学习计划依据成人学习特性设计：知道为什么学、自主导向、经验为本、问题驱动、微学习、间隔重复。</view>
+    <view class="muted">Amharic Learner · 面向在埃塞俄比亚的中文使用者的阿姆哈拉语速成。学习计划依据成人学习特性设计：知道为什么学、自主导向、经验为本、问题驱动、微学习、间隔重复。</view>
     <view class="divider"></view>
     <view class="list-item" bindlongpress="copyOpenid">
       <view class="row between">

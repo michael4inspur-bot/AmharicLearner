@@ -1,7 +1,7 @@
 <view class="login">
   <view class="hero">
     <view class="am hero-am">ሰላም!</view>
-    <view class="hero-title">AmharicLearner</view>
+    <view class="hero-title">Amharic Learner</view>
     <view class="hero-sub">在埃塞工作的你，8 周学会用阿姆哈拉语沟通工作</view>
   </view>
 

@@ -77,7 +77,7 @@ test('synthesize 按计划的 URL 与请求头调用并返回 Buffer', async () 
   assert.equal(seen.init.headers['Ocp-Apim-Subscription-Key'], 'k');
   assert.equal(seen.init.headers['Content-Type'], 'application/ssml+xml');
   assert.equal(seen.init.headers['X-Microsoft-OutputFormat'], 'audio-24khz-48kbitrate-mono-mp3');
-  assert.equal(seen.init.headers['User-Agent'], 'AmharicLearner');
+  assert.equal(seen.init.headers['User-Agent'], 'Amharic-Learner');
   assert.ok(seen.init.body.includes('<prosody rate="-25%">'));
 });
 

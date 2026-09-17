@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 把 AmharicLearner 的 Express 后台替换为一个微信云函数 `api` 加两个云数据库集合，小程序改用 `wx.cloud.callFunction`，删除 `server/`。
+**Goal:** 把 Amharic Learner 的 Express 后台替换为一个微信云函数 `api` 加两个云数据库集合，小程序改用 `wx.cloud.callFunction`，删除 `server/`。
 
 **Architecture:** 小程序页面通过 `utils/api.js` 调 `wx.cloud.callFunction('api', {action, data})`；云函数 `index.js` 取 openid 后交给纯逻辑 `handler.js`，`handler.js` 通过注入的 `db` 适配器和 `deepseek` 客户端工作，因此可以在本地用假实现做 node:test。提示词与 DeepSeek 调用代码从 `server/src` 搬来改成 CommonJS，内容不变。
 
@@ -88,7 +88,7 @@
 {
   "name": "api",
   "version": "1.0.0",
-  "description": "AmharicLearner 云函数：进度存储 + DeepSeek 学习诊断",
+  "description": "Amharic Learner 云函数：进度存储 + DeepSeek 学习诊断",
   "main": "index.js",
   "scripts": {
     "test": "node --test test/*.test.js"
@@ -1324,7 +1324,7 @@ main().catch((e) => { console.error(e); process.exit(1); });
 {
   "name": "amharic-leander",
   "private": true,
-  "description": "AmharicLearner 阿姆哈拉语学习小程序（含微信云函数）",
+  "description": "Amharic Learner 阿姆哈拉语学习小程序（含微信云函数）",
   "scripts": {
     "test": "node --test cloudfunctions/api/test/*.test.js && node scripts/sim-miniprogram.js"
   }

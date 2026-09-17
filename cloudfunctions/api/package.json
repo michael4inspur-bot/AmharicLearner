@@ -1,7 +1,7 @@
 {
   "name": "api",
   "version": "1.0.0",
-  "description": "AmharicLearner 云函数：进度存储 + DeepSeek 学习诊断",
+  "description": "Amharic Learner 云函数：进度存储 + DeepSeek 学习诊断",
   "main": "index.js",
   "scripts": {
     "test": "node --test test/*.test.js"
