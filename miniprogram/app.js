@@ -2,6 +2,7 @@ const config = require('./config.js');
 const progress = require('./utils/progress.js');
 const sync = require('./utils/sync.js');
 const fonts = require('./utils/fonts.js');
+const update = require('./utils/update.js');
 
 App({
   globalData: { version: '0.3.0', buildTag: config.buildTag },
@@ -13,6 +14,8 @@ App({
     }
     progress.load();
     fonts.loadFidelFont();
+    // 新版本下载好后弹框重启，省掉微信默认要求的第二次冷启动
+    update.init();
     // 每次进度保存后 3 秒内合并上传一次
     progress.setOnSaved(() => sync.scheduleSync(3000));
   },

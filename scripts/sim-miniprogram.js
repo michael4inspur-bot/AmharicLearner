@@ -25,7 +25,7 @@ global.wx = {
   getStorageSync: (k) => store[k],
   setStorageSync: (k, v) => { store[k] = JSON.parse(JSON.stringify(v)); },
   removeStorageSync: (k) => { delete store[k]; },
-  showToast() {}, showModal() {}, showActionSheet() {}, setNavigationBarTitle() {}, navigateTo() {}, switchTab() {},
+  showToast() {}, showModal(o) { global.__modal = o; }, showActionSheet() {}, setNavigationBarTitle() {}, navigateTo() {}, switchTab() {},
   navigateBack() {}, redirectTo() {}, setClipboardData() {},
   authorize({ success }) { if (success) success(); },
   requirePrivacyAuthorize({ success, fail }) { global.__privacyCalls = (global.__privacyCalls || 0) + 1; if (global.__privacyReject) return fail({ errMsg: 'requirePrivacyAuthorize:fail user reject' }); success(); },
@@ -46,6 +46,7 @@ global.wx = {
     };
   },
   getNetworkType({ success }) { success({ networkType: global.__net || 'wifi' }); },
+  getUpdateManager() { return global.__um; },
   getRecorderManager() {
     return { start() {}, stop() {}, onStop() {}, onError() {} };
   },
@@ -63,6 +64,15 @@ global.wx = {
     }
   }
 };
+// 假的版本更新管理器：记录回调，测试里手动触发
+const umCbs = {};
+global.__um = {
+  onCheckForUpdate(cb) { umCbs.check = cb; },
+  onUpdateReady(cb) { umCbs.ready = cb; },
+  onUpdateFailed(cb) { umCbs.fail = cb; },
+  applyUpdate() { global.__applied = true; }
+};
+
 const pages = [];
 global.Page = (cfg) => { cfg.getTabBar = () => ({ setData() {} }); pages.push(cfg); };
 global.Component = () => {};
@@ -84,8 +94,23 @@ const audio = require(path.join(root, 'utils/audio.js'));
 ['index/index', 'lessons/lessons', 'lesson/lesson', 'review/review', 'quiz/quiz', 'plan/plan', 'coach/coach', 'fidel/fidel', 'profile/profile', 'search/search', 'speak/speak', 'admin/admin', 'login/login', 'privacy/privacy']
   .forEach((p) => require(path.join(root, 'pages', p + '.js')));
 assert.equal(pages.length, 14, 'pages loaded');
+const update = require(path.join(root, 'utils/update.js'));
 require(path.join(root, 'app.js'));
 global.__app.onLaunch();
+
+// 版本更新：启动即开始检查
+assert.equal(update.status(), 'checking', '启动后进入检查中');
+umCbs.check({ hasUpdate: true });
+assert.equal(update.status(), 'downloading', '发现新版本');
+umCbs.ready();
+assert.equal(update.status(), 'ready', '新版下载完成');
+assert.ok(global.__modal && /重启/.test(global.__modal.content), '下载完成后弹框提示重启');
+global.__modal.success({ confirm: true });
+assert.equal(global.__applied, true, '用户确认后重启到新版');
+// 关于页「检查更新」：新版已就绪时再问一次
+global.__modal = null;
+assert.match(update.checkNow(), /重启/, '按钮汇报当前状态');
+assert.ok(global.__modal, '已就绪时按钮直接弹重启框');
 
 async function main() {
   // 学习流程
