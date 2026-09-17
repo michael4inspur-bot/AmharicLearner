@@ -2,5 +2,8 @@
 module.exports = {
   cloudEnv: 'cloud1-d4g658z1x5264f151',
   // 可选：云存储里的 Noto Sans Ethiopic 字体文件 fileID（cloud://...），留空用系统字体
-  fidelFontFileID: ''
+  fidelFontFileID: '',
+  // 构建标记：启动时打印到 Console，也显示在「我的 → 关于」。
+  // 排查"改了代码但工具还跑旧版"时，先看这个值对不对。每次改动请手动更新。
+  buildTag: '2026-09-17 昵称输入框改普通文本框'
 };

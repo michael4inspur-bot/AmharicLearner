@@ -4,8 +4,10 @@ const sync = require('./utils/sync.js');
 const fonts = require('./utils/fonts.js');
 
 App({
-  globalData: { version: '0.3.0' },
+  globalData: { version: '0.3.0', buildTag: config.buildTag },
   onLaunch() {
+    // 这一行用来确认工具编译的是哪一版代码，排查缓存/目录不一致时最先看它
+    console.log('[build]', config.buildTag, '| cloudEnv:', config.cloudEnv || '(未配置)');
     if (wx.cloud && config.cloudEnv) {
       wx.cloud.init({ env: config.cloudEnv, traceUser: true });
     }
