@@ -3,6 +3,7 @@ const points = require('../../utils/points.js');
 const api = require('../../utils/api.js');
 const plan = require('../../data/plan.js');
 const vocab = require('../../data/vocab.js');
+const update = require('../../utils/update.js');
 
 const GREETINGS = [
   { am: 'ሰላም', rom: 'selam', zh: '你好' },
@@ -49,8 +50,8 @@ Page({
     // 首页不引导登录、不索要授权：登录入口只在「我的」和需要 AI/语音的功能里，由用户自己点。
     // 昵称提示也只对已经登录过的人显示，新用户进来先自由体验。
     this.setData({ needNickname: configured && !!profile.registered && !nickname });
-    if (!configured) { this.setData({ announce: null }); return; }
-    api.announcement()
+    if (!configured) { this.setData({ announce: null }); return Promise.resolve(); }
+    return api.announcement()
       .then((a) => {
         const text = a && a.text ? String(a.text) : '';
         const updatedAt = String((a && a.updatedAt) || '');
@@ -58,6 +59,24 @@ Page({
         this.setData({ announce: text && seen !== updatedAt ? { text, updatedAt } : null });
       })
       .catch(() => { /* 静默：云端还没有公告能力时当作没有公告 */ });
+  },
+
+  /**
+   * 下拉刷新：重算今日任务、拉公告，并汇报版本更新状态。
+   * 微信只在冷启动时检查新版本，没有重新检查的接口，所以这里汇报的是本次启动的检查结果；
+   * 新版已经下载好时直接弹框问要不要重启。
+   */
+  async onPullDownRefresh() {
+    try {
+      this.refresh();
+      await this.loadNotices();
+    } catch (e) {
+      // 拉公告失败不影响刷新本身
+    } finally {
+      wx.stopPullDownRefresh();
+    }
+    update.checkNow();
+    if (update.status() !== 'ready') wx.showToast({ title: update.refreshHint(), icon: 'none' });
   },
 
   dismissAnnounce() {

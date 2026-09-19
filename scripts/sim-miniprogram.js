@@ -47,6 +47,7 @@ global.wx = {
   },
   getNetworkType({ success }) { success({ networkType: global.__net || 'wifi' }); },
   getUpdateManager() { return global.__um; },
+  stopPullDownRefresh() { global.__pullStops = (global.__pullStops || 0) + 1; },
   getRecorderManager() {
     return { start() {}, stop() {}, onStop() {}, onError() {} };
   },
@@ -179,6 +180,12 @@ async function main() {
   home.loadNotices();
   assert.equal(global.__nav.filter((u) => /login/.test(u)).length, 0, '首页不跳登录页');
   assert.equal(home.data.needNickname, false, '未登录用户首页不提示填昵称');
+
+  // 首页下拉刷新：刷新数据并汇报版本状态，结束后必须关掉下拉动画
+  global.__modal = null;
+  await home.onPullDownRefresh();
+  assert.equal(global.__pullStops, 1, '下拉刷新结束后调用 stopPullDownRefresh');
+  assert.ok(global.__modal && /重启/.test(global.__modal.content), '新版已就绪时下拉刷新弹出重启确认');
 
   // 登录页：隐私同意默认不勾选，不勾选不登记、不调授权接口
   const loginPage = pages[12];
