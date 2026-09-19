@@ -36,7 +36,7 @@ Page({
   data: { days7: [1, 2, 3, 4, 5, 6, 7], announce: null, needNickname: false },
 
   onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().setData({ selected: 0 });
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().select('/pages/index/index');
     this.refresh();
     this.loadNotices();
   },

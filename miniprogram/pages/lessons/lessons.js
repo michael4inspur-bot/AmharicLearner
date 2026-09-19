@@ -5,7 +5,7 @@ const vocab = require('../../data/vocab.js');
 Page({
   data: { weeks: [] },
   onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().setData({ selected: 1 });
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().select('/pages/lessons/lessons');
     const p = progress.load();
     const pos = progress.currentPosition(p);
     const best = {};
