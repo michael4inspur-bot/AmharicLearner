@@ -11,8 +11,18 @@
     <view class="section-title">昵称（可选，方便同事认出你）</view>
     <input type="text" class="input on-card login-input" value="{{nickname}}" placeholder="例如：李工" placeholder-class="ph" bindblur="onNickname" maxlength="20" />
     <view class="err" wx:if="{{error}}">{{error}}</view>
-    <button class="btn login-btn" bindtap="login" loading="{{loading}}" disabled="{{loading || !configured}}">微信登录并开始</button>
-    <view class="consent muted-2">登录即表示你已阅读并同意<text class="link-inline" catchtap="goPrivacy">《隐私指引与 AI 内容声明》</text>：我们收集微信 openid、自填昵称和学习行为数据，用于学习进度记录、AI 教练个性化建议与语音评分。</view>
+
+    <view class="consent-box">
+      <checkbox-group bindchange="onAgree">
+        <label class="agree">
+          <checkbox value="1" checked="{{agreed}}" color="#C2410C" />
+          <view class="agree-text">我已阅读并同意<text class="link-inline" catchtap="goPrivacy">《隐私政策与 AI 内容声明》</text></view>
+        </label>
+      </checkbox-group>
+      <view class="muted-2 consent-detail">登记后我们会收集你的微信 openid、自填昵称和学习行为数据，用于学习进度记录与个性化学习建议。不勾选也可以继续离线学习。</view>
+    </view>
+
+    <button class="btn login-btn" bindtap="login" loading="{{loading}}" disabled="{{loading || !configured || !agreed}}">微信登录并开始</button>
     <view class="muted center" wx:if="{{!configured}}">还没配置云环境，暂时只能离线学习</view>
     <view class="link center" bindtap="skip">先离线用，稍后再登录</view>
   </view>

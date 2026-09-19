@@ -25,7 +25,7 @@ global.wx = {
   getStorageSync: (k) => store[k],
   setStorageSync: (k, v) => { store[k] = JSON.parse(JSON.stringify(v)); },
   removeStorageSync: (k) => { delete store[k]; },
-  showToast() {}, showModal(o) { global.__modal = o; }, showActionSheet() {}, setNavigationBarTitle() {}, navigateTo() {}, switchTab() {},
+  showToast() {}, showModal(o) { global.__modal = o; }, showActionSheet() {}, setNavigationBarTitle() {}, navigateTo(o) { global.__nav = (global.__nav || []).concat((o && o.url) || ''); }, switchTab() {},
   navigateBack() {}, redirectTo() {}, setClipboardData() {},
   authorize({ success }) { if (success) success(); },
   requirePrivacyAuthorize({ success, fail }) { global.__privacyCalls = (global.__privacyCalls || 0) + 1; if (global.__privacyReject) return fail({ errMsg: 'requirePrivacyAuthorize:fail user reject' }); success(); },
@@ -163,13 +163,31 @@ async function main() {
   await assert.rejects(api.ttsGet('ሰላም', 'female', 'normal'), (e) => /登录/.test(e.message), '未登录不能朗读');
   const me0 = await api.me();
   assert.equal(me0.registered, false);
-  // 登录页：先弹微信隐私授权，用户拒绝则不登记
+  // 首页：未登录用户进入时不得被引导去登录（微信审核要求先体验后授权）
+  const home = pages[0];
+  home.data = { ...home.data };
+  home.setData = function (d) { Object.assign(this.data, d); };
+  global.__nav = [];
+  home.loadNotices();
+  assert.equal(global.__nav.filter((u) => /login/.test(u)).length, 0, '首页不跳登录页');
+  assert.equal(home.data.needNickname, false, '未登录用户首页不提示填昵称');
+
+  // 登录页：隐私同意默认不勾选，不勾选不登记、不调授权接口
   const loginPage = pages[12];
   loginPage.data = { ...loginPage.data, configured: true };
   loginPage.setData = function (d) { Object.assign(this.data, d); };
+  assert.equal(loginPage.data.agreed, false, '隐私同意默认不勾选');
+  await loginPage.login();
+  assert.match(loginPage.data.error, /勾选/, '未勾选时提示用户先勾选');
+  assert.equal(global.__privacyCalls, undefined, '未勾选不触发隐私授权');
+  assert.equal((await api.me()).registered, false, '未勾选不登记');
+
+  // 用户主动勾选后才能登录；拒绝微信隐私授权仍然不登记
+  loginPage.onAgree({ detail: { value: ['1'] } });
+  assert.equal(loginPage.data.agreed, true, '勾选后可登录');
   global.__privacyReject = true;
   await loginPage.login();
-  assert.equal(global.__privacyCalls, 1, '登录前调用了 requirePrivacyAuthorize');
+  assert.equal(global.__privacyCalls, 1, '勾选后才调用 requirePrivacyAuthorize');
   assert.ok(/隐私/.test(loginPage.data.error), '拒绝隐私授权时提示');
   assert.equal((await api.me()).registered, false, '拒绝隐私授权后未登记');
   global.__privacyReject = false;
