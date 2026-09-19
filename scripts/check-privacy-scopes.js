@@ -48,4 +48,13 @@ fs.readdirSync(path.join(root, 'utils')).forEach((name) => {
 });
 assert.deepEqual(chatHits, [], 'AI 问答入口又回到小程序端了（微信个人主体未开放此类目）：\n  ' + chatHits.join('\n  '));
 
-console.log('OK: 隐私 scope 与 AI 问答静态检查通过');
+// AI 教练总开关与 app.json 的 tabBar 必须一致，否则要么 Tab 点不开，要么下线了还露出来
+const config = require(path.join(root, 'config.js'));
+const tabs = app.tabBar.list.map((t) => t.pagePath);
+const coachInTab = tabs.indexOf('pages/coach/coach') >= 0;
+assert.equal(coachInTab, !!config.aiCoachEnabled,
+  config.aiCoachEnabled
+    ? 'config.aiCoachEnabled 为 true，但 app.json 的 tabBar 里没有 pages/coach/coach'
+    : 'AI 教练已下线（config.aiCoachEnabled=false），但 app.json 的 tabBar 里还留着 pages/coach/coach');
+
+console.log('OK: 隐私 scope、AI 问答与 AI 教练开关静态检查通过');
