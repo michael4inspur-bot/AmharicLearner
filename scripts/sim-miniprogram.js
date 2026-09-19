@@ -159,7 +159,7 @@ async function main() {
   assert.equal(fetched.progress.unitsLearned.u01, progress.load().unitsLearned.u01);
 
   // 登录门槛：未登录不能用 AI / 语音；微信登录（注册）后可用；第一个登录者自动成为管理员
-  await assert.rejects(api.chat([{ role: 'user', content: 'hi' }], s), (e) => /登录/.test(e.message), '未登录被拒');
+  await assert.rejects(api.diagnose(s, plan.planOutline()), (e) => /登录/.test(e.message), '未登录被拒');
   await assert.rejects(api.ttsGet('ሰላም', 'female', 'normal'), (e) => /登录/.test(e.message), '未登录不能朗读');
   const me0 = await api.me();
   assert.equal(me0.registered, false);
@@ -201,7 +201,9 @@ async function main() {
   // 云函数链路：AI
   const diag = await api.diagnose(s, plan.planOutline());
   assert.equal(diag.score, 50);
-  const chat = await api.chat([{ role: 'user', content: '你好怎么说' }], s);
+  // 小程序端已移除 AI 问答（微信个人主体未开放深度合成类目）；云函数接口保留，直接验证
+  const chatRes = await handle('ai.chat', { messages: [{ role: 'user', content: '你好怎么说' }], summary: s }, { openid: simOpenid, db, deepseek, azure, storage });
+  const chat = chatRes.data;
   assert.match(chat.reply, /ሰላም/);
   const hist = await api.aiHistory();
   assert.equal(hist.history.length, 1);
