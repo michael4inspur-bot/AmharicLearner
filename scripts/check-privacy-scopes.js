@@ -35,4 +35,17 @@ const app = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'));
 assert.equal(app.__usePrivacyCheck__, undefined,
   'app.json 打开了 __usePrivacyCheck__；后台指引配好之前请保持关闭（见 README 第 5 节）');
 
-console.log('OK: 隐私 scope 静态检查通过');
+// 微信审核：AI 问答属于深度合成技术，个人主体尚未开放该类目。
+// 小程序端不得再出现对话入口；云函数 ai.chat 保留，换成企业主体后可直接恢复。
+const chatHits = [];
+walk(root).forEach((f) => {
+  const s = fs.readFileSync(f, 'utf8');
+  if (/tab\s*===?\s*'chat'|问教练|quickAsk/.test(s)) chatHits.push(path.relative(root, f));
+});
+fs.readdirSync(path.join(root, 'utils')).forEach((name) => {
+  const s = fs.readFileSync(path.join(root, 'utils', name), 'utf8');
+  if (/ai\.chat/.test(s)) chatHits.push('utils/' + name);
+});
+assert.deepEqual(chatHits, [], 'AI 问答入口又回到小程序端了（微信个人主体未开放此类目）：\n  ' + chatHits.join('\n  '));
+
+console.log('OK: 隐私 scope 与 AI 问答静态检查通过');

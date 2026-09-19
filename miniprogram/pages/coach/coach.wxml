@@ -2,14 +2,13 @@
   <view class="segs">
     <view class="seg {{tab==='diagnose'?'on':''}}" data-tab="diagnose" bindtap="switchTab">进度诊断</view>
     <view class="seg {{tab==='adjust'?'on':''}}" data-tab="adjust" bindtap="switchTab">计划调整</view>
-    <view class="seg {{tab==='chat'?'on':''}}" data-tab="chat" bindtap="switchTab">问教练</view>
   </view>
 
   <!-- 诊断 -->
   <block wx:if="{{tab==='diagnose'}}">
     <view class="card">
       <view class="card-title">让 DeepSeek 看一眼你的学习数据</view>
-      <view class="muted">会上传：当前周/天、连续天数、已学单元、小测成绩、复习正确率、最近 14 天时长、最常忘的词。不上传聊天记录。</view>
+      <view class="muted">会上传：当前周/天、连续天数、已学单元、小测成绩、复习正确率、最近 14 天时长、最常忘的词。</view>
       <view class="section-title">自述（可选）：最近哪里卡住、想优先解决什么</view>
       <textarea class="input on-card" value="{{selfReport}}" placeholder="例如：数字听不清；工作要和司机沟通；晚上没时间…" placeholder-class="ph" bindinput="onSelfReport" maxlength="500"></textarea>
       <button class="btn" bindtap="diagnose" loading="{{loading==='diagnose'}}" disabled="{{!!loading}}">开始诊断</button>
@@ -139,47 +138,4 @@
     </view>
   </block>
 
-  <!-- 对话 -->
-  <block wx:if="{{tab==='chat'}}">
-    <view class="chat-wrap">
-      <scroll-view scroll-y class="chat" scroll-into-view="{{scrollTo}}" scroll-with-animation>
-        <view class="msg assistant" wx:if="{{!messages.length}}">
-          <view class="bubble-wrap">
-            <view class="bubble">ሰላም! 我是你的阿姆哈拉语教练。可以问我怎么说某句话、让我纠正你写的句子、或者陪你练对话。我知道你的学习进度，会结合你在埃塞的生活场景回答。</view>
-          </view>
-        </view>
-        <view class="msg {{m.role}}" wx:for="{{messages}}" wx:for-item="m" wx:key="index" id="m{{index}}">
-          <view class="bubble-wrap">
-            <view class="bubble" data-text="{{m.content}}" bindlongpress="copy">{{m.content}}</view>
-            <view class="ai-mark" wx:if="{{m.role === 'assistant'}}">AI 生成 · 仅供参考</view>
-            <view class="am-chips" wx:if="{{m.am && m.am.length}}">
-              <view class="am-chip" wx:for="{{m.am}}" wx:for-item="seg" wx:key="*this" data-text="{{seg}}" catchtap="playAm">
-                <x-icon name="speaker" size="24" color="#1E5C45" />
-                <text class="am">{{seg}}</text>
-              </view>
-            </view>
-          </view>
-        </view>
-        <view class="msg assistant" wx:if="{{loading==='chat'}}">
-          <view class="bubble-wrap">
-            <view class="bubble thinking">教练正在思考…</view>
-          </view>
-        </view>
-      </scroll-view>
-    </view>
-
-    <view class="ai-note chat-note">回复由 AI 生成，可能有错漏。<button class="fb" open-type="feedback">反馈</button></view>
-    <scroll-view scroll-x class="quick">
-      <view class="qbtn" wx:for="{{quick}}" wx:key="*this" data-q="{{item}}" bindtap="quickAsk">{{item}}</view>
-    </scroll-view>
-
-    <view class="composer">
-      <input class="input grow" value="{{input}}" placeholder="用中文或阿姆哈拉语提问…" placeholder-class="ph" bindinput="onInput" confirm-type="send" bindconfirm="send" />
-      <view class="send" bindtap="send">
-        <x-icon name="chevron-right" size="36" color="#FFFFFF" />
-      </view>
-    </view>
-
-    <view class="muted clear-chat" bindtap="clearChat">清空对话</view>
-  </block>
 </view>

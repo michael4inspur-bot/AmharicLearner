@@ -28,14 +28,20 @@ function requirePrivacy() {
 }
 
 Page({
-  data: { nickname: '', loading: false, configured: false, error: '' },
+  data: { nickname: '', loading: false, configured: false, error: '', agreed: false },
   onLoad() {
     const p = readProfile();
     this.setData({ nickname: p.nickname || '', configured: api.configured() });
   },
+  /** 隐私同意：默认不勾选，必须用户自己勾上才能登录 */
+  onAgree(e) {
+    const vals = (e && e.detail && e.detail.value) || [];
+    this.setData({ agreed: vals.length > 0, error: '' });
+  },
   onNickname(e) { this.setData({ nickname: String((e.detail && e.detail.value) || '').trim().slice(0, 20) }); },
   async login() {
     if (this.data.loading) return;
+    if (!this.data.agreed) { this.setData({ error: '请先阅读并勾选同意《隐私政策与 AI 内容声明》' }); return; }
     this.setData({ loading: true, error: '' });
     try {
       await requirePrivacy();
