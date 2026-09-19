@@ -59,3 +59,7 @@
 
 /* 我的账号 */
 .openid { font-size: 22rpx; word-break: break-all; margin-top: 8rpx; }
+/* 关于卡：版本与检查更新 */
+.update-row { align-items: center; gap: 20rpx; }
+.up-state { margin-top: 6rpx; line-height: 1.5; }
+.up-build { margin-top: 2rpx; line-height: 1.5; }

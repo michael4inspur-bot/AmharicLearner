@@ -25,7 +25,7 @@ global.wx = {
   getStorageSync: (k) => store[k],
   setStorageSync: (k, v) => { store[k] = JSON.parse(JSON.stringify(v)); },
   removeStorageSync: (k) => { delete store[k]; },
-  showToast() {}, showModal() {}, showActionSheet() {}, setNavigationBarTitle() {}, navigateTo() {}, switchTab() {},
+  showToast() {}, showModal(o) { global.__modal = o; }, showActionSheet() {}, setNavigationBarTitle() {}, navigateTo(o) { global.__nav = (global.__nav || []).concat((o && o.url) || ''); }, switchTab() {},
   navigateBack() {}, redirectTo() {}, setClipboardData() {},
   authorize({ success }) { if (success) success(); },
   requirePrivacyAuthorize({ success, fail }) { global.__privacyCalls = (global.__privacyCalls || 0) + 1; if (global.__privacyReject) return fail({ errMsg: 'requirePrivacyAuthorize:fail user reject' }); success(); },
@@ -46,6 +46,7 @@ global.wx = {
     };
   },
   getNetworkType({ success }) { success({ networkType: global.__net || 'wifi' }); },
+  getUpdateManager() { return global.__um; },
   getRecorderManager() {
     return { start() {}, stop() {}, onStop() {}, onError() {} };
   },
@@ -63,6 +64,15 @@ global.wx = {
     }
   }
 };
+// 假的版本更新管理器：记录回调，测试里手动触发
+const umCbs = {};
+global.__um = {
+  onCheckForUpdate(cb) { umCbs.check = cb; },
+  onUpdateReady(cb) { umCbs.ready = cb; },
+  onUpdateFailed(cb) { umCbs.fail = cb; },
+  applyUpdate() { global.__applied = true; }
+};
+
 const pages = [];
 global.Page = (cfg) => { cfg.getTabBar = () => ({ setData() {} }); pages.push(cfg); };
 global.Component = () => {};
@@ -84,8 +94,23 @@ const audio = require(path.join(root, 'utils/audio.js'));
 ['index/index', 'lessons/lessons', 'lesson/lesson', 'review/review', 'quiz/quiz', 'plan/plan', 'coach/coach', 'fidel/fidel', 'profile/profile', 'search/search', 'speak/speak', 'admin/admin', 'login/login', 'privacy/privacy']
   .forEach((p) => require(path.join(root, 'pages', p + '.js')));
 assert.equal(pages.length, 14, 'pages loaded');
+const update = require(path.join(root, 'utils/update.js'));
 require(path.join(root, 'app.js'));
 global.__app.onLaunch();
+
+// 版本更新：启动即开始检查
+assert.equal(update.status(), 'checking', '启动后进入检查中');
+umCbs.check({ hasUpdate: true });
+assert.equal(update.status(), 'downloading', '发现新版本');
+umCbs.ready();
+assert.equal(update.status(), 'ready', '新版下载完成');
+assert.ok(global.__modal && /重启/.test(global.__modal.content), '下载完成后弹框提示重启');
+global.__modal.success({ confirm: true });
+assert.equal(global.__applied, true, '用户确认后重启到新版');
+// 关于页「检查更新」：新版已就绪时再问一次
+global.__modal = null;
+assert.match(update.checkNow(), /重启/, '按钮汇报当前状态');
+assert.ok(global.__modal, '已就绪时按钮直接弹重启框');
 
 async function main() {
   // 学习流程
@@ -134,17 +159,35 @@ async function main() {
   assert.equal(fetched.progress.unitsLearned.u01, progress.load().unitsLearned.u01);
 
   // 登录门槛：未登录不能用 AI / 语音；微信登录（注册）后可用；第一个登录者自动成为管理员
-  await assert.rejects(api.chat([{ role: 'user', content: 'hi' }], s), (e) => /登录/.test(e.message), '未登录被拒');
+  await assert.rejects(api.diagnose(s, plan.planOutline()), (e) => /登录/.test(e.message), '未登录被拒');
   await assert.rejects(api.ttsGet('ሰላም', 'female', 'normal'), (e) => /登录/.test(e.message), '未登录不能朗读');
   const me0 = await api.me();
   assert.equal(me0.registered, false);
-  // 登录页：先弹微信隐私授权，用户拒绝则不登记
+  // 首页：未登录用户进入时不得被引导去登录（微信审核要求先体验后授权）
+  const home = pages[0];
+  home.data = { ...home.data };
+  home.setData = function (d) { Object.assign(this.data, d); };
+  global.__nav = [];
+  home.loadNotices();
+  assert.equal(global.__nav.filter((u) => /login/.test(u)).length, 0, '首页不跳登录页');
+  assert.equal(home.data.needNickname, false, '未登录用户首页不提示填昵称');
+
+  // 登录页：隐私同意默认不勾选，不勾选不登记、不调授权接口
   const loginPage = pages[12];
   loginPage.data = { ...loginPage.data, configured: true };
   loginPage.setData = function (d) { Object.assign(this.data, d); };
+  assert.equal(loginPage.data.agreed, false, '隐私同意默认不勾选');
+  await loginPage.login();
+  assert.match(loginPage.data.error, /勾选/, '未勾选时提示用户先勾选');
+  assert.equal(global.__privacyCalls, undefined, '未勾选不触发隐私授权');
+  assert.equal((await api.me()).registered, false, '未勾选不登记');
+
+  // 用户主动勾选后才能登录；拒绝微信隐私授权仍然不登记
+  loginPage.onAgree({ detail: { value: ['1'] } });
+  assert.equal(loginPage.data.agreed, true, '勾选后可登录');
   global.__privacyReject = true;
   await loginPage.login();
-  assert.equal(global.__privacyCalls, 1, '登录前调用了 requirePrivacyAuthorize');
+  assert.equal(global.__privacyCalls, 1, '勾选后才调用 requirePrivacyAuthorize');
   assert.ok(/隐私/.test(loginPage.data.error), '拒绝隐私授权时提示');
   assert.equal((await api.me()).registered, false, '拒绝隐私授权后未登记');
   global.__privacyReject = false;
@@ -158,7 +201,9 @@ async function main() {
   // 云函数链路：AI
   const diag = await api.diagnose(s, plan.planOutline());
   assert.equal(diag.score, 50);
-  const chat = await api.chat([{ role: 'user', content: '你好怎么说' }], s);
+  // 小程序端已移除 AI 问答（微信个人主体未开放深度合成类目）；云函数接口保留，直接验证
+  const chatRes = await handle('ai.chat', { messages: [{ role: 'user', content: '你好怎么说' }], summary: s }, { openid: simOpenid, db, deepseek, azure, storage });
+  const chat = chatRes.data;
   assert.match(chat.reply, /ሰላም/);
   const hist = await api.aiHistory();
   assert.equal(hist.history.length, 1);

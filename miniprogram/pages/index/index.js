@@ -46,13 +46,9 @@ Page({
     const profile = readStorage(PROFILE_KEY) || {};
     const nickname = String(profile.nickname || '');
     const configured = api.configured();
-    this.setData({ needNickname: configured && !nickname });
-    // 首次进入且已配置云环境：引导微信登录，每次启动只弹一次；跳过的用户不再打扰
-    const app = getApp();
-    if (configured && !profile.registered && !profile.skipped && app && !app.globalData.loginPrompted) {
-      app.globalData.loginPrompted = true;
-      wx.navigateTo({ url: '/pages/login/login' });
-    }
+    // 首页不引导登录、不索要授权：登录入口只在「我的」和需要 AI/语音的功能里，由用户自己点。
+    // 昵称提示也只对已经登录过的人显示，新用户进来先自由体验。
+    this.setData({ needNickname: configured && !!profile.registered && !nickname });
     if (!configured) { this.setData({ announce: null }); return; }
     api.announcement()
       .then((a) => {
