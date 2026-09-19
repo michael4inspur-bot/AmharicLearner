@@ -1,9 +1,10 @@
 const plan = require('../../data/plan.js');
 const progress = require('../../utils/progress.js');
 const vocab = require('../../data/vocab.js');
+const config = require('../../config.js');
 
 Page({
-  data: { weeks: [], principles: plan.principles, showPrinciples: false, overrides: null, daily: plan.DAILY_TEMPLATE },
+  data: { aiEnabled: !!config.aiCoachEnabled, weeks: [], principles: plan.principles, showPrinciples: false, overrides: null, daily: plan.DAILY_TEMPLATE },
   onShow() {
     const p = progress.load();
     const pos = progress.currentPosition(p);

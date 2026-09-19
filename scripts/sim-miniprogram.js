@@ -74,8 +74,8 @@ global.__um = {
 };
 
 const pages = [];
-global.Page = (cfg) => { cfg.getTabBar = () => ({ setData() {} }); pages.push(cfg); };
-global.Component = () => {};
+global.Page = (cfg) => { cfg.getTabBar = () => ({ setData() {}, select() {} }); pages.push(cfg); };
+global.Component = (cfg) => { global.__components = (global.__components || []).concat(cfg); };
 global.getApp = () => ({ globalData: {} });
 global.getCurrentPages = () => [];
 global.App = (cfg) => { global.__app = cfg; };
@@ -94,6 +94,14 @@ const audio = require(path.join(root, 'utils/audio.js'));
 ['index/index', 'lessons/lessons', 'lesson/lesson', 'review/review', 'quiz/quiz', 'plan/plan', 'coach/coach', 'fidel/fidel', 'profile/profile', 'search/search', 'speak/speak', 'admin/admin', 'login/login', 'privacy/privacy']
   .forEach((p) => require(path.join(root, 'pages', p + '.js')));
 assert.equal(pages.length, 14, 'pages loaded');
+// 自定义 tabBar：AI 教练下线后不应出现在底部导航
+require(path.join(root, 'custom-tab-bar/index.js'));
+const tabBar = global.__components[global.__components.length - 1];
+const tabPaths = tabBar.data.list.map((t) => t.pagePath);
+assert.equal(tabPaths.indexOf('/pages/coach/coach'), -1, 'AI 教练不在底部导航里');
+assert.equal(tabPaths.length, 4, '底部导航剩 4 个 Tab');
+assert.deepEqual(tabPaths, ['/pages/index/index', '/pages/lessons/lessons', '/pages/review/review', '/pages/profile/profile']);
+
 const update = require(path.join(root, 'utils/update.js'));
 require(path.join(root, 'app.js'));
 global.__app.onLaunch();

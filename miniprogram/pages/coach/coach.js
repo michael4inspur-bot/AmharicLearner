@@ -11,7 +11,7 @@ function scoreToDeg(diagnosis) {
 Page({
   data: { tab: 'diagnose', diagnosis: null, adjustment: null, scoreDeg: 0, selfReport: '', request: '', loading: '', history: [] },
   onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().setData({ selected: 3 });
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().select('/pages/coach/coach');
     const p = progress.load();
     const latestDiag = p.aiHistory.find((h) => h.type === 'diagnosis');
     const latestAdj = p.aiHistory.find((h) => h.type === 'plan');

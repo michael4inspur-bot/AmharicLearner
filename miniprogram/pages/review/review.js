@@ -34,7 +34,7 @@ Page({
     mode: 'am', segs: buildSegs(0, 0), todayStars: 0
   },
   onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().setData({ selected: 2 });
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().select('/pages/review/review');
     this.loadQueue();
     this.enterAt = Date.now();
   },

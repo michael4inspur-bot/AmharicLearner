@@ -4,7 +4,7 @@
     <view class="muted-2">每天 {{goal}} 分钟：{{daily.reviewMinutes}}′ 闪卡复习 + {{daily.learnMinutes}}′ 新内容 + {{daily.practiceMinutes}}′ 小测 / 实战 · 每日新词上限 {{newCards}}</view>
     <view class="row gap" style="margin-top:20rpx">
       <view class="btn outline small" bindtap="togglePrinciples">{{showPrinciples ? '收起' : '为什么这样设计'}}</view>
-      <view class="btn small" bindtap="goCoach">让 AI 诊断并调整</view>
+      <view class="btn small" wx:if="{{aiEnabled}}" bindtap="goCoach">让 AI 诊断并调整</view>
     </view>
     <view wx:if="{{showPrinciples}}" class="pr-list">
       <view class="pr" wx:for="{{principles}}" wx:key="title">
