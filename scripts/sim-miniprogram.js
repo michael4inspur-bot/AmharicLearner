@@ -28,7 +28,8 @@ global.wx = {
   openPrivacyContract() {},
   createInnerAudioContext() {
     // 与真机一致：没设置过 src 就 stop，基础库会通过 onError 报 audioInstance is not set
-    const ctx = { src: '', played: 0, stops: 0, play() { this.played += 1; }, stop() { this.stops += 1; if (!this.src && this._onError) this._onError({ errMsg: 'operateAudio:fail audioInstance is not set', errCode: -1 }); }, onEnded() {}, onError(cb) { this._onError = cb; }, destroy() {} };
+    const ctx = { src: '', played: 0, stops: 0, destroyed: false, play() { this.played += 1; global.__audioPlays = (global.__audioPlays || 0) + 1; }, stop() { this.stops += 1; if (!this.src && this._onError) this._onError({ errMsg: 'operateAudio:fail audioInstance is not set', errCode: -1 }); }, onEnded() {}, onError(cb) { this._onError = cb; }, destroy() { this.destroyed = true; } };
+    global.__audioCtxs = (global.__audioCtxs || []).concat(ctx);
     global.__audioCtx = ctx;
     return ctx;
   },
@@ -36,6 +37,7 @@ global.wx = {
     localFiles.add(filePath);
     success({ statusCode: 200, tempFilePath: filePath, filePath, url });
   },
+  setInnerAudioOption(o) { global.__audioOption = o; },
   getFileSystemManager() {
     return {
       mkdirSync() {},
@@ -277,14 +279,14 @@ async function main() {
   await audio.speak('ሰላም');
   assert.ok(global.__audioCtx, 'InnerAudioContext created');
   assert.equal(global.__modal, null, '第一次朗读不能误报 audioInstance is not set');
-  assert.equal(global.__audioCtx.stops, 0, '播放器还没加载音频时不调用 stop');
-  global.__audioCtx._onError({ errMsg: 'operateAudio:fail audioInstance is not set', errCode: -1 });
-  assert.equal(global.__modal, null, '这个无害错误不弹框');
-  assert.equal(global.__audioCtx.played, 1, '首次朗读播放一次');
+  assert.equal(global.__audioCtx.stops, 0, '新播放器设置 src 之前不调用 stop');
+  assert.deepEqual(global.__audioOption, { obeyMuteSwitch: false }, 'iPhone 静音开关打开时也能朗读');
+  assert.equal(global.__audioPlays, 1, '首次朗读播放一次');
   assert.equal(azure.synthCalls.length, 1, '首次朗读调用 Azure 合成');
   assert.equal(azure.synthCalls[0].text, 'ሰላም');
   await audio.speak('ሰላም');
-  assert.equal(global.__audioCtx.played, 2, '第二次朗读仍播放（单例累计）');
+  assert.equal(global.__audioPlays, 2, '第二次朗读仍播放');
+  assert.ok(global.__audioCtxs[global.__audioCtxs.length - 2].destroyed, '上一个播放器已销毁，不会越积越多');
   assert.equal(azure.synthCalls.length, 1, '第二次朗读走本地缓存，不再合成');
   assert.equal(storage._files.size, 1, 'tts 音频已上传云存储');
 
@@ -410,13 +412,37 @@ async function main() {
   // 真机上不能直接播临时链接（要配合法域名，只有开了调试的手机能播）：必须先走云存储下载，播本地文件
   wx.cloud.downloadFile = ({ fileID, success }) => {
     global.__cloudDownloads = (global.__cloudDownloads || []).concat(fileID);
-    success({ statusCode: 200, tempFilePath: `/tmp/sim/cloud-${global.__cloudDownloads.length}.mp3` });
+    const temp = `/tmp/sim/cloud-${global.__cloudDownloads.length}.mp3`;
+    localFiles.add(temp);
+    success({ statusCode: 200, tempFilePath: temp });
   };
   global.__modal = null;
   await audio.speak('ወደ ቀኝ ታጠፍ');
   assert.equal(global.__cloudDownloads.length, 1, '朗读先走云存储下载');
   assert.match(global.__audioCtx.src, /^\/tmp\/sim\/cloud-1\.mp3$/, '播放的是下载到本地的文件，而不是临时链接');
   assert.equal(global.__modal, null, '成功时不弹框');
+  // 本地文件播不了（如开发者工具里的 audioInstance is not set）→ 自动换在线链接，不弹框
+  global.__audioCtx._onError({ errMsg: 'operateAudio:fail audioInstance is not set', errCode: -1 });
+  assert.ok(global.__audioCtx.src && !/cloud-/.test(global.__audioCtx.src), '本地文件失败后改播在线链接');
+  assert.equal(global.__modal, null, '换源成功前不弹框');
+  // 在线链接也失败 → 弹框同时列出两步的原因
+  global.__audioCtx._onError({ errMsg: 'MediaError', errCode: 10002 });
+  assert.match(global.__modal.content, /本地文件播放出错：operateAudio:fail audioInstance is not set/, '列出本地文件的错误');
+  assert.match(global.__modal.content, /在线链接播放出错：MediaError/, '列出在线链接的错误');
+  // 本地缓存文件坏了 → 删掉缓存，重新从云端取
+  global.__modal = null;
+  await audio.speak('ቀጥ ብለህ ሂድ');
+  const dl0 = global.__cloudDownloads.length;
+  const cachedSrc = global.__audioCtx.src;
+  await audio.speak('ቀጥ ብለህ ሂድ');
+  assert.equal(global.__cloudDownloads.length, dl0, '命中本地缓存，不重新下载');
+  assert.equal(global.__audioCtx.src, cachedSrc, '播放缓存文件');
+  global.__audioCtx._onError({ errMsg: 'decode error' });
+  await new Promise((r) => setTimeout(r, 20));
+  assert.equal(global.__cloudDownloads.length, dl0 + 1, '缓存文件坏了会重新下载');
+  assert.match(global.__audioCtx.src, /cloud-/, '重新下载后播放本地文件');
+  assert.notEqual(global.__audioCtx.src, cachedSrc, '换成新下载的文件');
+  assert.equal(global.__modal, null, '恢复成功不弹框');
 
   // 云存储下载失败（如权限设成仅创建者可读写）→ 退回播临时链接；再播不了时弹框要带上下载失败的原因
   wx.cloud.downloadFile = ({ fail }) => fail({ errMsg: 'cloud.downloadFile:fail -403003 permission denied' });

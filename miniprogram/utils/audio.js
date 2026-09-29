@@ -201,12 +201,10 @@ function download(url, key, fileID) {
 
 // ---------- 播放 ----------
 let ctx = null;
-// 播放器是否设置过 src。没设置过就调 stop()，基础库会通过 onError 报
-// 「operateAudio:fail audioInstance is not set」——第一次点喇叭、或页面 onHide 时都会触发，
-// 以前被当成播放失败弹框，其实声音照常播放。
-let loaded = false;
+// 每次播放的编号。换了新的播放 / 调了 stop 之后，旧播放器迟到的 onError 一律忽略
+let seq = 0;
 
-/** 对还没加载过音频的播放器调 stop/pause 时基础库报的错，不是真的播放失败 */
+/** 对还没加载过音频的播放器调 stop/pause 时基础库报的错（跟读页的回放播放器用） */
 function isBenignError(res) {
   return /audioInstance is not set/i.test(String((res && res.errMsg) || ''));
 }
@@ -238,79 +236,142 @@ function fail(reason, raw) {
   toast();
 }
 
-function player() {
-  if (ctx) return ctx;
+let optionSet = false;
+/**
+ * iPhone 打开静音开关时，InnerAudioContext 默认跟随静音：不出声也不报错，
+ * 用户只会觉得「点了没反应」。朗读是用户主动点的，不应被静音开关挡住。
+ */
+function setAudioOption() {
+  if (optionSet) return;
+  optionSet = true;
   try {
-    if (w() && typeof wx.createInnerAudioContext === 'function') {
-      ctx = wx.createInnerAudioContext() || null;
-      if (ctx && typeof ctx.onError === 'function') {
-        ctx.onError((res) => {
-          if (isBenignError(res)) return;
-          const why = `音频播放出错：${(res && (res.errMsg || res.errCode)) || '未知原因'}`;
-          // 在线链接播不了时，把先前云存储下载失败的原因一起给出来，才看得出是权限还是域名问题
-          fail(lastDownloadErr ? `${why}\n${lastDownloadErr}` : why, res);
-        });
-      }
-    }
+    if (w() && typeof wx.setInnerAudioOption === 'function') wx.setInnerAudioOption({ obeyMuteSwitch: false });
+  } catch (e) { /* ignore */ }
+}
+
+/** 销毁上一个播放器，建一个新的。复用同一个实例时，src 加载失败后实例会卡在「audioInstance is not set」 */
+function freshPlayer() {
+  if (ctx) {
+    const old = ctx;
+    ctx = null;
+    try { if (typeof old.destroy === 'function') old.destroy(); else if (typeof old.stop === 'function') old.stop(); } catch (e) { /* ignore */ }
+  }
+  try {
+    if (w() && typeof wx.createInnerAudioContext === 'function') ctx = wx.createInnerAudioContext() || null;
   } catch (e) { ctx = null; }
   return ctx;
 }
 
-function play(src) {
-  const c = player();
-  if (!c || !src) { fail(!c ? '当前环境无法创建音频播放器' : '没有可播放的音频'); return false; }
-  try {
-    if (loaded && typeof c.stop === 'function') c.stop();
-    c.src = src;
-    loaded = true;
-    if (typeof c.play === 'function') c.play();
-    return true;
-  } catch (e) { fail(`音频播放出错：${(e && e.message) || e}`, e); return false; }
+/**
+ * 依次尝试 sources：[{kind: '本地文件' | '在线链接' ..., src, onFail}]，前一个报错就换下一个。
+ * 全部失败时调 opts.onAllFail(errors)，没给就弹框列出每一步的原因。
+ * opts.errors 是播放之前已经发生的错误（例如云存储下载失败），会一起列出来。
+ */
+function playSources(sources, opts) {
+  opts = opts || {};
+  const list = (sources || []).filter((s) => s && s.src);
+  const errors = (opts.errors || []).slice();
+  const giveUp = (raw) => {
+    if (opts.onAllFail) { opts.onAllFail(errors); return; }
+    if (!opts.silent) fail(errors.join('\n') || '没有可播放的音频', raw);
+  };
+  if (!list.length) { if (!errors.length) errors.push('没有可播放的音频'); giveUp(); return false; }
+  setAudioOption();
+
+  function attempt(i) {
+    const s = list[i];
+    const id = ++seq;
+    let handled = false;
+    const onError = (res) => {
+      if (handled || id !== seq) return;
+      handled = true;
+      errors.push(`${s.kind}播放出错：${(res && (res.errMsg || res.errCode || res.message)) || '未知原因'}`);
+      try { console.warn('[audio] 播放失败', s.kind, s.src, res); } catch (e) { /* ignore */ }
+      if (typeof s.onFail === 'function') s.onFail();
+      if (i + 1 < list.length) attempt(i + 1);
+      else giveUp(res);
+    };
+    const c = freshPlayer();
+    if (!c) { errors.push('当前环境无法创建音频播放器'); handled = true; giveUp(); return; }
+    if (typeof c.onError === 'function') c.onError(onError);
+    try { console.info('[audio] 播放', s.kind, s.src); } catch (e) { /* ignore */ }
+    try {
+      c.src = s.src;
+      if (typeof c.play === 'function') c.play();
+    } catch (e) { onError(e); }
+  }
+  attempt(0);
+  return true;
 }
 
 /** 停止当前播放 */
 function stop() {
-  if (!ctx || !loaded) return;
+  seq++;
+  if (!ctx) return;
   try { if (typeof ctx.stop === 'function') ctx.stop(); } catch (e) { /* ignore */ }
+}
+
+function forget(key) {
+  const map = loadMap();
+  if (map[key]) { delete map[key]; saveMap(); }
+}
+
+/**
+ * 从云端取音频并播放：先用 wx.cloud.downloadFile 下载到本地再播。
+ * 不直接播临时链接：InnerAudioContext 播网络地址要求该域名在「downloadFile 合法域名」里，
+ * 开发者工具（不校验合法域名）和打开了「开发调试」的手机会跳过这项检查，
+ * 于是出现「只有自己手机能播、同事手机都不能播」。云存储下载不受合法域名限制。
+ * 本地文件播不了再换在线链接；每一步失败的原因都会列在弹框里。
+ */
+function fetchAndPlay(text, s, key, opts, prevErrors) {
+  return api.ttsGet(text, s.voice, s.rate)
+    .then((res) => {
+      const url = res && res.url;
+      const fileID = res && res.fileID;
+      if (!url && !fileID) {
+        if (!opts.silent) fail(prevErrors.concat('云端没有返回音频地址，请查看云函数 api 的日志').join('\n'), res);
+        return;
+      }
+      lastDownloadErr = '';
+      return downloadViaCloud(fileID, key).then((p) => {
+        const errors = prevErrors.slice();
+        if (!p && lastDownloadErr) errors.push(lastDownloadErr);
+        const sources = [];
+        if (p) sources.push({ kind: '本地文件', src: p, onFail: () => forget(key) });
+        if (url) sources.push({ kind: '在线链接', src: url });
+        playSources(sources, { errors, silent: opts.silent });
+        if (!p && url) downloadViaUrl(url, key);
+      });
+    })
+    .catch((err) => {
+      if (opts.silent) return;
+      if (account.prompt(err, '朗读')) return;
+      // api.js 已经把断网 / 超时 / 未部署 / 云端具体原因归一成中文，原样给用户看
+      fail(prevErrors.concat((err && err.message) || TOAST_TEXT).join('\n'), err);
+    });
 }
 
 /**
  * 朗读文本。opts 可覆盖 voice / rate。
- * 本地缓存命中直接播放；否则先用 wx.cloud.downloadFile 把云端音频下载到本地再播。
- * 不能直接播临时链接：InnerAudioContext 播网络地址要求该域名在「downloadFile 合法域名」里，
- * 开发者工具（不校验合法域名）和打开了「开发调试」的手机会跳过这项检查，
- * 于是出现「只有自己手机能播、同事手机都不能播」。云存储下载不受合法域名限制。
- * 云存储下载失败时才退回直接播临时链接，失败原因会一起显示在弹框里。
+ * 本地缓存命中直接播放，缓存文件播不了就删掉缓存、重新从云端取；否则走 fetchAndPlay。
  * opts.silent 为 true 时失败不弹任何提示（自动播放场景用：
  * 小测切题、复习先听再看都是页面自动触发的，弹登录框等于没点按钮就被要求授权）。
  */
 function speak(text, opts) {
   text = String(text == null ? '' : text).trim();
   if (!text) return Promise.resolve();
-  const s = normalizeSettings(Object.assign(getSettings(), opts || {}));
+  opts = opts || {};
+  const s = normalizeSettings(Object.assign(getSettings(), opts));
   const key = cacheKey(text, s.voice, s.rate);
   const local = cachedPath(key);
-  if (local) { play(local); return Promise.resolve(); }
-  if (opts && opts.silent && !account.isRegistered()) return Promise.resolve();
-  return api.ttsGet(text, s.voice, s.rate)
-    .then((res) => {
-      const url = res && res.url;
-      const fileID = res && res.fileID;
-      if (!url && !fileID) { fail('云端没有返回音频地址，请查看云函数 api 的日志', res); return; }
-      lastDownloadErr = '';
-      return downloadViaCloud(fileID, key).then((p) => {
-        if (p) { play(p); return; }
-        if (!url) { fail(lastDownloadErr || '音频下载失败', res); return; }
-        play(url);
-        downloadViaUrl(url, key);
-      });
-    })
-    .catch((err) => {
-      if (opts && opts.silent) return;
-      if (account.prompt(err, '朗读')) return;
-      // api.js 已经把断网 / 超时 / 未部署 / 云端具体原因归一成中文，原样给用户看
-      fail((err && err.message) || TOAST_TEXT, err);
+  if (local) {
+    playSources([{ kind: '本地缓存', src: local }], {
+      onAllFail: (errors) => { forget(key); fetchAndPlay(text, s, key, opts, errors); }
     });
+    return Promise.resolve();
+  }
+  if (opts.silent && !account.isRegistered()) return Promise.resolve();
+  return fetchAndPlay(text, s, key, opts, []);
 }
 
 // ---------- 预取 ----------
