@@ -201,6 +201,15 @@ function download(url, key, fileID) {
 
 // ---------- 播放 ----------
 let ctx = null;
+// 播放器是否设置过 src。没设置过就调 stop()，基础库会通过 onError 报
+// 「operateAudio:fail audioInstance is not set」——第一次点喇叭、或页面 onHide 时都会触发，
+// 以前被当成播放失败弹框，其实声音照常播放。
+let loaded = false;
+
+/** 对还没加载过音频的播放器调 stop/pause 时基础库报的错，不是真的播放失败 */
+function isBenignError(res) {
+  return /audioInstance is not set/i.test(String((res && res.errMsg) || ''));
+}
 
 function toast(text) {
   try { if (w() && typeof wx.showToast === 'function') wx.showToast({ title: text || TOAST_TEXT, icon: 'none' }); } catch (e) { /* ignore */ }
@@ -236,6 +245,7 @@ function player() {
       ctx = wx.createInnerAudioContext() || null;
       if (ctx && typeof ctx.onError === 'function') {
         ctx.onError((res) => {
+          if (isBenignError(res)) return;
           const why = `音频播放出错：${(res && (res.errMsg || res.errCode)) || '未知原因'}`;
           // 在线链接播不了时，把先前云存储下载失败的原因一起给出来，才看得出是权限还是域名问题
           fail(lastDownloadErr ? `${why}\n${lastDownloadErr}` : why, res);
@@ -250,8 +260,9 @@ function play(src) {
   const c = player();
   if (!c || !src) { fail(!c ? '当前环境无法创建音频播放器' : '没有可播放的音频'); return false; }
   try {
-    if (typeof c.stop === 'function') c.stop();
+    if (loaded && typeof c.stop === 'function') c.stop();
     c.src = src;
+    loaded = true;
     if (typeof c.play === 'function') c.play();
     return true;
   } catch (e) { fail(`音频播放出错：${(e && e.message) || e}`, e); return false; }
@@ -259,7 +270,7 @@ function play(src) {
 
 /** 停止当前播放 */
 function stop() {
-  if (!ctx) return;
+  if (!ctx || !loaded) return;
   try { if (typeof ctx.stop === 'function') ctx.stop(); } catch (e) { /* ignore */ }
 }
 
@@ -354,4 +365,4 @@ function prefetch(items) {
   } catch (e) { /* 静默 */ }
 }
 
-module.exports = { getSettings, setSettings, speak, prefetch, stop, cacheKey };
+module.exports = { getSettings, setSettings, speak, prefetch, stop, cacheKey, isBenignError };

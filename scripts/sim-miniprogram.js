@@ -27,7 +27,8 @@ global.wx = {
   requirePrivacyAuthorize({ success, fail }) { global.__privacyCalls = (global.__privacyCalls || 0) + 1; if (global.__privacyReject) return fail({ errMsg: 'requirePrivacyAuthorize:fail user reject' }); success(); },
   openPrivacyContract() {},
   createInnerAudioContext() {
-    const ctx = { src: '', played: 0, play() { this.played += 1; }, stop() {}, onEnded() {}, onError(cb) { this._onError = cb; }, destroy() {} };
+    // 与真机一致：没设置过 src 就 stop，基础库会通过 onError 报 audioInstance is not set
+    const ctx = { src: '', played: 0, stops: 0, play() { this.played += 1; }, stop() { this.stops += 1; if (!this.src && this._onError) this._onError({ errMsg: 'operateAudio:fail audioInstance is not set', errCode: -1 }); }, onEnded() {}, onError(cb) { this._onError = cb; }, destroy() {} };
     global.__audioCtx = ctx;
     return ctx;
   },
@@ -271,8 +272,14 @@ async function main() {
 
 
   // 语音：朗读走云端合成 + 本地缓存
+  global.__modal = null;
+  audio.stop(); // 页面 onHide 时会在还没播过任何音频的情况下调用
   await audio.speak('ሰላም');
   assert.ok(global.__audioCtx, 'InnerAudioContext created');
+  assert.equal(global.__modal, null, '第一次朗读不能误报 audioInstance is not set');
+  assert.equal(global.__audioCtx.stops, 0, '播放器还没加载音频时不调用 stop');
+  global.__audioCtx._onError({ errMsg: 'operateAudio:fail audioInstance is not set', errCode: -1 });
+  assert.equal(global.__modal, null, '这个无害错误不弹框');
   assert.equal(global.__audioCtx.played, 1, '首次朗读播放一次');
   assert.equal(azure.synthCalls.length, 1, '首次朗读调用 Azure 合成');
   assert.equal(azure.synthCalls[0].text, 'ሰላም');

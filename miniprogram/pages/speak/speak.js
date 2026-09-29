@@ -160,7 +160,10 @@ Page({
       if (has('createInnerAudioContext')) {
         this.playCtx = wx.createInnerAudioContext() || null;
         if (this.playCtx && typeof this.playCtx.onError === 'function') {
-          this.playCtx.onError(() => wx.showToast({ title: '回放失败', icon: 'none' }));
+          this.playCtx.onError((res) => {
+            if (audio.isBenignError(res)) return;
+            wx.showToast({ title: '回放失败', icon: 'none' });
+          });
         }
       }
     } catch (e) { this.playCtx = null; }
@@ -174,14 +177,15 @@ Page({
     const c = this.player();
     if (!c) { wx.showToast({ title: '回放不可用', icon: 'none' }); return; }
     try {
-      if (typeof c.stop === 'function') c.stop();
+      if (this.playLoaded && typeof c.stop === 'function') c.stop();
       c.src = path;
+      this.playLoaded = true;
       c.play();
     } catch (e) { wx.showToast({ title: '回放失败', icon: 'none' }); }
   },
 
   stopPlayback() {
-    if (this.playCtx) { try { this.playCtx.stop(); } catch (e) { /* ignore */ } }
+    if (this.playCtx && this.playLoaded) { try { this.playCtx.stop(); } catch (e) { /* ignore */ } }
   },
 
   /** 交替对比：先标准音，延时后播自己的（拿不到标准音结束事件，用文本长度估算） */
