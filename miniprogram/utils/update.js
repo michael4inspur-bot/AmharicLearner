@@ -54,10 +54,16 @@ function init() {
   return state.status;
 }
 
+/** 下拉刷新时的提示：已是最新版时补一句说明，避免误以为刚刚重新检查过 */
+function refreshHint() {
+  if (state.status === 'latest') return '已是最新版本（重开小程序可重新检查）';
+  return describe();
+}
+
 /** 关于页「检查更新」：新版已就绪就直接问要不要重启，否则汇报本次启动的检查结果 */
 function checkNow() {
   restart(true);
   return describe();
 }
 
-module.exports = { init, checkNow, describe, status, TEXT };
+module.exports = { init, checkNow, describe, refreshHint, status, TEXT };

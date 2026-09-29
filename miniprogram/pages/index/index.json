@@ -1,1 +1,6 @@
-{ "navigationBarTitleText": "今日学习" }
+{
+  "navigationBarTitleText": "今日学习",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
+  "backgroundColor": "#FFF7EE"
+}

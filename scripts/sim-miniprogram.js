@@ -47,6 +47,7 @@ global.wx = {
   },
   getNetworkType({ success }) { success({ networkType: global.__net || 'wifi' }); },
   getUpdateManager() { return global.__um; },
+  stopPullDownRefresh() { global.__pullStops = (global.__pullStops || 0) + 1; },
   getRecorderManager() {
     return { start() {}, stop() {}, onStop() {}, onError() {} };
   },
@@ -169,6 +170,12 @@ async function main() {
   // 登录门槛：未登录不能用 AI / 语音；微信登录（注册）后可用；第一个登录者自动成为管理员
   await assert.rejects(api.diagnose(s, plan.planOutline()), (e) => /登录/.test(e.message), '未登录被拒');
   await assert.rejects(api.ttsGet('ሰላም', 'female', 'normal'), (e) => /登录/.test(e.message), '未登录不能朗读');
+  // 未登录点朗读：弹出带「去登录」的提示，而不是一句看不懂的「语音暂时不可用」
+  global.__modal = null;
+  await audio.speak('ሰላም');
+  assert.ok(global.__modal, '未登录点朗读会给出提示');
+  assert.match(global.__modal.title, /登录/, '提示说明是登录问题');
+  assert.equal(global.__modal.confirmText, '去登录', '提示带去登录入口');
   const me0 = await api.me();
   assert.equal(me0.registered, false);
   // 首页：未登录用户进入时不得被引导去登录（微信审核要求先体验后授权）
@@ -179,6 +186,12 @@ async function main() {
   home.loadNotices();
   assert.equal(global.__nav.filter((u) => /login/.test(u)).length, 0, '首页不跳登录页');
   assert.equal(home.data.needNickname, false, '未登录用户首页不提示填昵称');
+
+  // 首页下拉刷新：刷新数据并汇报版本状态，结束后必须关掉下拉动画
+  global.__modal = null;
+  await home.onPullDownRefresh();
+  assert.equal(global.__pullStops, 1, '下拉刷新结束后调用 stopPullDownRefresh');
+  assert.ok(global.__modal && /重启/.test(global.__modal.content), '新版已就绪时下拉刷新弹出重启确认');
 
   // 登录页：隐私同意默认不勾选，不勾选不登记、不调授权接口
   const loginPage = pages[12];
