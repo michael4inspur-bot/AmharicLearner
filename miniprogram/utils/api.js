@@ -90,7 +90,7 @@ function invoke(action, data) {
 
 module.exports = {
   configured,
-  syncProgress: (progress, meta) => call('progress.put', { progress, meta }),
+  syncProgress: (progress, meta, baseUpdatedAt) => call('progress.put', { progress, meta, baseUpdatedAt }),
   fetchProgress: () => call('progress.get'),
   ttsGet: (text, voice, rate) => call('tts.get', { text, voice, rate }),
   ttsBatch: (items, voice, rate) => call('tts.batch', { items, voice, rate }),

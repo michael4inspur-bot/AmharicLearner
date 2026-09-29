@@ -158,12 +158,9 @@ async function main() {
   searchPage.search('多少钱');
   assert.equal(searchPage.data.results[0].am, 'ስንት ነው?');
 
-  // 云函数链路：同步
+  // 同步：未登记不上传（用户还没勾选隐私同意）
   assert.equal(api.configured(), true);
-  assert.equal(await sync.syncNow(), true, '首次同步应上传');
-  assert.equal(await sync.syncNow(), false, '未变化不重复上传');
-  const fetched = await api.fetchProgress();
-  assert.equal(fetched.progress.unitsLearned.u01, progress.load().unitsLearned.u01);
+  assert.equal(await sync.syncNow(), false, '未登记不上传学习数据');
 
   // 登录门槛：未登录不能用 AI / 语音；微信登录（注册）后可用；第一个登录者自动成为管理员
   await assert.rejects(api.ttsBatch([{ id: 'a', text: 'ሰላም' }], 'female', 'normal'), (e) => /登录/.test(e.message), '未登录被拒');
@@ -174,6 +171,19 @@ async function main() {
   assert.ok(global.__modal, '未登录点朗读会给出提示');
   assert.match(global.__modal.title, /登录/, '提示说明是登录问题');
   assert.equal(global.__modal.confirmText, '去登录', '提示带去登录入口');
+
+  // 未登录做小测：不能出听力题（题面是空的），也不能自动弹登录框
+  global.__modal = null;
+  const offlineQuiz = quiz.buildQuiz('u01', 10, progress.load(), false);
+  assert.equal(offlineQuiz.filter((q) => q.listen).length, 0, '未登录时小测没有听力题');
+  offlineQuiz.forEach((q) => assert.ok(q.prompt, '每道题都有题面'));
+  await audio.speak('ሰላም', { silent: true });
+  assert.equal(global.__modal, null, '自动播放失败不弹登录框');
+  // 干扰项不得出现文字完全相同的选项
+  quiz.buildQuiz('all', 10, progress.load(), true).forEach((q) => {
+    const texts = q.options.map((o) => o.text);
+    assert.equal(new Set(texts).size, texts.length, '选项文字互不相同');
+  });
 
   // 跟读页：录音之前就提示要登录，而不是录完上传才被拒
   const speakEarly = pageOf('speak/speak');
@@ -233,6 +243,31 @@ async function main() {
   assert.equal(reg.isAdmin, true, '显式开启引导时，第一个登录的人成为管理员');
   const me1 = await api.me();
   assert.equal(me1.isAdmin, true);
+
+  // 登记之后才开始同步；空进度永远不上传（否则换设备一开一关就覆盖云端）
+  wx.setStorageSync('profile_v1', { ...(wx.getStorageSync('profile_v1') || {}), registered: true, openid: simOpenid });
+  assert.equal(await sync.syncNow(), true, '登记后首次同步应上传');
+  assert.equal(await sync.syncNow(), false, '未变化不重复上传');
+  const fetched = await api.fetchProgress();
+  assert.equal(fetched.progress.unitsLearned.u01, progress.load().unitsLearned.u01);
+  // 云端快照缺 stars/badges 时，恢复不得把本机已得的星星和徽章清零
+  const withStars = { ...progress.load(), stars: 120, badges: { 'first-words': '2026-09-29' } };
+  progress.replace(withStars);
+  progress.replace({ ...progress.load(), stars: undefined, badges: undefined });
+  assert.equal(progress.load().stars, 120, '云端没有 stars 时保留本机星星');
+  assert.ok(progress.load().badges['first-words'], '云端没有 badges 时保留本机徽章');
+  // 畸形快照不能让页面崩
+  progress.replace({ logs: null, srs: null, quizScores: {}, startDate: 'bad' });
+  assert.equal(progress.streak(), 0, '畸形进度不抛错');
+  assert.equal(progress.dueCards().length, 0);
+  assert.ok(progress.srsStats());
+  progress.replace(withStars);
+
+  const realProgress = progress.load();
+  progress.reset();
+  assert.equal(progress.isEmpty(), true, '重置后是空进度');
+  assert.equal(await sync.syncNow(), false, '空进度不上传，不会覆盖云端');
+  progress.replace(realProgress);
 
 
   // 语音：朗读走云端合成 + 本地缓存

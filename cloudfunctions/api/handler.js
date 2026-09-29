@@ -117,6 +117,14 @@ async function handle(action, data, ctx) {
     }
     case 'progress.put': {
       if (!data.progress || typeof data.progress !== 'object') return fail('BAD_REQUEST', 'progress 必须是对象');
+      // 客户端可带上它上次读到的 updatedAt。云端更新过就拒绝，
+      // 避免旧设备的快照静默覆盖新设备刚上传的进度。
+      if (typeof data.baseUpdatedAt === 'string' && data.baseUpdatedAt) {
+        const current = await db.getProgress(openid);
+        if (current && current.updatedAt && current.updatedAt > data.baseUpdatedAt) {
+          return fail('CONFLICT', '云端有更新的进度，请先从云端恢复再上传');
+        }
+      }
       const updatedAt = now.toISOString();
       await db.putProgress(openid, { progress: data.progress, updatedAt });
       // 摘要只服务于管理端列表，写失败不能让已经存好的进度上传变成失败

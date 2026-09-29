@@ -52,11 +52,20 @@ function cacheKey(text, voice, rate) {
   return `${voice}|${rate}|${text}`;
 }
 
-/** djb2 → 16 进制，仅用于本地文件名 */
+/**
+ * 本地音频文件名。单个 32 位 djb2 在现有词库里已经真实撞过
+ * （慢速女声的「和」与「先生」映射到同一个文件名），两个词会共用一个缓存文件。
+ * 这里用 djb2 + sdbm 两套哈希再拼上长度，碰撞概率降到可忽略。
+ */
 function hashKey(key) {
-  let h = 5381;
-  for (let i = 0; i < key.length; i++) h = ((h * 33) ^ key.charCodeAt(i)) >>> 0;
-  return h.toString(16);
+  let a = 5381;
+  let b = 0;
+  for (let i = 0; i < key.length; i++) {
+    const c = key.charCodeAt(i);
+    a = ((a * 33) ^ c) >>> 0;
+    b = (c + (b << 6) + (b << 16) - b) >>> 0;
+  }
+  return `${a.toString(16)}${b.toString(16)}${key.length.toString(16)}`;
 }
 
 // ---------- 本地文件缓存 ----------
@@ -227,6 +236,10 @@ function stop() {
  * 本地缓存命中直接播放；否则取云端 url 立即播放，同时后台下载到本地。
  * 失败 toast "语音暂时不可用" 并 resolve，不阻塞学习。
  */
+/**
+ * 朗读。opts.silent 为 true 时失败不弹任何提示（自动播放场景用：
+ * 小测切题、复习先听再看都是页面自动触发的，弹登录框等于没点按钮就被要求授权）。
+ */
 function speak(text, opts) {
   text = String(text == null ? '' : text).trim();
   if (!text) return Promise.resolve();
@@ -234,6 +247,7 @@ function speak(text, opts) {
   const key = cacheKey(text, s.voice, s.rate);
   const local = cachedPath(key);
   if (local) { play(local); return Promise.resolve(); }
+  if (opts && opts.silent && !account.isRegistered()) return Promise.resolve();
   return api.ttsGet(text, s.voice, s.rate)
     .then((res) => {
       const url = res && res.url;
@@ -241,7 +255,10 @@ function speak(text, opts) {
       play(url);
       download(url, key, res && res.fileID);
     })
-    .catch((err) => { if (!account.prompt(err, '朗读')) toast(); });
+    .catch((err) => {
+      if (opts && opts.silent) return;
+      if (!account.prompt(err, '朗读')) toast();
+    });
 }
 
 // ---------- 预取 ----------

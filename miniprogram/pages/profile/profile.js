@@ -98,11 +98,17 @@ Page({
   },
   async download() {
     try {
-      const { progress: remote } = await api.fetchProgress();
+      const { progress: remote, updatedAt } = await api.fetchProgress();
       if (!remote) { wx.showToast({ title: '云端没有数据', icon: 'none' }); return; }
       wx.showModal({
         title: '覆盖本地进度？', content: '将用云端的进度替换本机数据。',
-        success: (r) => { if (r.confirm) { progress.replace(remote); this.onShow(); wx.showToast({ title: '已恢复', icon: 'success' }); } }
+        success: (r) => {
+          if (!r.confirm) return;
+          progress.replace(remote);
+          sync.noteRemoteVersion(updatedAt); // 记下云端版本，之后上传不会被判成旧快照
+          this.onShow();
+          wx.showToast({ title: '已恢复', icon: 'success' });
+        }
       });
     } catch (e) { wx.showModal({ title: '恢复失败', content: e.message, showCancel: false }); }
   },

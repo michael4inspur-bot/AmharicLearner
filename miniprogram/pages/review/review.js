@@ -67,7 +67,8 @@ Page({
   /** "先听再看"模式：显示新卡时自动播一次 */
   autoPlay() {
     const cur = this.data.current;
-    if (this.data.mode === 'listen' && cur && cur.am) audio.speak(cur.am);
+    // 自动播放：失败静默，用户没点任何按钮，不该被要求登录
+    if (this.data.mode === 'listen' && cur && cur.am) audio.speak(cur.am, { silent: true });
   },
   /** 播当前卡的阿姆哈拉语（catchtap，不触发翻面） */
   play() {

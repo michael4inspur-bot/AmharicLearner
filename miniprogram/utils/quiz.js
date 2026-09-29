@@ -16,7 +16,7 @@ function shuffle(arr) {
  * @param {number} n 题数
  * @param {object} progress 进度（用于优先出错题）
  */
-function buildQuiz(scope, n, progress) {
+function buildQuiz(scope, n, progress, withAudio = true) {
   let pool;
   if (scope === 'all') {
     const learned = progress ? Object.keys(progress.unitsLearned || {}) : [];
@@ -41,10 +41,20 @@ function buildQuiz(scope, n, progress) {
   const all = vocab.allItems();
 
   return chosen.map((it, idx) => {
-    // 每 3 题中 1 题为听力题（听音选中文）；其余按看阿选中 / 看中选阿交替
-    const listen = idx % 3 === 2;
+    // 每 3 题中 1 题为听力题（听音选中文）。withAudio 为 false 时全部出成文字题：
+    // 未登录用户用不了朗读，听力题题面是空的，根本答不了。
+    const listen = withAudio && idx % 3 === 2;
     const amToZh = idx % 2 === 0;
-    const distractorPool = shuffle(pool.length >= 8 ? pool : all).filter((d) => d.id !== it.id && d.zh !== it.zh).slice(0, 3);
+    // 干扰项既要按 id 和中文去重，也要按阿姆哈拉语原文去重：
+    // 词库里有几组不同条目共用同一句阿姆哈拉语，不去重就会出现两个文字完全相同的选项。
+    const distractorPool = shuffle(pool.length >= 8 ? pool : all)
+      .filter((d) => d.id !== it.id && d.zh !== it.zh && d.am !== it.am)
+      .reduce((acc, d) => {
+        if (acc.some((x) => x.am === d.am || x.zh === d.zh)) return acc;
+        acc.push(d);
+        return acc;
+      }, [])
+      .slice(0, 3);
     const options = shuffle([it, ...distractorPool]).map((d) => ({
       id: d.id,
       text: listen || amToZh ? d.zh : `${d.am}  ${d.rom}`
