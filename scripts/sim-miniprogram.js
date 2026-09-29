@@ -27,7 +27,7 @@ global.wx = {
   requirePrivacyAuthorize({ success, fail }) { global.__privacyCalls = (global.__privacyCalls || 0) + 1; if (global.__privacyReject) return fail({ errMsg: 'requirePrivacyAuthorize:fail user reject' }); success(); },
   openPrivacyContract() {},
   createInnerAudioContext() {
-    const ctx = { src: '', played: 0, play() { this.played += 1; }, stop() {}, onEnded() {}, onError() {}, destroy() {} };
+    const ctx = { src: '', played: 0, play() { this.played += 1; }, stop() {}, onEnded() {}, onError(cb) { this._onError = cb; }, destroy() {} };
     global.__audioCtx = ctx;
     return ctx;
   },
@@ -389,6 +389,36 @@ async function main() {
   const again = await api.register();
   assert.equal(again.registered, true, '重新登录恢复');
   assert.equal(again.isAdmin, true, '管理员身份随登录恢复');
+
+  // 朗读失败要说出真实原因：云端的详细错误拼上细节后很长，以前会被退回成「语音暂时不可用」
+  const realCall2 = wx.cloud.callFunction;
+  wx.cloud.callFunction = ({ success }) => success({ result: { ok: false, code: 'UPSTREAM', error: 'Azure 返回 401：订阅密钥无效或与所选区域不匹配，请检查 AZURE_SPEECH_KEY 与 AZURE_SPEECH_REGION' } });
+  global.__modal = null;
+  await audio.speak('ሰላም ጤና ይስጥልኝ');
+  assert.ok(global.__modal, '朗读失败弹出说明');
+  assert.match(global.__modal.content, /401/, '弹框里有云端的真实原因');
+  assert.match(global.__modal.content, /AZURE_SPEECH_KEY/, '长细节没有被截掉');
+  wx.cloud.callFunction = realCall2;
+
+  // 真机上不能直接播临时链接（要配合法域名，只有开了调试的手机能播）：必须先走云存储下载，播本地文件
+  wx.cloud.downloadFile = ({ fileID, success }) => {
+    global.__cloudDownloads = (global.__cloudDownloads || []).concat(fileID);
+    success({ statusCode: 200, tempFilePath: `/tmp/sim/cloud-${global.__cloudDownloads.length}.mp3` });
+  };
+  global.__modal = null;
+  await audio.speak('ወደ ቀኝ ታጠፍ');
+  assert.equal(global.__cloudDownloads.length, 1, '朗读先走云存储下载');
+  assert.match(global.__audioCtx.src, /^\/tmp\/sim\/cloud-1\.mp3$/, '播放的是下载到本地的文件，而不是临时链接');
+  assert.equal(global.__modal, null, '成功时不弹框');
+
+  // 云存储下载失败（如权限设成仅创建者可读写）→ 退回播临时链接；再播不了时弹框要带上下载失败的原因
+  wx.cloud.downloadFile = ({ fail }) => fail({ errMsg: 'cloud.downloadFile:fail -403003 permission denied' });
+  await audio.speak('ወደ ግራ ታጠፍ');
+  assert.ok(global.__audioCtx.src && !/cloud-/.test(global.__audioCtx.src), '下载失败时退回在线链接');
+  global.__audioCtx._onError({ errMsg: 'MediaError', errCode: 10002 });
+  assert.match(global.__modal.content, /MediaError/, '弹框有播放器错误');
+  assert.match(global.__modal.content, /403003/, '弹框同时给出云存储下载失败的原因');
+  delete wx.cloud.downloadFile;
 
   // 未配置云环境时的失败路径
   require(path.join(root, 'config.js')).cloudEnv = '';
