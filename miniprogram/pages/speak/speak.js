@@ -42,8 +42,16 @@ Page({
     tempFilePath: '',
     loading: false,
     result: null,
-    scoreClass: ''
+    scoreClass: '',
+    needLogin: false
   },
+
+  onShow() {
+    // 录之前就告诉用户要登录，别等录完上传才被拒
+    this.setData({ needLogin: api.configured() && !account.isRegistered() });
+  },
+
+  goLogin() { account.goLogin(); },
 
   onLoad(q) {
     const item = vocab.getItem(q && q.id);

@@ -70,7 +70,8 @@ Page({
     if (nickname === this.data.nickname) return;
     saveNickname(nickname);
     this.setData({ nickname });
-    if (!nickname || !api.configured()) return;
+    // 没登记的用户只存本地：昵称同步会在云端建账号，绕过登录时的隐私同意
+    if (!nickname || !api.configured() || !this.data.registered) return;
     api.setProfile(nickname).catch(() => { /* 静默，下次进入再试 */ });
   },
   copyOpenid() {

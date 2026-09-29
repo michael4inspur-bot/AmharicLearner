@@ -73,3 +73,6 @@
 .word.ok { background: var(--mint); color: var(--mint-deep); }
 .word.miss { background: var(--peach); color: var(--accent); text-decoration: line-through; }
 .res-tip { font-size: 24rpx; color: var(--muted-2); line-height: 1.6; margin-top: 20rpx; }
+/* 未登录时的提示卡 */
+.need-login { margin-bottom: 24rpx; }
+.need-login .btn { margin-top: 16rpx; }

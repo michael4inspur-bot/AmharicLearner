@@ -4,6 +4,11 @@
     <text class="crumb-text">跟读练习</text>
   </view>
 
+  <view class="card peach need-login" wx:if="{{needLogin}}">
+    <view class="muted">跟读评分需要先用微信登录。登录后可以录音打分，学习进度也会同步到云端。</view>
+    <view class="btn small" bindtap="goLogin">去登录</view>
+  </view>
+
   <view class="card word-card" wx:if="{{item}}">
     <view class="am big">{{item.am}}</view>
     <view class="rom">{{item.rom}}</view>

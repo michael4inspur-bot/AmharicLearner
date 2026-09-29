@@ -54,6 +54,7 @@ global.wx = {
   cloud: {
     init() {},
     callFunction({ data, success, fail }) {
+      global.__calls = (global.__calls || []).concat(data.action);
       handle(data.action, data.data, { openid: simOpenid, db, deepseek, azure, storage })
         .then((result) => success({ result }))
         .catch((e) => fail({ errMsg: e.message }));
@@ -176,6 +177,29 @@ async function main() {
   assert.ok(global.__modal, '未登录点朗读会给出提示');
   assert.match(global.__modal.title, /登录/, '提示说明是登录问题');
   assert.equal(global.__modal.confirmText, '去登录', '提示带去登录入口');
+
+  // 跟读页：录音之前就提示要登录，而不是录完上传才被拒
+  const speakEarly = pages[10];
+  speakEarly.data = { ...speakEarly.data };
+  speakEarly.setData = function (d) { Object.assign(this.data, d); };
+  speakEarly.onShow();
+  assert.equal(speakEarly.data.needLogin, true, '未登录时跟读页提前提示');
+
+  // 教练页的账号错误也走同一套提示
+  const coachPage = pages[6];
+  coachPage.data = { ...coachPage.data };
+  coachPage.setData = function (d) { Object.assign(this.data, d); };
+  global.__modal = null;
+  coachPage.fail(new Error('请先在「我的」页完成微信登录'));
+  assert.equal(global.__modal.confirmText, '去登录', '教练页登录提示同样带去登录');
+
+  // 未登记时改昵称只存本地，不得在云端凭空建账号
+  const profPage = pages[8];
+  profPage.data = { ...profPage.data, registered: false };
+  profPage.setData = function (d) { Object.assign(this.data, d); };
+  global.__calls = [];
+  profPage.onNickname({ detail: { value: '临时昵称' } });
+  assert.equal(global.__calls.indexOf('user.setProfile'), -1, '未登记不同步昵称到云端');
   const me0 = await api.me();
   assert.equal(me0.registered, false);
   // 首页：未登录用户进入时不得被引导去登录（微信审核要求先体验后授权）
