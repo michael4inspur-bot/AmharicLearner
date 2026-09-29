@@ -10,6 +10,22 @@
     <button class="btn" bindtap="goLogin">微信登录</button>
   </view>
 
+  <view class="card mint account-card" wx:if="{{cloudReady && registered}}">
+    <view class="row gap">
+      <view class="square white"><x-icon name="user" size="40" color="#2F7A5E" /></view>
+      <view class="grow">
+        <view class="row gap wrap">
+          <text class="cta-title">{{nickname || '微信用户'}}</text>
+          <text class="tag mint-strong" wx:if="{{isAdmin}}">管理员</text>
+          <text class="tag gray" wx:if="{{status === 'pending'}}">待批准</text>
+          <text class="tag" wx:if="{{status === 'paused' || status === 'blocked'}}">已暂停</text>
+        </view>
+        <view class="muted-2">已用微信登录，学习进度自动同步到云端</view>
+      </view>
+    </view>
+    <view class="btn small ghost logout-btn" bindtap="logout">退出登录</view>
+  </view>
+
   <view class="grid6">
     <view class="cell peach">
       <view class="cell-top">
@@ -133,7 +149,7 @@
     </view>
   </view>
 
-  <view class="card lav row between admin-card" wx:if="{{isAdmin}}" bindtap="goAdmin">
+  <view class="card lav row between admin-card" wx:if="{{registered && isAdmin}}" bindtap="goAdmin">
     <view class="square white"><x-icon name="settings" size="40" color="#4C3D8F" /></view>
     <view class="grow admin-text">
       <view class="admin-title">管理</view>

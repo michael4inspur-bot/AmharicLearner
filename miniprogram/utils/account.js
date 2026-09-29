@@ -22,6 +22,11 @@ function canUseSpeech() { return isRegistered() && status() === 'active'; }
 /** 本人 openid。跟读录音要上传到 stt/<openid>/ 下，云端据此确认是本人刚传的文件。 */
 function openid() { return String(profile().openid || ''); }
 
+/** 退出登录后清掉本地登录态。昵称保留，重新登录时自动带回。 */
+function forget() {
+  remember({ registered: false, openid: '', isAdmin: false, status: 'active' });
+}
+
 function remember(patch) {
   try { wx.setStorageSync(PROFILE_KEY, { ...profile(), ...patch }); } catch (e) { /* ignore */ }
 }
@@ -71,4 +76,4 @@ function prompt(err, feature) {
   return true;
 }
 
-module.exports = { classify, prompt, goLogin, isRegistered, status, canUseSpeech, openid, remember, LOGIN_URL };
+module.exports = { classify, prompt, goLogin, isRegistered, status, canUseSpeech, openid, remember, forget, LOGIN_URL };

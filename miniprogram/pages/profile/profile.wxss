@@ -66,3 +66,9 @@
 /* 未登录时置顶的登录引导卡 */
 .login-cta { margin-bottom: 24rpx; }
 .cta-title { font-size: 32rpx; font-weight: 800; margin-bottom: 6rpx; }
+/* 已登录时的账号卡 */
+.account-card { margin-bottom: 24rpx; }
+.account-card .wrap { flex-wrap: wrap; }
+.account-card .muted-2 { margin-top: 6rpx; }
+.logout-btn { margin-top: 20rpx; }
+.tag.mint-strong { background: var(--mint-ink); color: #fff; }

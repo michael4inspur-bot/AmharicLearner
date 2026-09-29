@@ -100,6 +100,7 @@ module.exports = {
   register: (nickname) => call('user.register', nickname ? { nickname } : {}),
   setProfile: (nickname) => call('user.setProfile', { nickname }),
   me: () => call('user.me'),
+  logout: () => call('user.logout'),
   announcement: () => call('announcement.get'),
   adminUsers: () => call('admin.users'),
   adminSetStatus: (openid, status) => call('admin.setStatus', { openid, status }),
