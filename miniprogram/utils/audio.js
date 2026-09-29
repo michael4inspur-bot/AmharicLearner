@@ -3,6 +3,7 @@
 // 注意：Node 模拟脚本也会加载本模块，wx 上可能缺少 env / createInnerAudioContext / getFileSystemManager / downloadFile，
 // 所以每个 wx.* 调用都做存在性判断或 try/catch，模块加载本身不能抛错。
 const api = require('./api.js');
+const account = require('./account.js');
 
 const SETTINGS_KEY = 'audio_settings_v1';
 const CACHE_KEY = 'audio_cache_v1';
@@ -240,7 +241,7 @@ function speak(text, opts) {
       play(url);
       download(url, key, res && res.fileID);
     })
-    .catch(() => { toast(); });
+    .catch((err) => { if (!account.prompt(err, '朗读')) toast(); });
 }
 
 // ---------- 预取 ----------

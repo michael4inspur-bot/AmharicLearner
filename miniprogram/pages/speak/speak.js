@@ -2,6 +2,7 @@
 // 所有 wx.* 在 Node 模拟环境可能不存在，涉及录音、上传的调用都做存在性判断或 try/catch。
 const progress = require('../../utils/progress.js');
 const points = require('../../utils/points.js');
+const account = require('../../utils/account.js');
 const vocab = require('../../data/vocab.js');
 const audio = require('../../utils/audio.js');
 const api = require('../../utils/api.js');
@@ -231,19 +232,8 @@ Page({
       })
       .catch((err) => {
         this.setData({ loading: false });
+        if (account.prompt(err, '跟读评分')) return;
         const msg = (err && err.message) || '请稍后再试';
-        if (/登录/.test(msg)) {
-          wx.showModal({ title: '请先登录', content: '到「我的」页点“微信登录”，登录后即可使用跟读评分。', showCancel: false });
-          return;
-        }
-        if (/批准/.test(msg)) {
-          wx.showModal({ title: '等待管理员批准', content: '管理员批准后即可使用语音功能。', showCancel: false });
-          return;
-        }
-        if (/暂停|停用/.test(msg)) {
-          wx.showModal({ title: '账号已被管理员暂停', content: '请联系管理员', showCancel: false });
-          return;
-        }
         wx.showModal({ title: '评分失败', content: msg, showCancel: false });
       });
   }

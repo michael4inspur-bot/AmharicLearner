@@ -170,6 +170,12 @@ async function main() {
   // 登录门槛：未登录不能用 AI / 语音；微信登录（注册）后可用；第一个登录者自动成为管理员
   await assert.rejects(api.diagnose(s, plan.planOutline()), (e) => /登录/.test(e.message), '未登录被拒');
   await assert.rejects(api.ttsGet('ሰላም', 'female', 'normal'), (e) => /登录/.test(e.message), '未登录不能朗读');
+  // 未登录点朗读：弹出带「去登录」的提示，而不是一句看不懂的「语音暂时不可用」
+  global.__modal = null;
+  await audio.speak('ሰላም');
+  assert.ok(global.__modal, '未登录点朗读会给出提示');
+  assert.match(global.__modal.title, /登录/, '提示说明是登录问题');
+  assert.equal(global.__modal.confirmText, '去登录', '提示带去登录入口');
   const me0 = await api.me();
   assert.equal(me0.registered, false);
   // 首页：未登录用户进入时不得被引导去登录（微信审核要求先体验后授权）
