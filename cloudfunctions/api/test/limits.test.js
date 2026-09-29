@@ -22,24 +22,24 @@ function withEnv(vars, fn) {
 
 test('环境变量缺失时使用默认值', () => {
   withEnv({}, () => {
-    assert.deepEqual(getLimits(), { ai: 20, tts: 300, stt: 100, ttsMonthlyChars: 400000 });
-    assert.deepEqual(DEFAULT_LIMITS, { ai: 20, tts: 300, stt: 100, ttsMonthlyChars: 400000 });
+    assert.deepEqual(getLimits(), { tts: 300, stt: 100, ttsMonthlyChars: 400000 });
+    assert.deepEqual(DEFAULT_LIMITS, { tts: 300, stt: 100, ttsMonthlyChars: 400000 });
   });
 });
 
 test('环境变量为正整数时生效', () => {
-  withEnv({ AI_DAILY_LIMIT: '3', TTS_DAILY_LIMIT: '50', STT_DAILY_LIMIT: '7', TTS_MONTHLY_CHARS_LIMIT: '1000' }, () => {
-    assert.deepEqual(getLimits(), { ai: 3, tts: 50, stt: 7, ttsMonthlyChars: 1000 });
+  withEnv({ TTS_DAILY_LIMIT: '50', STT_DAILY_LIMIT: '7', TTS_MONTHLY_CHARS_LIMIT: '1000' }, () => {
+    assert.deepEqual(getLimits(), { tts: 50, stt: 7, ttsMonthlyChars: 1000 });
   });
   // 每次调用重新读取，不缓存
-  withEnv({ AI_DAILY_LIMIT: '5' }, () => assert.equal(getLimits().ai, 5));
-  withEnv({}, () => assert.equal(getLimits().ai, 20));
+  withEnv({ TTS_DAILY_LIMIT: '5' }, () => assert.equal(getLimits().tts, 5));
+  withEnv({}, () => assert.equal(getLimits().tts, 300));
 });
 
 test('非法值（非数字、0、负数、小数、空串）回退默认', () => {
   for (const bad of ['abc', '0', '-5', '2.5', '', '  ', 'NaN', 'Infinity']) {
     withEnv({ AI_DAILY_LIMIT: bad, TTS_DAILY_LIMIT: bad, STT_DAILY_LIMIT: bad, TTS_MONTHLY_CHARS_LIMIT: bad }, () => {
-      assert.deepEqual(getLimits(), { ai: 20, tts: 300, stt: 100, ttsMonthlyChars: 400000 }, JSON.stringify(bad));
+      assert.deepEqual(getLimits(), { tts: 300, stt: 100, ttsMonthlyChars: 400000 }, JSON.stringify(bad));
     });
   }
 });
@@ -62,6 +62,6 @@ test('isAdmin：逗号分隔、trim、缺失时全部为 false', () => {
 
 test('withEnv 结束后环境变量已恢复', () => {
   const before = process.env.AI_DAILY_LIMIT;
-  withEnv({ AI_DAILY_LIMIT: '99' }, () => assert.equal(getLimits().ai, 99));
+  withEnv({ TTS_DAILY_LIMIT: '99' }, () => assert.equal(getLimits().tts, 99));
   assert.equal(process.env.AI_DAILY_LIMIT, before);
 });

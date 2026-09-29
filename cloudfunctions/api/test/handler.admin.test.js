@@ -4,11 +4,10 @@ const { handle } = require('../handler.js');
 const { USER_STATUSES } = require('../admin.js');
 const { dayStartIso } = require('../time.js');
 const { createFakeDb } = require('./fakeDb.js');
-const { createFakeDeepseek } = require('./fakeDeepseek.js');
 const { createFakeAzure } = require('./fakeAzure.js');
 const { createFakeStorage } = require('./fakeStorage.js');
 
-const KEYS = ['AI_DAILY_LIMIT', 'TTS_DAILY_LIMIT', 'STT_DAILY_LIMIT', 'TTS_MONTHLY_CHARS_LIMIT', 'ADMIN_OPENIDS'];
+const KEYS = ['TTS_DAILY_LIMIT', 'STT_DAILY_LIMIT', 'TTS_MONTHLY_CHARS_LIMIT', 'ADMIN_OPENIDS', 'REQUIRE_APPROVAL', 'ALLOW_ADMIN_BOOTSTRAP'];
 const NOW = '2026-09-11T10:00:00Z';
 
 /** 临时设置环境变量执行 async fn，结束后恢复。 */
@@ -27,11 +26,10 @@ async function withEnv(vars, fn) {
   }
 }
 
-function ctx({ openid = 'u1', db, deepseek, azure, storage, isoNow } = {}) {
+function ctx({ openid = 'u1', db, azure, storage, isoNow } = {}) {
   return {
     openid,
     db: db || createFakeDb(),
-    deepseek: deepseek || createFakeDeepseek(() => 'ok'),
     azure: azure || createFakeAzure(),
     storage: storage || createFakeStorage(),
     now: () => new Date(isoNow || NOW)
@@ -90,7 +88,7 @@ test('状态拦截：paused 用户 ai/tts/stt 被拒，progress.put 仍可用', 
     const db = createFakeDb();
     await db.putUser('u1', { status: 'paused' });
     const c = ctx({ db });
-    const chat = await handle('ai.chat', { messages: [{ role: 'user', content: 'hi' }] }, c);
+    const chat = await handle('tts.get', { text: 'ሰላም', voice: 'female', rate: 'normal' }, c);
     assert.deepEqual(chat, { ok: false, code: 'BAD_REQUEST', error: '账号已被管理员暂停' });
     const tts = await handle('tts.get', { text: 'ሰላም', voice: 'female', rate: 'normal' }, c);
     assert.equal(tts.error, '账号已被管理员暂停');
@@ -101,7 +99,7 @@ test('状态拦截：paused 用户 ai/tts/stt 被拒，progress.put 仍可用', 
     assert.equal((await handle('progress.get', {}, c)).ok, true);
     // 状态回到 active 后恢复
     await db.putUser('u1', { status: 'active' });
-    assert.equal((await handle('ai.chat', { messages: [{ role: 'user', content: 'hi' }] }, c)).ok, true);
+    assert.equal((await handle('tts.get', { text: 'ሰላም', voice: 'female', rate: 'normal' }, c)).ok, true);
   });
 });
 
@@ -112,7 +110,7 @@ test('状态拦截：blocked 用户 progress.get / progress.put 被拒', async (
     const c = ctx({ db });
     assert.deepEqual(await handle('progress.put', { progress: { streak: 1 } }, c), { ok: false, code: 'BAD_REQUEST', error: '账号已停用' });
     assert.deepEqual(await handle('progress.get', {}, c), { ok: false, code: 'BAD_REQUEST', error: '账号已停用' });
-    assert.equal((await handle('ai.chat', { messages: [{ role: 'user', content: 'hi' }] }, c)).error, '账号已被管理员暂停');
+    assert.equal((await handle('tts.get', { text: 'ሰላም', voice: 'female', rate: 'normal' }, c)).error, '账号已被管理员暂停');
   });
 });
 
@@ -131,18 +129,16 @@ test('admin.users：合并当日用量、标 isSelf、按 lastActive 倒序', as
     const db = createFakeDb();
     await db.putUser('u1', { nickname: '李工', status: 'active', lastActive: '2026-09-11T09:00:00.000Z', week: 2, streak: 5, stars: 12 });
     await db.putUser('u2', { nickname: '', status: 'paused', lastActive: '2026-09-11T11:00:00.000Z', week: 1, streak: 0, stars: 3 });
-    await db.addAiLog(log('u1', 'chat', '2026-09-11T08:00:00.000Z', { reply: 'a' }));
-    await db.addAiLog(log('u1', 'diagnosis', '2026-09-11T08:10:00.000Z', {}));
     await db.addAiLog(log('u1', 'tts', '2026-09-11T08:20:00.000Z', { chars: 4, key: 'k' }));
     await db.addAiLog(log('u2', 'stt', '2026-09-11T08:30:00.000Z', { transcript: '', score: 0 }));
     // 昨天（东非时间）的不计入今日
-    await db.addAiLog(log('u1', 'chat', '2026-09-10T20:00:00.000Z', { reply: 'old' }));
+    await db.addAiLog(log('u1', 'tts', '2026-09-10T20:00:00.000Z', { chars: 9, key: 'old' }));
     assert.equal(dayStartIso(new Date(NOW)), '2026-09-10T21:00:00.000Z');
     const res = await handle('admin.users', {}, ctx({ openid: 'u1', db }));
     assert.equal(res.ok, true);
     assert.deepEqual(res.data.users, [
-      { openid: 'u2', nickname: '', status: 'paused', lastActive: '2026-09-11T11:00:00.000Z', week: 1, streak: 0, stars: 3, today: { ai: 0, tts: 0, stt: 1 }, isSelf: false },
-      { openid: 'u1', nickname: '李工', status: 'active', lastActive: '2026-09-11T09:00:00.000Z', week: 2, streak: 5, stars: 12, today: { ai: 2, tts: 1, stt: 0 }, isSelf: true }
+      { openid: 'u2', nickname: '', status: 'paused', lastActive: '2026-09-11T11:00:00.000Z', week: 1, streak: 0, stars: 3, today: { tts: 0, stt: 1 }, isSelf: false },
+      { openid: 'u1', nickname: '李工', status: 'active', lastActive: '2026-09-11T09:00:00.000Z', week: 2, streak: 5, stars: 12, today: { tts: 1, stt: 0 }, isSelf: true }
     ]);
   });
 });
@@ -194,15 +190,14 @@ test('users 集合读不到时不阻断 AI 与进度同步（容错放行）', a
   const db = createFakeDb();
   // 模拟集合尚未创建：getUser 抛错
   db.getUser = async () => { throw new Error('database collection not exists'); };
-  const deepseek = createFakeDeepseek(() => 'ሰላም');
-  const chat = await handle('ai.chat', { messages: [{ role: 'user', content: 'hi' }] }, ctx({ openid: 'u1', db, deepseek }));
+  const chat = await handle('tts.get', { text: 'ሰላም', voice: 'female', rate: 'normal' }, ctx({ openid: 'u1', db }));
   assert.equal(chat.ok, true, 'AI 仍可用');
   const put = await handle('progress.put', { progress: { streak: 1 } }, ctx({ openid: 'u1', db }));
   assert.equal(put.ok, true, '进度同步仍可用');
 });
 
-test('user.register：首次注册创建记录；环境变量没配管理员时第一个注册的人成为管理员', async () => {
-  await withEnv({ ADMIN_OPENIDS: '' }, async () => {
+test('user.register：首次注册创建记录；显式开启引导时第一个注册的人成为管理员', async () => {
+  await withEnv({ ADMIN_OPENIDS: '', ALLOW_ADMIN_BOOTSTRAP: '1' }, async () => {
     const db = createFakeDb({ registered: false });
     const first = await handle('user.register', { nickname: '李工' }, ctx({ openid: 'u1', db }));
     assert.equal(first.ok, true);
@@ -225,25 +220,25 @@ test('user.register：首次注册创建记录；环境变量没配管理员时�
 });
 
 test('user.register：REQUIRE_APPROVAL=1 时新用户为 pending，管理员仍为 active', async () => {
-  await withEnv({ ADMIN_OPENIDS: '', REQUIRE_APPROVAL: '1' }, async () => {
+  await withEnv({ ADMIN_OPENIDS: '', REQUIRE_APPROVAL: '1', ALLOW_ADMIN_BOOTSTRAP: '1' }, async () => {
     const db = createFakeDb({ registered: false });
     const admin = await handle('user.register', {}, ctx({ openid: 'u1', db }));
     assert.equal(admin.data.status, 'active');
     const u2 = await handle('user.register', {}, ctx({ openid: 'u2', db }));
     assert.equal(u2.data.status, 'pending');
-    const chat = await handle('ai.chat', { messages: [{ role: 'user', content: 'hi' }] }, ctx({ openid: 'u2', db }));
+    const chat = await handle('tts.get', { text: 'ሰላም', voice: 'female', rate: 'normal' }, ctx({ openid: 'u2', db }));
     assert.equal(chat.code, 'BAD_REQUEST');
     assert.match(chat.error, /批准/);
     const approve = await handle('admin.setStatus', { openid: 'u2', status: 'active' }, ctx({ openid: 'u1', db }));
     assert.equal(approve.ok, true);
-    const chat2 = await handle('ai.chat', { messages: [{ role: 'user', content: 'hi' }] }, ctx({ openid: 'u2', db }));
+    const chat2 = await handle('tts.get', { text: 'ሰላም', voice: 'female', rate: 'normal' }, ctx({ openid: 'u2', db }));
     assert.equal(chat2.ok, true);
   });
 });
 
 test('未注册用户不能用 AI 与语音，但进度同步不受影响', async () => {
   const db = createFakeDb({ registered: false });
-  const chat = await handle('ai.chat', { messages: [{ role: 'user', content: 'hi' }] }, ctx({ openid: 'ghost', db }));
+  const chat = await handle('tts.get', { text: 'ሰላም', voice: 'female', rate: 'normal' }, ctx({ openid: 'ghost', db }));
   assert.equal(chat.code, 'BAD_REQUEST');
   assert.match(chat.error, /登录/);
   const tts = await handle('tts.get', { text: 'ሰላም', voice: 'female', rate: 'normal' }, ctx({ openid: 'ghost', db }));
@@ -368,5 +363,30 @@ test('未知 user./announcement./admin. action → BAD_REQUEST；admin.usage 仍
     assert.equal(usage.ok, true);
     assert.deepEqual(usage.data.users, []);
     assert.equal(typeof usage.data.since, 'string');
+  });
+});
+
+test('user.setProfile 不为未登记用户建档（否则绕过登录门槛拿到语音权限）', async () => {
+  await withEnv({ ADMIN_OPENIDS: '' }, async () => {
+    const db = createFakeDb({ registered: false });
+    const c = ctx({ openid: 'sneaky', db });
+    const set = await handle('user.setProfile', { nickname: '张三' }, c);
+    assert.equal(set.ok, false);
+    assert.match(set.error, /登录/);
+    assert.equal(await db.getUser('sneaky'), null, '没有凭空建出用户文档');
+    // 门禁仍然拦得住
+    const tts = await handle('tts.get', { text: 'ሰላም', voice: 'female', rate: 'normal' }, c);
+    assert.equal(tts.ok, false);
+    assert.match(tts.error, /登录/);
+  });
+});
+
+test('未开 ALLOW_ADMIN_BOOTSTRAP 时，第一个注册的人不会成为管理员', async () => {
+  await withEnv({ ADMIN_OPENIDS: '' }, async () => {
+    const db = createFakeDb({ registered: false });
+    const first = await handle('user.register', {}, ctx({ openid: 'reviewer', db }));
+    assert.equal(first.ok, true);
+    assert.equal(first.data.isAdmin, false, '提审时第一个打开的人可能是审核员，不能自动成为管理员');
+    assert.equal((await handle('admin.users', {}, ctx({ openid: 'reviewer', db }))).error, '无权限');
   });
 });

@@ -6,7 +6,6 @@ const { dayStartIso, monthStartIso, eatDayKey } = require('./time.js');
 
 const USER_STATUSES = ['active', 'pending', 'paused', 'blocked'];
 const ADMIN_SETTING_ID = 'admin';
-const AI_TYPES = ['diagnosis', 'plan', 'chat'];
 const MAX_NICKNAME = 20;
 const MAX_ANNOUNCEMENT = 500;
 const ANNOUNCEMENT_ID = 'announcement';
@@ -65,8 +64,17 @@ async function register(data, ctx, now) {
   const existing = await db.getUser(openid);
   if (!existing) {
     let bootstrappedAdmin = false;
-    if (!envAdminConfigured()) {
-      const adm = await db.getSetting(ADMIN_SETTING_ID);
+    // 首次登录自动成为管理员，必须显式开启 ALLOW_ADMIN_BOOTSTRAP=1。
+    // 默认关闭：提审时第一个打开小程序的往往是微信审核员，他会因此拿到
+    // 查看全部用户 openid、停用开发者账号的权限。正式部署请改用 ADMIN_OPENIDS。
+    if (!envAdminConfigured() && process.env.ALLOW_ADMIN_BOOTSTRAP === '1') {
+      let adm = null;
+      try {
+        adm = await db.getSetting(ADMIN_SETTING_ID);
+      } catch (err) {
+        // settings 集合还没建时视为没有管理员，不能让注册整个失败
+        console.error('读取管理员设置失败', err);
+      }
       if (!adm || !adm.openid) {
         await db.putSetting(ADMIN_SETTING_ID, { openid, createdAt: now.toISOString() });
         bootstrappedAdmin = true;
@@ -97,6 +105,11 @@ async function setProfile(data, ctx) {
   if (typeof data.nickname !== 'string') return fail('BAD_REQUEST', 'nickname 必须是字符串');
   const nickname = data.nickname.trim();
   if (!nickname || nickname.length > MAX_NICKNAME) return fail('BAD_REQUEST', `昵称必须是 1–${MAX_NICKNAME} 个字符`);
+  // 必须已经登记过。否则这里会凭空建出一条没有 status 的用户文档，
+  // 而门禁只判断「文档不存在 / status 为 pending / status 非 active」，
+  // status 为 undefined 时三条都不成立 —— 未登记用户就此拿到全部语音权限。
+  const existing = await db.getUser(openid);
+  if (!existing) return fail('BAD_REQUEST', '请先在「我的」页完成微信登录');
   await db.putUser(openid, { nickname });
   return ok({ nickname });
 }
@@ -134,11 +147,10 @@ async function listUsers(ctx, now) {
   for (const l of logs) {
     let t = today.get(l.openid);
     if (!t) {
-      t = { ai: 0, tts: 0, stt: 0 };
+      t = { tts: 0, stt: 0 };
       today.set(l.openid, t);
     }
-    if (AI_TYPES.includes(l.type)) t.ai++;
-    else if (l.type === 'tts') t.tts++;
+    if (l.type === 'tts') t.tts++;
     else if (l.type === 'stt') t.stt++;
   }
   const byId = new Map(docs.map((d) => [d._id, d]));
@@ -149,7 +161,7 @@ async function listUsers(ctx, now) {
     week: Number(d.week) || 0,
     streak: Number(d.streak) || 0,
     stars: Number(d.stars) || 0,
-    today: today.get(id) || { ai: 0, tts: 0, stt: 0 },
+    today: today.get(id) || { tts: 0, stt: 0 },
     isSelf: id === openid
   }));
   users.sort((a, b) => b.lastActive.localeCompare(a.lastActive) || a.openid.localeCompare(b.openid));

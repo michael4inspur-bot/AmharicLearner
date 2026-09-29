@@ -3,6 +3,7 @@ const api = require('../../utils/api.js');
 const audio = require('../../utils/audio.js');
 const points = require('../../utils/points.js');
 const sync = require('../../utils/sync.js');
+const account = require('../../utils/account.js');
 const update = require('../../utils/update.js');
 
 const PROFILE_KEY = 'profile_v1';
@@ -60,6 +61,7 @@ Page({
       const me = await api.me();
       if (!me) return;
       const d = { openid: me.openid || '', registered: !!me.registered, isAdmin: !!me.isAdmin, status: me.status || 'active' };
+      account.remember(d);
       if (me.nickname && !this.data.nickname) { saveNickname(me.nickname); d.nickname = me.nickname; }
       try { wx.setStorageSync(PROFILE_KEY, { ...readProfile(), registered: !!me.registered, isAdmin: !!me.isAdmin, status: me.status || 'active' }); } catch (e) { /* ignore */ }
       this.setData(d);
@@ -70,7 +72,8 @@ Page({
     if (nickname === this.data.nickname) return;
     saveNickname(nickname);
     this.setData({ nickname });
-    if (!nickname || !api.configured()) return;
+    // 没登记的用户只存本地：昵称同步会在云端建账号，绕过登录时的隐私同意
+    if (!nickname || !api.configured() || !this.data.registered) return;
     api.setProfile(nickname).catch(() => { /* 静默，下次进入再试 */ });
   },
   copyOpenid() {
@@ -95,11 +98,17 @@ Page({
   },
   async download() {
     try {
-      const { progress: remote } = await api.fetchProgress();
+      const { progress: remote, updatedAt } = await api.fetchProgress();
       if (!remote) { wx.showToast({ title: '云端没有数据', icon: 'none' }); return; }
       wx.showModal({
         title: '覆盖本地进度？', content: '将用云端的进度替换本机数据。',
-        success: (r) => { if (r.confirm) { progress.replace(remote); this.onShow(); wx.showToast({ title: '已恢复', icon: 'success' }); } }
+        success: (r) => {
+          if (!r.confirm) return;
+          progress.replace(remote);
+          sync.noteRemoteVersion(updatedAt); // 记下云端版本，之后上传不会被判成旧快照
+          this.onShow();
+          wx.showToast({ title: '已恢复', icon: 'success' });
+        }
       });
     } catch (e) { wx.showModal({ title: '恢复失败', content: e.message, showCancel: false }); }
   },

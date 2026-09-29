@@ -1,7 +1,7 @@
 // 8 周阿姆哈拉语学习计划：以工作沟通（IT/通信/设备交付）为主线。
 // 设计依据（成人学习特性）：
 //  1. 需要知道"为什么学"    -> 每周、每单元都写明 why 与真实场景
-//  2. 自我导向             -> 每天任务是建议而非强制，可调节每日时长，可让 AI 改计划
+//  2. 自我导向             -> 每天任务是建议而非强制，每日时长和新词上限都可调
 //  3. 经验为本             -> 数字、时间等与已有经验对照（埃塞时间制 vs 国际时间）
 //  4. 问题中心、即学即用    -> 每周一个真实工作任务（mission），必须在现实中说出口；生活场景为自选补充
 //  5. 时间碎片化           -> 每天约 33 分钟：8 分钟复习 + 15 分钟新内容 + 10 分钟小测/实战
@@ -53,12 +53,12 @@ const weeks = [
     week: 4,
     theme: '现场与班组 + 第一次复盘',
     goal: '在站点、机房向班组布置任务、确认完成、提醒安全。本周只加一个单元，复习占 60%。',
-    why: '前三周约 120 个词，遗忘曲线开始起作用；同时现场用语是交付工作的核心，要练扎实。周末让 AI 诊断一次。',
+    why: '前三周约 120 个词，遗忘曲线开始起作用；同时现场用语是交付工作的核心，要练扎实。周末回顾一次错得最多的词。',
     units: ['u14'],
     extra: 'u07',
     fidelGroup: 3,
     reviewWeek: true,
-    mission: '在现场用阿姆哈拉语向班组布置一件事（装什么、几个人、今天完成），并用 ጨርሰሃል? 确认。周末在"AI 教练"做诊断。',
+    mission: '在现场用阿姆哈拉语向班组布置一件事（装什么、几个人、今天完成），并用 ጨርሰሃል? 确认。周末回顾本周说出口的句子。',
     milestone: '前 4 周复习正确率 ≥ 75%，现场布置一次任务'
   },
   {
@@ -97,13 +97,13 @@ const weeks = [
   {
     week: 8,
     theme: '综合复习 + 5 个工作实战',
-    goal: '不加新词，完成 5 个真实工作任务，做 AI 结业诊断并生成下一阶段计划。',
+    goal: '不加新词，完成 5 个真实工作任务，并为下一阶段挑出还没掌握的场景。',
     why: '成人学习最怕"学完就忘、学完不用"。最后一周只做提取练习和实战，检验并巩固。',
     units: [],
     extra: null,
     fidelGroup: 5,
     reviewWeek: true,
-    mission: '5 个实战：给司机安排行程 / 电话约时间 / 现场布置任务 / 敬语接待 / 报告并解决一个问题。全部完成后做 AI 结业诊断。',
+    mission: '5 个实战：给司机安排行程 / 电话约时间 / 现场布置任务 / 敬语接待 / 报告并解决一个问题。全部完成后回顾哪些场景还开不了口。',
     milestone: '全部词汇复习正确率 ≥ 85%，5 个实战任务完成'
   }
 ];
@@ -135,7 +135,7 @@ function getDayTasks(week, day) {
       tasks.push({ type: 'quiz', title: '综合小测', desc: '10 题混合所有单元', minutes: 5, unit: 'all' });
       tasks.push({ type: 'fidel', title: 'Fidel 全表自测', desc: '认读全部 33 个基础辅音', minutes: 8, group: 5 });
     } else {
-      tasks.push({ type: 'ai', title: 'AI 结业诊断', desc: '在"AI 教练"做诊断并生成下一阶段计划', minutes: 10 });
+      tasks.push({ type: 'reflect', title: '结业复盘', reflectKey: 'final', desc: '回顾 8 周：哪些场景已经能开口，哪些还要练，写下下一阶段想攻的 3 个场景', minutes: 10 });
     }
     return tasks;
   }
@@ -166,12 +166,12 @@ function getDayTasks(week, day) {
       break;
     default:
       tasks.push({ type: 'quiz', title: '本周综合小测', desc: '混合本周单元', minutes: 5, unit: 'week' });
-      tasks.push({ type: 'reflect', title: '一周复盘', desc: w.reviewWeek ? '让 AI 教练做一次学习诊断，并按建议调整计划' : '写下这周在工作里说出口的 3 句话，想想下周想在哪个场景用', minutes: 5 });
+      tasks.push({ type: 'reflect', title: '一周复盘', reflectKey: `w${w.week}`, desc: w.reviewWeek ? '回顾本周错得最多的词，挑 3 个下周重点用的场景' : '写下这周在工作里说出口的 3 句话，想想下周想在哪个场景用', minutes: 5 });
   }
   return tasks;
 }
 
-/** 给 AI 的计划大纲（精简版） */
+/** 计划大纲（精简版） */
 function planOutline() {
   return {
     totalWeeks: weeks.length,
@@ -183,13 +183,13 @@ function planOutline() {
 
 const principles = [
   { title: '先知道为什么学', desc: '每个单元都写明真实场景和收益，学的每句话都能立刻用上。' },
-  { title: '你说了算', desc: '每日时长、学习顺序都可调；AI 只给建议和理由，最终由你决定。' },
+  { title: '你说了算', desc: '每日时长、学习顺序、新词上限都可调，节奏由你自己定。' },
   { title: '挂到已有经验上', desc: '数字、时间、货币都和你已经熟悉的概念对照（如埃塞时间 = 国际时间 − 6）。' },
   { title: '问题驱动、即学即用', desc: '每周一个真实工作任务：安排行程、打电话、现场布置、敬语接待……说出口才算学会。' },
   { title: '每天 30 分钟左右', desc: '8 分钟复习 + 15 分钟新内容 + 10 分钟小测或实战。连续比时长更重要。' },
   { title: '间隔重复 + 主动回忆', desc: '闪卡按遗忘曲线安排，小测用选择题做提取练习，遗忘的词会更频繁出现。' },
   { title: '文字渐进', desc: 'Fidel 字母分 5 批，每周约 6 个辅音，和当周词汇绑定学。' },
-  { title: '定期诊断、动态调整', desc: '第 4 周和第 8 周让 AI 根据数据诊断进度并修改计划。' }
+  { title: '定期复盘、动态调整', desc: '第 4 周和第 8 周专门用来复盘，按自己的实际情况调整节奏。' }
 ];
 
 module.exports = { weeks, getDayTasks, planOutline, principles, DAILY_TEMPLATE };

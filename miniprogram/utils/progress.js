@@ -24,20 +24,67 @@ function defaultProgress() {
     srs: {},            // itemId -> card
     logs: {},           // date -> {minutes, reviews, correct, wrong, newCards}
     missions: {},       // missionKey -> date
+    reflections: {},    // 复盘 key（如 w3）-> date
     fidelGroupsDone: {},// group -> date
-    aiHistory: [],      // {type, date, result, request}
-    planOverrides: null,// AI 调整结果（用户点"采纳"后）
-    selfReport: ''      // 用户自述困难
   };
 }
 
 let cache = null;
 
+const OBJECT_FIELDS = ['unitsLearned', 'srs', 'logs', 'missions', 'reflections', 'fidelGroupsDone', 'starLog', 'badges'];
+const ARRAY_FIELDS = ['quizScores'];
+
+/**
+ * 把外来进度（本地旧数据、云端快照、别的版本写的）整理成本模块能安全使用的形状。
+ * 浅合并挡不住 `logs: null` 这类脏值：null 会覆盖默认的 {}，之后 todayLog / streak /
+ * dueCards / srsStats 全部抛错，首页、复习页、我的页一起崩，重启也不恢复。
+ * 星星、徽章、星星日志是 points.js 懒创建的，不在默认结构里，浅合并会把它们直接丢掉。
+ */
+function sanitize(raw) {
+  const p = { ...defaultProgress(), ...(raw && typeof raw === 'object' ? raw : {}) };
+  OBJECT_FIELDS.forEach((k) => {
+    if (!p[k] || typeof p[k] !== 'object' || Array.isArray(p[k])) p[k] = {};
+  });
+  ARRAY_FIELDS.forEach((k) => {
+    if (!Array.isArray(p[k])) p[k] = [];
+  });
+  if (typeof p.startDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(p.startDate)) p.startDate = todayStr();
+  if (typeof p.dailyMinutesGoal !== 'number' || !(p.dailyMinutesGoal > 0)) p.dailyMinutesGoal = 35;
+  if (typeof p.newCardsPerDay !== 'number' || !(p.newCardsPerDay > 0)) p.newCardsPerDay = 15;
+  if (typeof p.stars !== 'number' || !Number.isFinite(p.stars) || p.stars < 0) p.stars = 0;
+  // 每日日志缺 minutes 会让 streak 把没学的天算成连续（undefined <= 0 为 false）
+  Object.keys(p.logs).forEach((k) => {
+    const l = p.logs[k];
+    if (!l || typeof l !== 'object') { delete p.logs[k]; return; }
+    ['minutes', 'reviews', 'correct', 'wrong', 'newCards', 'newSeen'].forEach((f) => {
+      if (typeof l[f] !== 'number' || !Number.isFinite(l[f])) l[f] = 0;
+    });
+  });
+  // 缺 ef 的卡片评分后 ef/interval/due 会全变 NaN，该卡永久不再到期却仍计入总数
+  Object.keys(p.srs).forEach((id) => {
+    const c = p.srs[id];
+    if (!c || typeof c !== 'object') { delete p.srs[id]; return; }
+    if (typeof c.ef !== 'number' || !Number.isFinite(c.ef)) c.ef = 2.5;
+    if (typeof c.interval !== 'number' || !Number.isFinite(c.interval)) c.interval = 0;
+    if (typeof c.reps !== 'number' || !Number.isFinite(c.reps)) c.reps = 0;
+    if (typeof c.due !== 'number' || !Number.isFinite(c.due)) c.due = Date.now();
+  });
+  return p;
+}
+
+/** 本地进度是否还是全新的（没学过任何东西）。空进度不该覆盖云端。 */
+function isEmpty(p) {
+  p = p || load();
+  return Object.keys(p.unitsLearned).length === 0
+    && Object.keys(p.srs).length === 0
+    && Object.keys(p.logs).length === 0
+    && p.quizScores.length === 0;
+}
+
 function load() {
   if (cache) return cache;
   try {
-    const raw = wx.getStorageSync(KEY);
-    cache = raw ? { ...defaultProgress(), ...raw } : defaultProgress();
+    cache = sanitize(wx.getStorageSync(KEY));
   } catch (e) {
     cache = defaultProgress();
   }
@@ -61,8 +108,15 @@ function reset() {
 }
 
 function replace(p) {
+  const local = load();
+  const next = sanitize(p);
+  // 云端快照可能早于积分功能，缺这三个字段。浅合并会把本机已得的星星和徽章清零且不可逆，
+  // 所以云端没有时保留本机的。
+  if (!p || typeof p !== 'object' || p.stars == null) next.stars = local.stars || 0;
+  if (!p || !p.starLog) next.starLog = local.starLog || {};
+  if (!p || !p.badges) next.badges = local.badges || {};
   cache = null;
-  return save({ ...defaultProgress(), ...p });
+  return save(next);
 }
 
 // ---------- 当前周 / 天 ----------
@@ -76,10 +130,18 @@ function currentPosition(p) {
 }
 
 // ---------- 日志 ----------
+const ZERO_LOG = { minutes: 0, reviews: 0, correct: 0, wrong: 0, newCards: 0, newSeen: 0 };
+
+/** 只读地看今天的日志，不会在 logs 里留下空条目 */
+function peekLog(p) {
+  p = p || load();
+  return p.logs[todayStr()] || ZERO_LOG;
+}
+
 function todayLog(p) {
   p = p || load();
   const k = todayStr();
-  if (!p.logs[k]) p.logs[k] = { minutes: 0, reviews: 0, correct: 0, wrong: 0, newCards: 0, newSeen: 0 };
+  if (!p.logs[k]) p.logs[k] = { ...ZERO_LOG };
   return p.logs[k];
 }
 
@@ -127,7 +189,7 @@ function learnUnit(unitId) {
 function dueCards(p, limit) {
   p = p || load();
   const now = Date.now();
-  const log = todayLog(p);
+  const log = peekLog(p);
   // 新卡（从未复习过）每天只放出 newCardsPerDay 张，避免成人学习者一次堆太多
   let newBudget = Math.max(0, (p.newCardsPerDay || 10) - (log.newSeen || 0));
   const due = Object.keys(p.srs)
@@ -162,13 +224,22 @@ function srsStats(p) {
     if (srs.isMature(p.srs[id])) mature += 1;
     if (p.srs[id].last === null && srs.isDue(p.srs[id], now)) newWaiting += 1;
   });
-  const due = dueCards(p).length;
-  return { total: ids.length, due, mature, newWaiting: Math.max(0, newWaiting - due) };
+  // newWaiting 是"还没学过且已到期"的卡；due 里既有新卡也有复习卡，
+  // 直接相减会把复习卡也扣掉，排队数被严重低估甚至压成 0。只减今天已放出的新卡。
+  const dueList = dueCards(p);
+  const releasedNew = dueList.filter((x) => x.card && x.card.last === null).length;
+  return { total: ids.length, due: dueList.length, mature, newWaiting: Math.max(0, newWaiting - releasedNew) };
 }
 
 function recordQuiz(unit, score, total) {
   const p = load();
   p.quizScores.push({ unit, score, total, date: todayStr() });
+  return save(p);
+}
+
+function completeReflection(key) {
+  const p = load();
+  p.reflections[key] = todayStr();
   return save(p);
 }
 
@@ -181,27 +252,6 @@ function completeMission(key) {
 function completeFidelGroup(group) {
   const p = load();
   p.fidelGroupsDone[group] = todayStr();
-  return save(p);
-}
-
-function setSelfReport(text) {
-  const p = load();
-  p.selfReport = text;
-  return save(p);
-}
-
-function pushAi(entry) {
-  const p = load();
-  p.aiHistory.unshift(entry);
-  p.aiHistory = p.aiHistory.slice(0, 20);
-  return save(p);
-}
-
-function applyPlanOverrides(adjustment) {
-  const p = load();
-  p.planOverrides = { ...adjustment, appliedAt: todayStr() };
-  if (adjustment.daily_minutes) p.dailyMinutesGoal = adjustment.daily_minutes;
-  if (adjustment.new_words_per_day) p.newCardsPerDay = adjustment.new_words_per_day;
   return save(p);
 }
 
@@ -260,13 +310,11 @@ function summary(p) {
     missionsDone: Object.keys(p.missions),
     fidelGroupsDone: Object.keys(p.fidelGroupsDone).map(Number),
     weakItems,
-    selfReport: p.selfReport || '',
-    planOverrides: p.planOverrides ? { summary: p.planOverrides.summary, appliedAt: p.planOverrides.appliedAt } : null
   };
 }
 
 module.exports = {
-  todayStr, load, save, reset, replace, setOnSaved, currentPosition, todayLog, addMinutes, streak,
-  learnUnit, dueCards, gradeCard, srsStats, recordQuiz, completeMission, completeFidelGroup,
-  setSelfReport, pushAi, applyPlanOverrides, summary
+  todayStr, load, save, reset, replace, sanitize, isEmpty, setOnSaved, currentPosition, todayLog, addMinutes, streak,
+  learnUnit, dueCards, gradeCard, srsStats, recordQuiz, completeMission, completeReflection, completeFidelGroup,
+  completeReflection, summary
 };

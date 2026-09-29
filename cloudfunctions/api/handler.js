@@ -1,67 +1,31 @@
 // 云函数纯逻辑。不直接依赖 wx-server-sdk，所有外部依赖通过 ctx 注入。
-// ctx = { openid, db, deepseek, azure, storage, now? }
-const prompts = require('./prompts.js');
+// ctx = { openid, db, azure, storage, now? }
+// 注：AI 教练（DeepSeek 诊断 / 计划调整 / 问答）已整体下线，微信个人主体未开放深度合成类目。
 const { handleSpeech } = require('./speech.js');
 const { handleAdmin, isAdminUser } = require('./admin.js');
 const { getLimits, isAdmin, DEFAULT_LIMITS } = require('./limits.js');
 const { dayStartIso, monthStartIso } = require('./time.js');
 
-const DAILY_AI_LIMIT = DEFAULT_LIMITS.ai; // 默认值常量；实际上限每次调用 getLimits() 读取
-const AI_LIMIT_TYPES = ['diagnosis', 'plan', 'chat']; // 每日 AI 上限只统计这三类，tts/stt 另计
-const HISTORY_LIMIT = 30;
-const CHAT_LOG_TTL_DAYS = 7;
 const ADMIN_USAGE_DAYS = 7;
 const ADMIN_LOG_LIMIT = 2000;
-const MAX_CHAT_MESSAGES = 20;
 const DAY_MS = 24 * 60 * 60 * 1000;
-const GATED_PREFIXES = ['ai.', 'tts.', 'stt.']; // 非 active 账号不可用
+const GATED_PREFIXES = ['tts.', 'stt.']; // 非 active 账号不可用
 const ADMIN_PREFIXES = ['user.', 'announcement.', 'admin.'];
 
 function ok(data) { return { ok: true, data }; }
 function fail(code, error) { return { ok: false, code, error }; }
-
-async function withAi(ctx, now, type, request, run) {
-  const { openid, db, deepseek } = ctx;
-  const aiLimit = getLimits().ai;
-  const used = await db.countAiSince(openid, dayStartIso(now), AI_LIMIT_TYPES);
-  if (used >= aiLimit) {
-    return fail('BAD_REQUEST', `今天的 AI 次数已用完（${aiLimit} 次），明天再来`);
-  }
-  let result;
-  try {
-    result = await run();
-  } catch (err) {
-    if (err && ['NO_API_KEY', 'TIMEOUT', 'UPSTREAM'].includes(err.code)) return fail(err.code, err.message);
-    throw err;
-  }
-  await db.addAiLog({
-    openid,
-    type,
-    date: now.toISOString(),
-    request: String(request || '').slice(0, 500),
-    result: type === 'chat' ? { reply: String(result.reply).slice(0, 500) } : result
-  });
-  await db.pruneAiLogs(openid, {
-    keep: HISTORY_LIMIT,
-    chatBefore: new Date(now.getTime() - CHAT_LOG_TTL_DAYS * DAY_MS).toISOString()
-  });
-  void deepseek;
-  return ok(result);
-}
 
 /** usage.get：当前用户今日各类用量与上限、全体本月 TTS 字符。 */
 async function usageGet(ctx, now) {
   const { openid, db } = ctx;
   const limits = getLimits();
   const dayStart = dayStartIso(now);
-  const [ai, tts, stt, monthChars] = await Promise.all([
-    db.countAiSince(openid, dayStart, AI_LIMIT_TYPES),
+  const [tts, stt, monthChars] = await Promise.all([
     db.countAiSince(openid, dayStart, ['tts']),
     db.countAiSince(openid, dayStart, ['stt']),
     db.sumTtsCharsSince(monthStartIso(now))
   ]);
   return ok({
-    ai: { used: ai, limit: limits.ai },
     tts: { used: tts, limit: limits.tts },
     stt: { used: stt, limit: limits.stt },
     monthChars: { used: monthChars, limit: limits.ttsMonthlyChars },
@@ -69,7 +33,7 @@ async function usageGet(ctx, now) {
   });
 }
 
-/** admin.usage：最近 7 天按用户汇总，按 ai 次数降序。仅 ADMIN_OPENIDS 中的用户可用。 */
+/** admin.usage：最近 7 天按用户汇总，按语音次数降序。仅管理员可用。 */
 async function adminUsage(ctx, now) {
   const { openid, db } = ctx;
   if (!(await isAdminUser(openid, db))) return fail('BAD_REQUEST', '无权限');
@@ -79,11 +43,10 @@ async function adminUsage(ctx, now) {
   for (const l of logs) {
     let u = byUser.get(l.openid);
     if (!u) {
-      u = { openid: l.openid, ai: 0, tts: 0, stt: 0, ttsChars: 0, lastActive: '' };
+      u = { openid: l.openid, tts: 0, stt: 0, ttsChars: 0, lastActive: '' };
       byUser.set(l.openid, u);
     }
-    if (AI_LIMIT_TYPES.includes(l.type)) u.ai++;
-    else if (l.type === 'tts') {
+    if (l.type === 'tts') {
       u.tts++;
       u.ttsChars += Number(l.result && l.result.chars) || 0;
     } else if (l.type === 'stt') u.stt++;
@@ -92,7 +55,7 @@ async function adminUsage(ctx, now) {
   }
   const users = [...byUser.values()]
     .map((u) => ({ ...u, lastActive: u.lastActive.slice(0, 10) }))
-    .sort((a, b) => b.ai - a.ai || a.openid.localeCompare(b.openid));
+    .sort((a, b) => (b.tts + b.stt) - (a.tts + a.stt) || a.openid.localeCompare(b.openid));
   return ok({ users, since });
 }
 
@@ -114,7 +77,7 @@ async function putUserSummary(ctx, now, meta) {
 }
 
 async function handle(action, data, ctx) {
-  const { openid, db, deepseek } = ctx;
+  const { openid, db } = ctx;
   const now = ctx.now ? ctx.now() : new Date();
   data = data || {};
 
@@ -154,6 +117,14 @@ async function handle(action, data, ctx) {
     }
     case 'progress.put': {
       if (!data.progress || typeof data.progress !== 'object') return fail('BAD_REQUEST', 'progress 必须是对象');
+      // 客户端可带上它上次读到的 updatedAt。云端更新过就拒绝，
+      // 避免旧设备的快照静默覆盖新设备刚上传的进度。
+      if (typeof data.baseUpdatedAt === 'string' && data.baseUpdatedAt) {
+        const current = await db.getProgress(openid);
+        if (current && current.updatedAt && current.updatedAt > data.baseUpdatedAt) {
+          return fail('CONFLICT', '云端有更新的进度，请先从云端恢复再上传');
+        }
+      }
       const updatedAt = now.toISOString();
       await db.putProgress(openid, { progress: data.progress, updatedAt });
       // 摘要只服务于管理端列表，写失败不能让已经存好的进度上传变成失败
@@ -164,52 +135,6 @@ async function handle(action, data, ctx) {
       }
       return ok({ updatedAt });
     }
-    case 'ai.diagnose': {
-      if (!data.summary) return fail('BAD_REQUEST', '缺少 summary');
-      return withAi(ctx, now, 'diagnosis', '', async () => {
-        const text = await deepseek.chatCompletion(
-          [
-            { role: 'system', content: prompts.diagnosisSystemPrompt() },
-            { role: 'user', content: prompts.buildDiagnosisUserMessage(data.summary, data.planOutline) }
-          ],
-          { json: true, temperature: 0.4, maxTokens: 2000 }
-        );
-        return deepseek.parseJsonReply(text);
-      });
-    }
-    case 'ai.adjustPlan': {
-      if (!data.summary) return fail('BAD_REQUEST', '缺少 summary');
-      return withAi(ctx, now, 'plan', data.request, async () => {
-        const text = await deepseek.chatCompletion(
-          [
-            { role: 'system', content: prompts.planAdjustSystemPrompt() },
-            { role: 'user', content: prompts.buildPlanAdjustUserMessage(data.summary, data.planOutline, data.diagnosis, data.request) }
-          ],
-          { json: true, temperature: 0.5, maxTokens: 2000 }
-        );
-        return deepseek.parseJsonReply(text);
-      });
-    }
-    case 'ai.chat': {
-      if (!Array.isArray(data.messages) || data.messages.length === 0) return fail('BAD_REQUEST', 'messages 必须是非空数组');
-      const history = data.messages
-        .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
-        .slice(-MAX_CHAT_MESSAGES)
-        .map((m) => ({ role: m.role, content: m.content.slice(0, 4000) }));
-      if (history.length === 0) return fail('BAD_REQUEST', 'messages 中没有有效消息');
-      const lastUser = [...history].reverse().find((m) => m.role === 'user');
-      return withAi(ctx, now, 'chat', lastUser ? lastUser.content : '', async () => {
-        const reply = await deepseek.chatCompletion(
-          [{ role: 'system', content: prompts.tutorSystemPrompt(data.summary) }, ...history],
-          { temperature: 0.7, maxTokens: 1200 }
-        );
-        return { reply };
-      });
-    }
-    case 'ai.history': {
-      const history = await db.listAiLogs(openid, ['diagnosis', 'plan'], HISTORY_LIMIT);
-      return ok({ history });
-    }
     case 'usage.get':
       return usageGet(ctx, now);
     case 'admin.usage':
@@ -219,4 +144,4 @@ async function handle(action, data, ctx) {
   }
 }
 
-module.exports = { handle, DAILY_AI_LIMIT, HISTORY_LIMIT, dayStartIso };
+module.exports = { handle, dayStartIso };

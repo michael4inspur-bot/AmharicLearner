@@ -629,7 +629,7 @@ const units = [
       { id: 'u15-08', am: 'በኋላ እደውልልሃለሁ', rom: 'behwala idewililihalehu', zh: '我一会儿打给你（对男）', note: '对女：እደውልልሻለሁ (idewililishalehu)' },
       { id: 'u15-09', am: 'መልዕክት', rom: "mel'ikt", zh: '消息 / 短信' },
       { id: 'u15-10', am: 'ላክልኝ', rom: 'lakilign', zh: '发给我（对男）', note: '对女：ላኪልኝ (lakilign)' },
-      { id: 'u15-11', am: 'ቴሌግራም', rom: 'télégram', zh: 'Telegram', note: 'በቴሌግራም ላክልኝ 用 Telegram 发我' },
+      { id: 'u15-11', am: 'ቴሌግራም', rom: 'télégram', zh: '电报（Telegram，常用聊天软件）', note: 'በቴሌግራም ላክልኝ 用 Telegram 发我' },
       { id: 'u15-12', am: 'ቁጥርህን ስጠኝ', rom: 'qutirihin siteny', zh: '把你的号码给我（对男）', note: '对女：ቁጥርሽን ስጪኝ' },
       { id: 'u15-13', am: 'ስራ በዝቶብኛል', rom: 'sira bezitobignal', zh: '我很忙' },
       { id: 'u15-14', am: 'መንገድ ላይ ነኝ', rom: 'menged lay negn', zh: '我在路上' },

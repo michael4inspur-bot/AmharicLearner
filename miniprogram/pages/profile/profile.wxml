@@ -111,13 +111,9 @@
       <view class="card-title" style="margin-bottom:0">云端同步</view>
       <text class="tag {{cloudReady ? 'mint' : 'gray'}}">{{cloudReady ? '已连接' : '未配置'}}</text>
     </view>
-    <view class="muted" style="margin-top:10rpx">{{cloudReady ? '微信云开发 + DeepSeek，进度会自动同步。' : '还没配置云环境，请管理员在 miniprogram/config.js 填写 cloudEnv。'}}</view>
+    <view class="muted" style="margin-top:10rpx">{{cloudReady ? '微信云开发，进度会自动同步。' : '还没配置云环境，请管理员在 miniprogram/config.js 填写 cloudEnv。'}}</view>
     <view class="usage" wx:if="{{usage}}">
       <view class="usage-row">
-        <view class="usage-cell">
-          <view class="usage-n">{{usage.ai.used}} / {{usage.ai.limit}}</view>
-          <view class="usage-l">AI</view>
-        </view>
         <view class="usage-cell">
           <view class="usage-n">{{usage.tts.used}} / {{usage.tts.limit}}</view>
           <view class="usage-l">语音</view>
@@ -173,7 +169,7 @@
       <view class="muted-2" wx:if="{{!registered}}">还没登录。登录入口在本页顶部。</view>
     </view>
     <view class="list-item row between" bindtap="goPrivacy">
-      <text>隐私指引与 AI 内容声明</text>
+      <text>隐私政策与自动生成内容说明</text>
       <x-icon name="chevron-right" size="28" color="#9C8C82" />
     </view>
     <button class="btn ghost" open-type="feedback">意见反馈</button>

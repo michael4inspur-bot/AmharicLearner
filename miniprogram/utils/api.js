@@ -2,7 +2,7 @@
 const config = require('../config.js');
 
 const MESSAGES = {
-  NO_API_KEY: '管理员还没配置 DeepSeek 密钥',
+  NO_API_KEY: '管理员还没配置 Azure 语音密钥',
   UPSTREAM: 'AI 服务暂时不可用，稍后再试',
   TIMEOUT: 'AI 响应超时，请重试'
 };
@@ -90,11 +90,8 @@ function invoke(action, data) {
 
 module.exports = {
   configured,
-  syncProgress: (progress, meta) => call('progress.put', { progress, meta }),
+  syncProgress: (progress, meta, baseUpdatedAt) => call('progress.put', { progress, meta, baseUpdatedAt }),
   fetchProgress: () => call('progress.get'),
-  diagnose: (summary, planOutline) => call('ai.diagnose', { summary, planOutline }),
-  adjustPlan: (summary, planOutline, diagnosis, request) => call('ai.adjustPlan', { summary, planOutline, diagnosis, request }),
-  aiHistory: () => call('ai.history'),
   ttsGet: (text, voice, rate) => call('tts.get', { text, voice, rate }),
   ttsBatch: (items, voice, rate) => call('tts.batch', { items, voice, rate }),
   sttScore: (fileID, target) => call('stt.score', { fileID, target }),

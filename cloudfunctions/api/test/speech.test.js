@@ -5,7 +5,7 @@ const { handle } = require('../handler.js');
 const { createFakeDb } = require('./fakeDb.js');
 const { createFakeAzure } = require('./fakeAzure.js');
 const { createFakeStorage } = require('./fakeStorage.js');
-const { errorOf } = require('./fakeDeepseek.js');
+const { errorOf } = require('./upstreamError.js');
 
 function ctx({ openid = 'u1', db, azure, storage, isoNow } = {}) {
   return {
@@ -203,7 +203,7 @@ test('tts.batch 校验：超过 40 条、items 非数组、voice 非法 → BAD_
 
 test('stt.score 成功路径：文件被删除、score 100、逐词、日志 stt', async () => {
   const storage = createFakeStorage();
-  const fileID = await storage.upload('stt/1.wav', Buffer.from('wav'));
+  const fileID = await storage.upload('stt/u1/1.wav', Buffer.from('wav'));
   const azure = createFakeAzure({ recog: () => ({ status: 'Success', text: 'ሰላም ነህ።' }) });
   const c = ctx({ storage, azure });
   const res = await handleSpeech('stt.score', { fileID, target: 'ሰላም ነህ' }, c);
@@ -222,7 +222,7 @@ test('stt.score 成功路径：文件被删除、score 100、逐词、日志 stt
 
 test('stt.score 部分匹配：score 介于 0-100，words 标出错词', async () => {
   const storage = createFakeStorage();
-  const fileID = await storage.upload('stt/2.wav', Buffer.from('wav'));
+  const fileID = await storage.upload('stt/u1/2.wav', Buffer.from('wav'));
   const azure = createFakeAzure({ recog: () => ({ status: 'Success', text: 'ሰላም' }) });
   const res = await handleSpeech('stt.score', { fileID, target: 'ሰላም ነህ' }, ctx({ storage, azure }));
   assert.ok(res.data.score > 0 && res.data.score < 100);
@@ -231,7 +231,7 @@ test('stt.score 部分匹配：score 介于 0-100，words 标出错词', async (
 
 test('stt.score NoMatch → ok 但 transcript 空、score 0，文件仍删除，日志仍写', async () => {
   const storage = createFakeStorage();
-  const fileID = await storage.upload('stt/3.wav', Buffer.from('wav'));
+  const fileID = await storage.upload('stt/u1/3.wav', Buffer.from('wav'));
   const azure = createFakeAzure({ recog: () => ({ status: 'NoMatch', text: '' }) });
   const c = ctx({ storage, azure });
   const res = await handleSpeech('stt.score', { fileID, target: 'ሰላም ነህ' }, c);
@@ -244,7 +244,7 @@ test('stt.score NoMatch → ok 但 transcript 空、score 0，文件仍删除，
 
 test('stt.score azure 失败：文件仍被删除，返回错误码，不写日志', async () => {
   const storage = createFakeStorage();
-  const fileID = await storage.upload('stt/4.wav', Buffer.from('wav'));
+  const fileID = await storage.upload('stt/u1/4.wav', Buffer.from('wav'));
   const azure = createFakeAzure({ recog: () => { throw errorOf('TIMEOUT', 'slow'); } });
   const c = ctx({ storage, azure });
   const res = await handleSpeech('stt.score', { fileID, target: 'ሰላም' }, c);
@@ -268,17 +268,20 @@ test('stt 每日上限：第 101 次 BAD_REQUEST；tts 日志不计入', async (
   const c = ctx({ storage, azure });
   await handleSpeech('tts.get', TTS_DATA, c); // 一条 tts 日志
   for (let i = 0; i < STT_DAILY_LIMIT; i++) {
-    const fileID = await storage.upload(`stt/${i}.wav`, Buffer.from('wav'));
+    const fileID = await storage.upload(`stt/u1/${i}.wav`, Buffer.from('wav'));
     const r = await handleSpeech('stt.score', { fileID, target: 'ሰላም' }, c);
     assert.equal(r.ok, true, `第 ${i + 1} 次应成功`);
   }
-  const fileID = await storage.upload('stt/last.wav', Buffer.from('wav'));
+  const fileID = await storage.upload('stt/u1/last.wav', Buffer.from('wav'));
   const blocked = await handleSpeech('stt.score', { fileID, target: 'ሰላም' }, c);
   assert.equal(blocked.code, 'BAD_REQUEST');
   assert.match(blocked.error, /100/);
   assert.equal(azure.recogCalls.length, STT_DAILY_LIMIT);
+  // 超额被拒时录音也必须删掉（隐私声明承诺评分完成即删除）
+  assert.equal(storage._files.has(fileID), false, '超额被拒后录音已删除');
   // 次日重置（东非时间次日 00:30 = UTC 21:30）
-  const nextDay = await handleSpeech('stt.score', { fileID, target: 'ሰላም' }, { ...c, now: () => new Date('2026-09-11T21:30:00Z') });
+  const nextFile = await storage.upload('stt/u1/next.wav', Buffer.from('wav'));
+  const nextDay = await handleSpeech('stt.score', { fileID: nextFile, target: 'ሰላም' }, { ...c, now: () => new Date('2026-09-11T21:30:00Z') });
   assert.equal(nextDay.ok, true);
 });
 
@@ -294,10 +297,54 @@ test('handler.handle 将 tts./stt. 委托给 handleSpeech', async () => {
   assert.equal(res.data.key, ttsKey('female', 'normal', 'ሰላም'));
   assert.equal(c.azure.synthCalls.length, 1);
   const storage = createFakeStorage();
-  const fileID = await storage.upload('stt/h.wav', Buffer.from('wav'));
+  const fileID = await storage.upload('stt/u1/h.wav', Buffer.from('wav'));
   const stt = await handle('stt.score', { fileID, target: 'ሰላም' }, ctx({ storage }));
   assert.equal(stt.ok, true);
   assert.equal(stt.data.score, 0);
   const bad = await handle(undefined, {}, c);
   assert.equal(bad.code, 'BAD_REQUEST');
+});
+
+test('stt.score 拒绝别人的文件：不下载、不删除', async () => {
+  const storage = createFakeStorage();
+  const azure = createFakeAzure({ recog: () => ({ status: 'Success', text: 'ሰላም' }) });
+  // 语音缓存的 fileID 会随 tts.get 返回给客户端，必须不能拿它来删文件
+  const ttsFile = await storage.upload('tts/someone.mp3', Buffer.from('mp3'));
+  const othersRecording = await storage.upload('stt/u2/1.wav', Buffer.from('wav'));
+  for (const fileID of [ttsFile, othersRecording, 'cloud://fake/fonts/a.ttf']) {
+    const res = await handleSpeech('stt.score', { fileID, target: 'ሰላም' }, ctx({ storage, azure }));
+    assert.equal(res.ok, false, fileID);
+    assert.equal(res.error, '录音文件不合法');
+    assert.equal(storage._files.has(fileID), fileID.startsWith('cloud://fake/') && fileID !== 'cloud://fake/fonts/a.ttf', `${fileID} 不应被删除`);
+  }
+  assert.equal(azure.recogCalls.length, 0, '非法文件不送去识别');
+});
+
+test('tts.batch 同一批里的重复文本只合成一次，也不会重复计费', async () => {
+  const azure = createFakeAzure();
+  const storage = createFakeStorage();
+  const db = createFakeDb();
+  const c = ctx({ azure, storage, db });
+  const items = Array.from({ length: 10 }, (_, i) => ({ id: `i${i}`, text: 'ሰላም' }));
+  const res = await handleSpeech('tts.batch', { items, voice: 'female', rate: 'normal' }, c);
+  assert.equal(res.ok, true);
+  assert.equal(azure.synthCalls.length, 1, '10 条相同文本只合成 1 次');
+  assert.equal(Object.keys(res.data.urls).length, 10, '每个 id 都拿到 url');
+  const logs = await db.countAiSince('u1', '2000-01-01T00:00:00.000Z', ['tts']);
+  assert.equal(logs, 1, '只记一条 tts 日志');
+});
+
+test('tts.batch 一次请求内不能超发日额度', async () => {
+  const prev = process.env.TTS_DAILY_LIMIT;
+  process.env.TTS_DAILY_LIMIT = '3';
+  try {
+    const azure = createFakeAzure();
+    const c = ctx({ azure, storage: createFakeStorage(), db: createFakeDb() });
+    const items = Array.from({ length: 20 }, (_, i) => ({ id: `i${i}`, text: `ሰላም${i}` }));
+    const res = await handleSpeech('tts.batch', { items, voice: 'female', rate: 'normal' }, c);
+    assert.equal(res.ok, true);
+    assert.ok(azure.synthCalls.length <= 3, `合成次数 ${azure.synthCalls.length} 不应超过日额度 3`);
+  } finally {
+    if (prev === undefined) delete process.env.TTS_DAILY_LIMIT; else process.env.TTS_DAILY_LIMIT = prev;
+  }
 });

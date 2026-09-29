@@ -49,7 +49,10 @@ Page({
   loadQueue() {
     const p = progress.load();
     const queue = progress.dueCards(p, 30).map(withUnit);
-    const done = this.data.done;
+    // tabBar 页实例常驻，不跨天重置的话第二天进来还显示「第 41 / 45 张」
+    const today = progress.todayStr();
+    if (this.sessionDay !== today) { this.sessionDay = today; this.cleared = false; this.setData({ done: 0, sessionTotal: 0 }); }
+    const done = this.sessionDay === today ? this.data.done : 0;
     const sessionTotal = Math.max(this.data.sessionTotal, done + queue.length);
     this.setData({
       queue,
@@ -67,7 +70,8 @@ Page({
   /** "先听再看"模式：显示新卡时自动播一次 */
   autoPlay() {
     const cur = this.data.current;
-    if (this.data.mode === 'listen' && cur && cur.am) audio.speak(cur.am);
+    // 自动播放：失败静默，用户没点任何按钮，不该被要求登录
+    if (this.data.mode === 'listen' && cur && cur.am) audio.speak(cur.am, { silent: true });
   },
   /** 播当前卡的阿姆哈拉语（catchtap，不触发翻面） */
   play() {
@@ -98,7 +102,7 @@ Page({
     const done = this.data.done + (cur.again ? 0 : 1);
     const sessionTotal = Math.max(this.data.sessionTotal, done + queue.length);
     // 一次学习会话内到期归零时加一次星
-    if (had > 0 && queue.length === 0 && !this.cleared) {
+    if (had > 0 && queue.length === 0 && !this.cleared) { // cleared 每天重置，见 loadQueue
       this.cleared = true;
       points.award('review_clear');
       points.celebrate();

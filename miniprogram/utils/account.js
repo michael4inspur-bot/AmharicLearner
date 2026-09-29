@@ -4,6 +4,27 @@
 // 提示只在用户主动使用功能时出现，不在启动或首页弹，符合微信审核「先体验后授权」的要求。
 
 const LOGIN_URL = '/pages/login/login';
+const PROFILE_KEY = 'profile_v1';
+
+function profile() {
+  try { return (typeof wx !== 'undefined' && wx.getStorageSync(PROFILE_KEY)) || {}; } catch (e) { return {}; }
+}
+
+/** 本地记录的登记状态。只用于提前提示，真正的判断以云端返回为准。 */
+function isRegistered() { return !!profile().registered; }
+
+/** 账号状态：active / pending / paused / blocked */
+function status() { return String(profile().status || 'active'); }
+
+/** 能不能用朗读与跟读评分。pending / 被暂停的账号同样不行。 */
+function canUseSpeech() { return isRegistered() && status() === 'active'; }
+
+/** 本人 openid。跟读录音要上传到 stt/<openid>/ 下，云端据此确认是本人刚传的文件。 */
+function openid() { return String(profile().openid || ''); }
+
+function remember(patch) {
+  try { wx.setStorageSync(PROFILE_KEY, { ...profile(), ...patch }); } catch (e) { /* ignore */ }
+}
 
 /** 把云函数返回的错误归类。返回 '' 表示不是账号问题。 */
 function classify(err) {
@@ -50,4 +71,4 @@ function prompt(err, feature) {
   return true;
 }
 
-module.exports = { classify, prompt, goLogin, LOGIN_URL };
+module.exports = { classify, prompt, goLogin, isRegistered, status, canUseSpeech, openid, remember, LOGIN_URL };
