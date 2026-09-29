@@ -2,7 +2,7 @@
 // ctx = { openid, db, azure, storage, now? }
 // 注：AI 教练（DeepSeek 诊断 / 计划调整 / 问答）已整体下线，微信个人主体未开放深度合成类目。
 const { handleSpeech } = require('./speech.js');
-const { handleAdmin, isAdminUser } = require('./admin.js');
+const { handleAdmin, isAdminUser, isSignedIn } = require('./admin.js');
 const { getLimits, isAdmin, DEFAULT_LIMITS } = require('./limits.js');
 const { dayStartIso, monthStartIso } = require('./time.js');
 
@@ -29,7 +29,8 @@ async function usageGet(ctx, now) {
     tts: { used: tts, limit: limits.tts },
     stt: { used: stt, limit: limits.stt },
     monthChars: { used: monthChars, limit: limits.ttsMonthlyChars },
-    isAdmin: await isAdminUser(openid, db)
+    // 退出登录后不能靠这里把管理员入口带回来
+    isAdmin: isSignedIn(await db.getUser(openid)) && (await isAdminUser(openid, db))
   });
 }
 
@@ -65,7 +66,7 @@ async function putUserSummary(ctx, now, meta) {
   const m = meta || {};
   const existing = await db.getUser(openid);
   // 只更新已登录（注册）的用户；未注册的不在这里创建，否则进度同步会绕过登录门槛
-  if (!existing) return;
+  if (!isSignedIn(existing)) return;
   const patch = {
     lastActive: now.toISOString(),
     week: Number(m.week) || 0,
@@ -99,7 +100,7 @@ async function handle(action, data, ctx) {
     }
     const status = user && user.status;
     if (isGated && !readFailed) {
-      if (!user) return fail('BAD_REQUEST', '请先在「我的」页完成微信登录');
+      if (!isSignedIn(user)) return fail('BAD_REQUEST', '请先在「我的」页完成微信登录');
       if (status === 'pending') return fail('BAD_REQUEST', '账号等待管理员批准');
       if (status && status !== 'active') return fail('BAD_REQUEST', '账号已被管理员暂停');
     }

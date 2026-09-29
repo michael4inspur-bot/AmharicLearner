@@ -39,6 +39,11 @@ function envAdminConfigured() {
  * 管理员判定：环境变量名单优先；名单为空时，以数据库 settings/admin 记录的
  * 第一个注册者为管理员（user.register 时自动写入），免去复制 openid 配环境变量。
  */
+/** 已登录 = 云端有档案且没有主动退出。退出只打标记，不删数据，重新登录即恢复。 */
+function isSignedIn(doc) {
+  return !!doc && !doc.loggedOut;
+}
+
 async function isAdminUser(openid, db) {
   if (isAdmin(openid)) return true;
   if (envAdminConfigured()) return false;
@@ -88,8 +93,11 @@ async function register(data, ctx, now) {
       lastActive: now.toISOString(),
       ...(nickname ? { nickname } : {})
     });
-  } else if (nickname) {
-    await db.putUser(openid, { nickname });
+  } else {
+    // 已有档案（包括之前主动退出过的）：重新登录即清掉退出标记
+    const patch = { loggedOut: false, lastActive: now.toISOString() };
+    if (nickname) patch.nickname = nickname;
+    await db.putUser(openid, patch);
   }
   const doc = await db.getUser(openid);
   return ok({ ...publicUser(openid, doc), registered: true, isAdmin: await isAdminUser(openid, db) });
@@ -109,7 +117,7 @@ async function setProfile(data, ctx) {
   // 而门禁只判断「文档不存在 / status 为 pending / status 非 active」，
   // status 为 undefined 时三条都不成立 —— 未登记用户就此拿到全部语音权限。
   const existing = await db.getUser(openid);
-  if (!existing) return fail('BAD_REQUEST', '请先在「我的」页完成微信登录');
+  if (!isSignedIn(existing)) return fail('BAD_REQUEST', '请先在「我的」页完成微信登录');
   await db.putUser(openid, { nickname });
   return ok({ nickname });
 }
@@ -117,7 +125,16 @@ async function setProfile(data, ctx) {
 async function me(ctx) {
   const { openid, db } = ctx;
   const doc = await db.getUser(openid);
-  return ok({ ...publicUser(openid, doc), registered: !!doc, isAdmin: await isAdminUser(openid, db) });
+  const registered = isSignedIn(doc);
+  return ok({ ...publicUser(openid, doc), registered, isAdmin: registered && (await isAdminUser(openid, db)) });
+}
+
+/** 退出登录：只打标记不删数据。之后朗读、评分、改昵称、管理接口都要求重新登录。 */
+async function logout(ctx, now) {
+  const { openid, db } = ctx;
+  const doc = await db.getUser(openid);
+  if (doc) await db.putUser(openid, { loggedOut: true, loggedOutAt: now.toISOString() });
+  return ok({ registered: false });
 }
 
 async function announcementGet(ctx) {
@@ -251,10 +268,14 @@ async function handleAdmin(action, data, ctx) {
     case 'user.register': return register(data, ctx, now);
     case 'user.setProfile': return setProfile(data, ctx);
     case 'user.me': return me(ctx);
+    case 'user.logout': return logout(ctx, now);
     case 'announcement.get': return announcementGet(ctx);
     default: break;
   }
   if (!action.startsWith('admin.')) return fail('BAD_REQUEST', `未知 action: ${action}`);
+  // 主动退出的管理员不能继续用管理接口（从未登记过的 ADMIN_OPENIDS 管理员保持原行为）
+  const self = await ctx.db.getUser(ctx.openid);
+  if (self && self.loggedOut) return fail('BAD_REQUEST', '请先在「我的」页完成微信登录');
   if (!(await isAdminUser(ctx.openid, ctx.db))) return fail('BAD_REQUEST', '无权限');
   switch (action) {
     case 'admin.users': return listUsers(ctx, now);
@@ -267,4 +288,4 @@ async function handleAdmin(action, data, ctx) {
   }
 }
 
-module.exports = { handleAdmin, isAdminUser, USER_STATUSES, MAX_NICKNAME, MAX_ANNOUNCEMENT };
+module.exports = { handleAdmin, isAdminUser, isSignedIn, USER_STATUSES, MAX_NICKNAME, MAX_ANNOUNCEMENT };

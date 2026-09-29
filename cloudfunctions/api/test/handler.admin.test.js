@@ -390,3 +390,45 @@ test('未开 ALLOW_ADMIN_BOOTSTRAP 时，第一个注册的人不会成为管理
     assert.equal((await handle('admin.users', {}, ctx({ openid: 'reviewer', db }))).error, '无权限');
   });
 });
+
+test('user.logout：退出后语音、改昵称、管理接口都要求重新登录；再次登录即恢复', async () => {
+  await withEnv({ ADMIN_OPENIDS: 'boss' }, async () => {
+    const db = createFakeDb({ registered: false });
+    const c = ctx({ openid: 'boss', db });
+    const tts = () => handle('tts.get', { text: 'ሰላም', voice: 'female', rate: 'normal' }, c);
+
+    assert.equal((await handle('user.register', { nickname: '李工' }, c)).ok, true);
+    assert.equal((await tts()).ok, true, '登录后能用朗读');
+    assert.equal((await handle('admin.users', {}, c)).ok, true, '登录的管理员能进管理页');
+
+    const out = await handle('user.logout', {}, c);
+    assert.equal(out.ok, true);
+
+    const me = await handle('user.me', {}, c);
+    assert.equal(me.data.registered, false, '退出后 me 显示未登录');
+    assert.equal(me.data.isAdmin, false, '退出后不显示管理员入口');
+    const usage = await handle('usage.get', {}, c);
+    assert.equal(usage.data.isAdmin, false, 'usage.get 也不能把管理员入口带回来');
+
+    const t = await tts();
+    assert.equal(t.ok, false);
+    assert.match(t.error, /登录/, '退出后朗读要求重新登录');
+    assert.match((await handle('user.setProfile', { nickname: '王工' }, c)).error, /登录/);
+    assert.match((await handle('admin.users', {}, c)).error, /登录/, '退出的管理员不能继续用管理接口');
+
+    // 数据不删：进度、昵称都还在，重新登录即恢复
+    const back = await handle('user.register', {}, c);
+    assert.equal(back.ok, true);
+    assert.equal(back.data.registered, true);
+    assert.equal(back.data.nickname, '李工', '昵称保留');
+    assert.equal((await tts()).ok, true, '重新登录后朗读恢复');
+    assert.equal((await handle('admin.users', {}, c)).ok, true, '重新登录后管理员恢复');
+  });
+});
+
+test('user.logout：从未登录的人调用也不报错，不会凭空建档', async () => {
+  const db = createFakeDb({ registered: false });
+  const res = await handle('user.logout', {}, ctx({ openid: 'nobody', db }));
+  assert.equal(res.ok, true);
+  assert.equal(await db.getUser('nobody'), null);
+});

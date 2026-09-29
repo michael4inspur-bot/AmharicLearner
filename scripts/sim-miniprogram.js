@@ -367,6 +367,29 @@ async function main() {
   await assert.rejects(api.ttsGet("ሰላም", "female", "normal"), (e) => e.code === 'NOT_DEPLOYED');
   wx.cloud.callFunction = realCall;
 
+  // 我的页：已登录显示账号卡与退出按钮；退出后云端与本地都回到未登录，管理员入口隐藏、同步停止
+  const account = require(path.join(root, 'utils/account.js'));
+  simOpenid = 'sim-user';
+  wx.setStorageSync('profile_v1', { ...(wx.getStorageSync('profile_v1') || {}), registered: true, openid: simOpenid, isAdmin: true, status: 'active' });
+  const me2 = pageOf('profile/profile');
+  me2.data = { ...me2.data, cloudReady: true, registered: true, isAdmin: true, openid: simOpenid };
+  me2.setData = function (d) { Object.assign(this.data, d); };
+  global.__modal = null;
+  me2.logout();
+  assert.ok(global.__modal && /退出/.test(global.__modal.title), '退出前先确认');
+  await global.__modal.success({ confirm: true });
+  assert.equal(me2.data.registered, false, '退出后页面显示未登录');
+  assert.equal(me2.data.isAdmin, false, '退出后隐藏管理员入口');
+  assert.equal(account.isRegistered(), false, '本地登录态已清');
+  assert.equal((await api.me()).registered, false, '云端也记下了退出');
+  await assert.rejects(api.ttsGet('ሰላም', 'female', 'normal'), (e) => /登录/.test(e.message), '退出后朗读要求重新登录');
+  progress.addMinutes(1);
+  assert.equal(await sync.syncNow(), false, '退出后不再上传进度');
+  // 重新登录即恢复
+  const again = await api.register();
+  assert.equal(again.registered, true, '重新登录恢复');
+  assert.equal(again.isAdmin, true, '管理员身份随登录恢复');
+
   // 未配置云环境时的失败路径
   require(path.join(root, 'config.js')).cloudEnv = '';
   await assert.rejects(api.ttsGet("ሰላም", "female", "normal"), (e) => e.code === 'NO_ENV');

@@ -54,7 +54,7 @@ Page({
     let usage;
     try { usage = await api.usageGet(); } catch (e) { return; }
     if (!usage) return;
-    this.setData({ usage, isAdmin: !!usage.isAdmin });
+    this.setData({ usage, isAdmin: this.data.registered && !!usage.isAdmin });
   },
   async loadMe() {
     try {
@@ -83,6 +83,28 @@ Page({
   },
   goAdmin() { wx.navigateTo({ url: '/pages/admin/admin' }); },
   goLogin() { wx.navigateTo({ url: '/pages/login/login' }); },
+  /** 退出登录：云端打标记（不删数据），本地清掉登录态。之后朗读、评分、云同步都停，重新登录即恢复。 */
+  logout() {
+    wx.showModal({
+      title: '退出登录',
+      content: '退出后朗读、跟读评分和云端同步会停用。学习进度保留在本机和云端，重新登录即可恢复。',
+      confirmText: '退出',
+      confirmColor: '#c0392b',
+      success: async (r) => {
+        if (!r || !r.confirm) return;
+        try {
+          await api.logout();
+        } catch (e) {
+          // 云端没记下退出的话，语音在服务端仍然可用，本地单方面"退出"会前后不一致，所以不继续
+          wx.showModal({ title: '退出失败', content: (e && e.message) || '请检查网络后重试', showCancel: false });
+          return;
+        }
+        account.forget();
+        this.setData({ registered: false, isAdmin: false, openid: '', status: 'active', usage: null });
+        wx.showToast({ title: '已退出登录', icon: 'none' });
+      }
+    });
+  },
   goPrivacy() { wx.navigateTo({ url: '/pages/privacy/privacy' }); },
   onVoice(e) { const { voice } = audio.setSettings({ voice: e.detail.value }); this.setData({ voice }); },
   onRate(e) { const { rate } = audio.setSettings({ rate: e.detail.value }); this.setData({ rate }); },

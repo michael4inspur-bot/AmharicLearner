@@ -17,7 +17,7 @@
 | 语音 | Azure 阿姆哈拉语朗读（课程、闪卡、搜索结果、教练回复，男 / 女声、正常 / 慢速）、小测与闪卡听力题、跟读录音、发音评分（分数 + 识别文字 + 逐词对错） |
 | 管理 | 管理员（`ADMIN_OPENIDS`）在小程序内管理用户账号（暂停 / 恢复 / 删除）、查看本月语音字符、语音缓存并清理、最近错误，发首页公告；用户自填昵称 |
 | 积分与徽章 | 复习清空 10 星、学完单元 30、小测 20（≥80% 再 +10）、实战 40、跟读评分 8、Fidel 批次 15；8 枚徽章（开口者、七日连续、电话达人、现场指挥、敬语大师…），首页提示下一枚 |
-| 我的 | 底部第 4 个 Tab：微信登录、昵称、每日目标、新词上限、开始日期、声音与语速、云端同步与用量、徽章墙、管理入口、隐私指引、意见反馈 |
+| 我的 | 底部第 4 个 Tab：顶部账号卡（未登录时是「微信登录」，已登录时显示昵称与「退出登录」）、昵称、每日目标、新词上限、开始日期、声音与语速、云端同步与用量、徽章墙、管理入口、隐私指引、意见反馈 |
 | 合规 | 隐私同意默认不勾选；「隐私政策与自动生成内容说明」页；发音评分注明由识别自动判定、仅供参考 |
 
 ## 目录
@@ -211,8 +211,9 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 | `stt.score` | `{fileID, target}` | 识别云存储里的录音并评分，返回 `{transcript, score, words}`；处理完删除录音 |
 | `usage.get` | 无 | 本人今日 AI / 语音 / 评分用量与上限，本月语音字符 |
 | `admin.usage` | 无 | 管理员（`ADMIN_OPENIDS`）查看最近 7 天各用户用量 |
-| `user.register` | `{nickname?}` | 微信登录：登记本人；首个登记者成为管理员；`REQUIRE_APPROVAL=1` 时新用户为待批准 |
+| `user.register` | `{nickname?}` | 微信登录：登记本人（退出过的会恢复）；`ALLOW_ADMIN_BOOTSTRAP=1` 时首个登记者成为管理员；`REQUIRE_APPROVAL=1` 时新用户为待批准 |
 | `user.setProfile` / `user.me` | `{nickname}` / 无 | 设置昵称 / 查看自己的 openid、是否已登录、是否管理员 |
+| `user.logout` | 无 | 退出登录：云端打标记不删数据，之后语音、改昵称、管理接口都要求重新登录，再次 `user.register` 即恢复 |
 | `announcement.get` | 无 | 首页公告 |
 | `admin.users` / `admin.setStatus` / `admin.deleteUser` | 见 spec | 用户列表、暂停 / 恢复、删除（需 `confirm: true`） |
 | `admin.system` / `admin.clearTtsCache` / `admin.setAnnouncement` | 见 spec | 系统面板、清理语音缓存（需 `confirm`）、发公告 |
