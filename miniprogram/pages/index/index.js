@@ -29,7 +29,6 @@ const TASK_STARS = {
   mission: R.mission,
   fidel: R.fidel,
   dialog: 0,
-  ai: 0,
   reflect: 0
 };
 
@@ -118,8 +117,7 @@ Page({
       requiredCount,
       stars: p.stars || 0,
       badgeHint: nb ? nb.hint : '',
-      weekPct: week.units.length ? Math.round((weekUnitsDone / week.units.length) * 100) : Math.round((pos.day / 7) * 100),
-      overrides: p.planOverrides
+      weekPct: week.units.length ? Math.round((weekUnitsDone / week.units.length) * 100) : Math.round((pos.day / 7) * 100)
     });
   },
 
@@ -138,7 +136,7 @@ Page({
       case 'mission': d.done = !!p.missions[t.missionKey]; break;
       case 'fidel': d.done = !!p.fidelGroupsDone[t.group]; break;
       case 'dialog': d.done = !!p.unitsLearned[t.unit]; break;
-      case 'ai': case 'reflect': d.done = p.aiHistory.some((h) => (h.date || '').slice(0, 10) === today); break;
+      case 'reflect': d.done = !!p.reflections[t.reflectKey]; break;
       default: d.done = false;
     }
     d.stars = TASK_STARS[t.type] || 0;
@@ -158,9 +156,26 @@ Page({
       }
       case 'fidel': wx.navigateTo({ url: `/pages/fidel/fidel?group=${t.group}` }); break;
       case 'mission': this.confirmMission(t); break;
-      case 'ai': case 'reflect': wx.switchTab({ url: '/pages/coach/coach' }); break;
+      case 'reflect': this.confirmReflect(t); break;
       default: break;
     }
+  },
+
+  confirmReflect(t) {
+    if (t.done) return;
+    wx.showModal({
+      title: '复盘',
+      content: `${t.desc}\n\n做完了吗？`,
+      confirmText: '做完了',
+      cancelText: '还没',
+      success: (r) => {
+        if (!r.confirm) return;
+        progress.completeReflection(t.reflectKey);
+        progress.addMinutes(t.minutes || 5);
+        wx.showToast({ title: '记下了', icon: 'none' });
+        this.refresh();
+      }
+    });
   },
 
   confirmMission(t) {

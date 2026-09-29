@@ -7,7 +7,7 @@
 
   <view class="card">
     <view class="card-title">微信登录</view>
-    <view class="muted">用微信身份登记后即可使用 AI 教练、朗读、跟读评分，进度会自动同步到云端。不登录也能离线学习课程、闪卡和小测。</view>
+    <view class="muted">用微信身份登记后即可使用朗读和跟读评分，进度会自动同步到云端。不登录也能离线学习课程、闪卡和小测。</view>
     <view class="section-title">昵称（可选，方便同事认出你）</view>
     <input type="text" class="input on-card login-input" value="{{nickname}}" placeholder="例如：李工" placeholder-class="ph" bindblur="onNickname" maxlength="20" />
     <view class="err" wx:if="{{error}}">{{error}}</view>
@@ -19,7 +19,7 @@
           <view class="agree-text">我已阅读并同意<text class="link-inline" catchtap="goPrivacy">《隐私政策与 AI 内容声明》</text></view>
         </label>
       </checkbox-group>
-      <view class="muted-2 consent-detail">登记后我们会收集你的微信 openid、自填昵称和学习行为数据，用于学习进度记录与个性化学习建议。不勾选也可以继续离线学习。</view>
+      <view class="muted-2 consent-detail">登记后我们会收集你的微信 openid、自填昵称和学习行为数据，用于学习进度记录与跨设备同步。不勾选也可以继续离线学习。</view>
     </view>
 
     <button class="btn login-btn" bindtap="login" loading="{{loading}}" disabled="{{loading || !configured || !agreed}}">微信登录并开始</button>

@@ -1,5 +1,5 @@
-// Azure Speech REST 适配器（TTS / STT）。配置全部来自环境变量，错误类复用 deepseek.js 的 DeepSeekError。
-const { DeepSeekError } = require('./deepseek.js');
+// Azure Speech REST 适配器（TTS / STT）。配置全部来自环境变量。
+const { UpstreamError } = require('./upstream-error.js');
 // 云函数可能跑在 Node 16（没有全局 fetch），缺失时补上内置实现。
 require('./fetch-polyfill.js').installFetch();
 
@@ -9,7 +9,7 @@ const TIMEOUT_MS = 20000;
 function config() {
   const apiKey = process.env.AZURE_SPEECH_KEY || '';
   const region = process.env.AZURE_SPEECH_REGION || '';
-  if (!apiKey || !region) throw new DeepSeekError('未配置 AZURE_SPEECH_KEY', 'NO_API_KEY');
+  if (!apiKey || !region) throw new UpstreamError('未配置 AZURE_SPEECH_KEY', 'NO_API_KEY');
   return { apiKey, region };
 }
 
@@ -24,7 +24,7 @@ function xmlEscape(text) {
 
 /** 生成 SSML；rate 只接受 'normal' | 'slow'。 */
 function buildSsml(text, voiceName, rate) {
-  if (rate !== 'normal' && rate !== 'slow') throw new DeepSeekError(`rate 非法: ${rate}`, 'BAD_REQUEST');
+  if (rate !== 'normal' && rate !== 'slow') throw new UpstreamError(`rate 非法: ${rate}`, 'BAD_REQUEST');
   const slow = rate === 'slow';
   return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="am-ET">` +
     `<voice name="${xmlEscape(voiceName)}">` +
@@ -39,14 +39,14 @@ async function post(url, headers, body, label) {
   try {
     res = await fetch(url, { method: 'POST', headers, body, signal: controller.signal });
   } catch (err) {
-    if (err.name === 'AbortError') throw new DeepSeekError(`Azure ${label} 响应超时`, 'TIMEOUT');
-    throw new DeepSeekError(`调用 Azure ${label} 失败: ${err.message}`, 'UPSTREAM');
+    if (err.name === 'AbortError') throw new UpstreamError(`Azure ${label} 响应超时`, 'TIMEOUT');
+    throw new UpstreamError(`调用 Azure ${label} 失败: ${err.message}`, 'UPSTREAM');
   } finally {
     clearTimeout(timer);
   }
   if (res.status !== 200) {
     const text = await res.text().catch(() => '');
-    throw new DeepSeekError(`Azure ${label} 返回 ${res.status}: ${text.slice(0, 300)}`, 'UPSTREAM');
+    throw new UpstreamError(`Azure ${label} 返回 ${res.status}: ${text.slice(0, 300)}`, 'UPSTREAM');
   }
   return res;
 }
@@ -94,7 +94,7 @@ async function recognize(wavBuffer) {
   try {
     json = await res.json();
   } catch (err) {
-    throw new DeepSeekError('Azure STT 返回内容无法解析', 'UPSTREAM');
+    throw new UpstreamError('Azure STT 返回内容无法解析', 'UPSTREAM');
   }
   return { status: json.RecognitionStatus, text: json.DisplayText || '' };
 }

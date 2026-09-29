@@ -1,16 +1,10 @@
-const config = require('../config.js');
-
-// 完整的 Tab 列表。AI 教练是否出现由 config.aiCoachEnabled 决定：
-// 微信个人主体未开放深度合成类目，默认关闭。开关同时要改 app.json 的 tabBar.list。
-const ALL = [
+// 底部 Tab。AI 教练已整体移除（微信个人主体未开放深度合成类目）。
+const LIST = [
   { pagePath: '/pages/index/index', text: '今日', icon: 'home' },
   { pagePath: '/pages/lessons/lessons', text: '课程', icon: 'book' },
   { pagePath: '/pages/review/review', text: '复习', icon: 'cards' },
-  { pagePath: '/pages/coach/coach', text: 'AI 教练', icon: 'spark', needsAi: true },
   { pagePath: '/pages/profile/profile', text: '我的', icon: 'user' }
 ];
-
-const LIST = ALL.filter((item) => !item.needsAi || config.aiCoachEnabled);
 
 Component({
   data: { selected: 0, list: LIST },

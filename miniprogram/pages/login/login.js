@@ -1,4 +1,4 @@
-// 微信登录 = 在云端登记本人 openid。登记后才能用 AI 教练与语音；本地学习不受影响。
+// 微信登录 = 在云端登记本人 openid。登记后才能用朗读与跟读评分；本地学习不受影响。
 const api = require('../../utils/api.js');
 
 const PROFILE_KEY = 'profile_v1';
@@ -46,7 +46,7 @@ Page({
     try {
       await requirePrivacy();
       const me = await api.register(this.data.nickname);
-      writeProfile({ registered: true, nickname: me.nickname || this.data.nickname, isAdmin: !!me.isAdmin, status: me.status || 'active' });
+      writeProfile({ registered: true, openid: me.openid || '', nickname: me.nickname || this.data.nickname, isAdmin: !!me.isAdmin, status: me.status || 'active' });
       wx.showToast({ title: me.isAdmin ? '已登录（管理员）' : '已登录', icon: 'none' });
       setTimeout(() => this.back(), 400);
     } catch (err) {

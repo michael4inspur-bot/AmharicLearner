@@ -13,7 +13,7 @@
   </block>
 
   <view class="card" wx:if="{{q && !results.length}}">
-    <view class="empty">没找到。可以去「AI 教练」问一句。</view>
+    <view class="empty">没找到。换个说法再试，或者用拼写片段搜。</view>
   </view>
 
   <view class="word-row" wx:for="{{results}}" wx:key="id">

@@ -131,15 +131,26 @@ async function ttsBatch(data, ctx, now) {
   return ok({ urls, files });
 }
 
+// 录音上传路径：stt/<openid>/<随机名>.wav。校验前缀，否则任何登录用户都能拿别人的
+// fileID（tts.get 会把语音缓存的 fileID 返回给客户端）来下载并删除任意云存储文件。
+function isOwnRecording(fileID, openid) {
+  return typeof fileID === 'string' && fileID.indexOf(`/stt/${openid}/`) > 0 && !/\.\./.test(fileID);
+}
+
 async function sttScore(data, ctx, now) {
   const { openid, db, azure, storage } = ctx;
   const { fileID } = data;
   if (typeof fileID !== 'string' || !fileID) return fail('BAD_REQUEST', '缺少 fileID');
+  if (!isOwnRecording(fileID, openid)) return fail('BAD_REQUEST', '录音文件不合法');
   const target = typeof data.target === 'string' ? data.target.trim() : '';
   if (!target) return fail('BAD_REQUEST', '缺少 target');
   const sttLimit = getLimits().stt;
   const used = await db.countAiSince(openid, dayStartIso(now), ['stt']);
-  if (used >= sttLimit) return fail('BAD_REQUEST', `今天的跟读评分次数已用完（${sttLimit} 次），明天再来`);
+  if (used >= sttLimit) {
+    // 录音已经上传了，拒绝也要删掉，隐私声明承诺「评分完成即删除」
+    await storage.remove([fileID]).catch(() => {});
+    return fail('BAD_REQUEST', `今天的跟读评分次数已用完（${sttLimit} 次），明天再来`);
+  }
   let recog;
   try {
     const wav = await storage.download(fileID);

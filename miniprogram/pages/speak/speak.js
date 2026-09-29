@@ -194,7 +194,8 @@ Page({
         reject(new Error('当前环境不支持上传录音'));
         return;
       }
-      const cloudPath = 'stt/' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.wav';
+      // 路径里带 openid，云端据此确认这是本人刚上传的录音
+      const cloudPath = `stt/${account.openid() || 'anonymous'}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.wav`;
       wx.cloud.uploadFile({
         cloudPath,
         filePath,

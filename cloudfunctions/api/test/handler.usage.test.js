@@ -4,11 +4,10 @@ const { handle } = require('../handler.js');
 const { ttsKey } = require('../speech.js');
 const { monthStartIso, dayStartIso } = require('../time.js');
 const { createFakeDb } = require('./fakeDb.js');
-const { createFakeDeepseek } = require('./fakeDeepseek.js');
 const { createFakeAzure } = require('./fakeAzure.js');
 const { createFakeStorage } = require('./fakeStorage.js');
 
-const KEYS = ['AI_DAILY_LIMIT', 'TTS_DAILY_LIMIT', 'STT_DAILY_LIMIT', 'TTS_MONTHLY_CHARS_LIMIT', 'ADMIN_OPENIDS'];
+const KEYS = ['TTS_DAILY_LIMIT', 'STT_DAILY_LIMIT', 'TTS_MONTHLY_CHARS_LIMIT', 'ADMIN_OPENIDS'];
 const NOW = '2026-09-11T10:00:00Z';
 
 /** 临时设置环境变量执行 async fn，结束后恢复。 */
@@ -27,11 +26,10 @@ async function withEnv(vars, fn) {
   }
 }
 
-function ctx({ openid = 'u1', db, deepseek, azure, storage, isoNow } = {}) {
+function ctx({ openid = 'u1', db, azure, storage, isoNow } = {}) {
   return {
     openid,
     db: db || createFakeDb(),
-    deepseek: deepseek || createFakeDeepseek(() => 'ok'),
     azure: azure || createFakeAzure(),
     storage: storage || createFakeStorage(),
     now: () => new Date(isoNow || NOW)
@@ -42,9 +40,6 @@ function log(openid, type, date, result) {
   return { openid, type, date, request: 'x', result };
 }
 
-async function chat(c) {
-  return handle('ai.chat', { messages: [{ role: 'user', content: 'hi' }] }, c);
-}
 
 test('time.monthStartIso / dayStartIso：东非时间自然月 / 自然日', () => {
   assert.equal(dayStartIso(new Date('2026-09-11T10:00:00Z')), '2026-09-10T21:00:00.000Z');
@@ -56,15 +51,12 @@ test('time.monthStartIso / dayStartIso：东非时间自然月 / 自然日', () 
   assert.equal(monthStartIso(new Date('2026-08-31T20:00:00Z')), '2026-07-31T21:00:00.000Z');
 });
 
-test('usage.get：2 条 chat、1 条 tts(5 字)、1 条 stt → 计数正确，limit 为默认', async () => {
+test('usage.get：1 条 tts(5 字)、1 条 stt → 计数正确，limit 为默认', async () => {
   await withEnv({}, async () => {
     const db = createFakeDb();
-    await db.addAiLog(log('u1', 'chat', '2026-09-11T08:00:00.000Z', { reply: 'a' }));
-    await db.addAiLog(log('u1', 'chat', '2026-09-11T09:00:00.000Z', { reply: 'b' }));
     await db.addAiLog(log('u1', 'tts', '2026-09-11T09:10:00.000Z', { chars: 5, key: 'k' }));
     await db.addAiLog(log('u1', 'stt', '2026-09-11T09:20:00.000Z', { transcript: '', score: 0 }));
     // 昨天（东非时间）的记录不计入今日，但计入本月字符
-    await db.addAiLog(log('u1', 'chat', '2026-09-10T20:00:00.000Z', { reply: 'old' }));
     await db.addAiLog(log('u1', 'tts', '2026-09-10T20:00:00.000Z', { chars: 7, key: 'k2' }));
     // 上月的 tts 不计入本月字符
     await db.addAiLog(log('u1', 'tts', '2026-08-20T10:00:00.000Z', { chars: 100, key: 'k3' }));
@@ -73,34 +65,11 @@ test('usage.get：2 条 chat、1 条 tts(5 字)、1 条 stt → 计数正确，l
     const res = await handle('usage.get', {}, ctx({ db }));
     assert.equal(res.ok, true);
     assert.deepEqual(res.data, {
-      ai: { used: 2, limit: 20 },
       tts: { used: 1, limit: 300 },
       stt: { used: 1, limit: 100 },
       monthChars: { used: 5 + 7 + 11, limit: 400000 },
       isAdmin: false
     });
-  });
-});
-
-test('AI_DAILY_LIMIT=3：usage.get 的 limit 为 3，第 4 次 chat 被拒', async () => {
-  await withEnv({ AI_DAILY_LIMIT: '3' }, async () => {
-    const c = ctx();
-    for (let i = 0; i < 3; i++) {
-      const r = await chat(c);
-      assert.equal(r.ok, true, `第 ${i + 1} 次应成功`);
-    }
-    const blocked = await chat(c);
-    assert.equal(blocked.ok, false);
-    assert.equal(blocked.code, 'BAD_REQUEST');
-    assert.match(blocked.error, /3/);
-    assert.match(blocked.error, /已用完/);
-    const usage = await handle('usage.get', {}, c);
-    assert.deepEqual(usage.data.ai, { used: 3, limit: 3 });
-  });
-  // 环境恢复后回到默认
-  await withEnv({}, async () => {
-    const usage = await handle('usage.get', {}, ctx());
-    assert.equal(usage.data.ai.limit, 20);
   });
 });
 
@@ -116,10 +85,10 @@ test('TTS_DAILY_LIMIT / STT_DAILY_LIMIT 也每次从环境读取', async () => {
     assert.match(blocked.error, /1 次/);
     const storage = c.storage;
     for (let i = 0; i < 2; i++) {
-      const fileID = await storage.upload(`stt/${i}.wav`, Buffer.from('wav'));
+      const fileID = await storage.upload(`stt/u1/${i}.wav`, Buffer.from('wav'));
       assert.equal((await handle('stt.score', { fileID, target: 'ሰላም' }, c)).ok, true);
     }
-    const fileID = await storage.upload('stt/last.wav', Buffer.from('wav'));
+    const fileID = await storage.upload('stt/u1/last.wav', Buffer.from('wav'));
     const stt = await handle('stt.score', { fileID, target: 'ሰላም' }, c);
     assert.equal(stt.code, 'BAD_REQUEST');
     assert.match(stt.error, /2 次/);
@@ -140,30 +109,26 @@ test('admin.usage：非管理员被拒绝（含 ADMIN_OPENIDS 未设置）', asy
   });
 });
 
-test('admin.usage：管理员得到最近 7 天按用户汇总，按 ai 降序', async () => {
+test('admin.usage：管理员得到最近 7 天按用户汇总，按语音次数降序', async () => {
   await withEnv({ ADMIN_OPENIDS: ' u1 ,boss' }, async () => {
     const db = createFakeDb();
-    // u1：1 chat、1 tts
-    await db.addAiLog(log('u1', 'chat', '2026-09-09T08:00:00.000Z', { reply: 'a' }));
+    // u1：1 tts
     await db.addAiLog(log('u1', 'tts', '2026-09-11T09:00:00.000Z', { chars: 5, key: 'k' }));
-    // u2：2 diagnosis + 1 plan + 1 stt + 2 tts
-    await db.addAiLog(log('u2', 'diagnosis', '2026-09-05T08:00:00.000Z', {}));
-    await db.addAiLog(log('u2', 'plan', '2026-09-06T08:00:00.000Z', {}));
-    await db.addAiLog(log('u2', 'diagnosis', '2026-09-10T23:00:00.000Z', {}));
+    // u2：1 stt + 2 tts
     await db.addAiLog(log('u2', 'stt', '2026-09-07T08:00:00.000Z', { transcript: '', score: 0 }));
     await db.addAiLog(log('u2', 'tts', '2026-09-07T08:00:00.000Z', { chars: 3, key: 'a' }));
     await db.addAiLog(log('u2', 'tts', '2026-09-08T08:00:00.000Z', { chars: 4, key: 'b' }));
     // 7 天之前的不计
-    await db.addAiLog(log('u2', 'chat', '2026-09-01T08:00:00.000Z', { reply: 'old' }));
-    await db.addAiLog(log('u3', 'chat', '2026-08-30T08:00:00.000Z', { reply: 'old' }));
+    await db.addAiLog(log('u2', 'tts', '2026-09-01T08:00:00.000Z', { chars: 1, key: 'old' }));
+    await db.addAiLog(log('u3', 'tts', '2026-08-30T08:00:00.000Z', { chars: 1, key: 'old2' }));
     const c = ctx({ openid: 'u1', db });
     assert.equal((await handle('usage.get', {}, c)).data.isAdmin, true);
     const res = await handle('admin.usage', {}, c);
     assert.equal(res.ok, true);
     assert.equal(res.data.since, '2026-09-04T10:00:00.000Z');
     assert.deepEqual(res.data.users, [
-      { openid: 'u2', ai: 3, tts: 2, stt: 1, ttsChars: 7, lastActive: '2026-09-10' },
-      { openid: 'u1', ai: 1, tts: 1, stt: 0, ttsChars: 5, lastActive: '2026-09-11' }
+      { openid: 'u2', tts: 2, stt: 1, ttsChars: 7, lastActive: '2026-09-08' },
+      { openid: 'u1', tts: 1, stt: 0, ttsChars: 5, lastActive: '2026-09-11' }
     ]);
   });
 });

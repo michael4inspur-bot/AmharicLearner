@@ -79,12 +79,6 @@
     <text>现场急用：多少钱 / sint / ውሃ</text>
   </view>
 
-  <view class="card lav" wx:if="{{overrides}}">
-    <view class="card-title">AI 调整中的计划</view>
-    <view class="muted-2">{{overrides.summary}}</view>
-    <view class="muted-2 gap-top">本周任务：{{overrides.mission_this_week}}</view>
-  </view>
-
   <view class="card" bindtap="goPlan">
     <view class="row between">
       <view class="card-title">为什么这周学这个</view>

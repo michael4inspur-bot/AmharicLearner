@@ -4,7 +4,7 @@ const { handle } = require('../handler.js');
 const { createFakeDb } = require('./fakeDb.js');
 
 function ctx(openid, db) {
-  return { openid, db, deepseek: null, now: () => new Date('2026-09-11T10:00:00Z') };
+  return { openid, db, now: () => new Date('2026-09-11T10:00:00Z') };
 }
 
 test('未知 action 返回 BAD_REQUEST', async () => {

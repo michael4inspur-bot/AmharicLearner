@@ -24,10 +24,8 @@ function defaultProgress() {
     srs: {},            // itemId -> card
     logs: {},           // date -> {minutes, reviews, correct, wrong, newCards}
     missions: {},       // missionKey -> date
+    reflections: {},    // 复盘 key（如 w3）-> date
     fidelGroupsDone: {},// group -> date
-    aiHistory: [],      // {type, date, result, request}
-    planOverrides: null,// AI 调整结果（用户点"采纳"后）
-    selfReport: ''      // 用户自述困难
   };
 }
 
@@ -172,6 +170,12 @@ function recordQuiz(unit, score, total) {
   return save(p);
 }
 
+function completeReflection(key) {
+  const p = load();
+  p.reflections[key] = todayStr();
+  return save(p);
+}
+
 function completeMission(key) {
   const p = load();
   p.missions[key] = todayStr();
@@ -181,27 +185,6 @@ function completeMission(key) {
 function completeFidelGroup(group) {
   const p = load();
   p.fidelGroupsDone[group] = todayStr();
-  return save(p);
-}
-
-function setSelfReport(text) {
-  const p = load();
-  p.selfReport = text;
-  return save(p);
-}
-
-function pushAi(entry) {
-  const p = load();
-  p.aiHistory.unshift(entry);
-  p.aiHistory = p.aiHistory.slice(0, 20);
-  return save(p);
-}
-
-function applyPlanOverrides(adjustment) {
-  const p = load();
-  p.planOverrides = { ...adjustment, appliedAt: todayStr() };
-  if (adjustment.daily_minutes) p.dailyMinutesGoal = adjustment.daily_minutes;
-  if (adjustment.new_words_per_day) p.newCardsPerDay = adjustment.new_words_per_day;
   return save(p);
 }
 
@@ -260,13 +243,11 @@ function summary(p) {
     missionsDone: Object.keys(p.missions),
     fidelGroupsDone: Object.keys(p.fidelGroupsDone).map(Number),
     weakItems,
-    selfReport: p.selfReport || '',
-    planOverrides: p.planOverrides ? { summary: p.planOverrides.summary, appliedAt: p.planOverrides.appliedAt } : null
   };
 }
 
 module.exports = {
   todayStr, load, save, reset, replace, setOnSaved, currentPosition, todayLog, addMinutes, streak,
-  learnUnit, dueCards, gradeCard, srsStats, recordQuiz, completeMission, completeFidelGroup,
-  setSelfReport, pushAi, applyPlanOverrides, summary
+  learnUnit, dueCards, gradeCard, srsStats, recordQuiz, completeMission, completeReflection, completeFidelGroup,
+  completeReflection, summary
 };

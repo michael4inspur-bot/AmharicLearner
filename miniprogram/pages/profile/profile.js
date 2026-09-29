@@ -3,6 +3,7 @@ const api = require('../../utils/api.js');
 const audio = require('../../utils/audio.js');
 const points = require('../../utils/points.js');
 const sync = require('../../utils/sync.js');
+const account = require('../../utils/account.js');
 const update = require('../../utils/update.js');
 
 const PROFILE_KEY = 'profile_v1';
@@ -60,6 +61,7 @@ Page({
       const me = await api.me();
       if (!me) return;
       const d = { openid: me.openid || '', registered: !!me.registered, isAdmin: !!me.isAdmin, status: me.status || 'active' };
+      account.remember(d);
       if (me.nickname && !this.data.nickname) { saveNickname(me.nickname); d.nickname = me.nickname; }
       try { wx.setStorageSync(PROFILE_KEY, { ...readProfile(), registered: !!me.registered, isAdmin: !!me.isAdmin, status: me.status || 'active' }); } catch (e) { /* ignore */ }
       this.setData(d);
