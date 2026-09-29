@@ -49,7 +49,10 @@ Page({
   loadQueue() {
     const p = progress.load();
     const queue = progress.dueCards(p, 30).map(withUnit);
-    const done = this.data.done;
+    // tabBar 页实例常驻，不跨天重置的话第二天进来还显示「第 41 / 45 张」
+    const today = progress.todayStr();
+    if (this.sessionDay !== today) { this.sessionDay = today; this.cleared = false; this.setData({ done: 0, sessionTotal: 0 }); }
+    const done = this.sessionDay === today ? this.data.done : 0;
     const sessionTotal = Math.max(this.data.sessionTotal, done + queue.length);
     this.setData({
       queue,
@@ -99,7 +102,7 @@ Page({
     const done = this.data.done + (cur.again ? 0 : 1);
     const sessionTotal = Math.max(this.data.sessionTotal, done + queue.length);
     // 一次学习会话内到期归零时加一次星
-    if (had > 0 && queue.length === 0 && !this.cleared) {
+    if (had > 0 && queue.length === 0 && !this.cleared) { // cleared 每天重置，见 loadQueue
       this.cleared = true;
       points.award('review_clear');
       points.celebrate();

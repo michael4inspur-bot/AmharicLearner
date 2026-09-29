@@ -13,6 +13,12 @@ function profile() {
 /** 本地记录的登记状态。只用于提前提示，真正的判断以云端返回为准。 */
 function isRegistered() { return !!profile().registered; }
 
+/** 账号状态：active / pending / paused / blocked */
+function status() { return String(profile().status || 'active'); }
+
+/** 能不能用朗读与跟读评分。pending / 被暂停的账号同样不行。 */
+function canUseSpeech() { return isRegistered() && status() === 'active'; }
+
 /** 本人 openid。跟读录音要上传到 stt/<openid>/ 下，云端据此确认是本人刚传的文件。 */
 function openid() { return String(profile().openid || ''); }
 
@@ -65,4 +71,4 @@ function prompt(err, feature) {
   return true;
 }
 
-module.exports = { classify, prompt, goLogin, isRegistered, openid, remember, LOGIN_URL };
+module.exports = { classify, prompt, goLogin, isRegistered, status, canUseSpeech, openid, remember, LOGIN_URL };

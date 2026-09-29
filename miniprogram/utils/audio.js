@@ -199,8 +199,8 @@ function download(url, key, fileID) {
 // ---------- 播放 ----------
 let ctx = null;
 
-function toast() {
-  try { if (w() && typeof wx.showToast === 'function') wx.showToast({ title: TOAST_TEXT, icon: 'none' }); } catch (e) { /* ignore */ }
+function toast(text) {
+  try { if (w() && typeof wx.showToast === 'function') wx.showToast({ title: text || TOAST_TEXT, icon: 'none' }); } catch (e) { /* ignore */ }
 }
 
 function player() {
@@ -257,7 +257,10 @@ function speak(text, opts) {
     })
     .catch((err) => {
       if (opts && opts.silent) return;
-      if (!account.prompt(err, '朗读')) toast();
+      if (account.prompt(err, '朗读')) return;
+      // api.js 已经把断网 / 超时 / 未部署归一成可照做的中文提示，别再盖成一句没信息量的话
+      const msg = err && err.message;
+      toast(msg && msg.length <= 60 ? msg : undefined);
     });
 }
 

@@ -319,3 +319,32 @@ test('stt.score 拒绝别人的文件：不下载、不删除', async () => {
   }
   assert.equal(azure.recogCalls.length, 0, '非法文件不送去识别');
 });
+
+test('tts.batch 同一批里的重复文本只合成一次，也不会重复计费', async () => {
+  const azure = createFakeAzure();
+  const storage = createFakeStorage();
+  const db = createFakeDb();
+  const c = ctx({ azure, storage, db });
+  const items = Array.from({ length: 10 }, (_, i) => ({ id: `i${i}`, text: 'ሰላም' }));
+  const res = await handleSpeech('tts.batch', { items, voice: 'female', rate: 'normal' }, c);
+  assert.equal(res.ok, true);
+  assert.equal(azure.synthCalls.length, 1, '10 条相同文本只合成 1 次');
+  assert.equal(Object.keys(res.data.urls).length, 10, '每个 id 都拿到 url');
+  const logs = await db.countAiSince('u1', '2000-01-01T00:00:00.000Z', ['tts']);
+  assert.equal(logs, 1, '只记一条 tts 日志');
+});
+
+test('tts.batch 一次请求内不能超发日额度', async () => {
+  const prev = process.env.TTS_DAILY_LIMIT;
+  process.env.TTS_DAILY_LIMIT = '3';
+  try {
+    const azure = createFakeAzure();
+    const c = ctx({ azure, storage: createFakeStorage(), db: createFakeDb() });
+    const items = Array.from({ length: 20 }, (_, i) => ({ id: `i${i}`, text: `ሰላም${i}` }));
+    const res = await handleSpeech('tts.batch', { items, voice: 'female', rate: 'normal' }, c);
+    assert.equal(res.ok, true);
+    assert.ok(azure.synthCalls.length <= 3, `合成次数 ${azure.synthCalls.length} 不应超过日额度 3`);
+  } finally {
+    if (prev === undefined) delete process.env.TTS_DAILY_LIMIT; else process.env.TTS_DAILY_LIMIT = prev;
+  }
+});

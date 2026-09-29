@@ -43,15 +43,22 @@ Page({
     loading: false,
     result: null,
     scoreClass: '',
-    needLogin: false
+    needLogin: false,
+    needLoginText: ''
   },
 
   onShow() {
-    // 录之前就告诉用户要登录，别等录完上传才被拒
-    this.setData({ needLogin: api.configured() && !account.isRegistered() });
+    // 录之前就把不可用的情况说清楚。录完再被拒的话录音已经上传到云存储，
+    // 云端在门禁阶段就 return 了，不会走到删除那一步，录音会永久残留。
+    const st = account.status();
+    const text = !account.isRegistered()
+      ? '跟读评分需要先用微信登录。登录后可以录音打分，学习进度也会同步到云端。'
+      : st === 'pending' ? '账号等待管理员批准，批准后即可使用跟读评分。'
+        : '账号已被管理员暂停，请联系管理员恢复。';
+    this.setData({ needLogin: api.configured() && !account.canUseSpeech(), needLoginText: text });
   },
 
-  goLogin() { account.goLogin(); },
+  goLogin() { if (!account.isRegistered()) account.goLogin(); },
 
   onLoad(q) {
     const item = vocab.getItem(q && q.id);
@@ -209,6 +216,12 @@ Page({
   },
 
   score() {
+    // 不可用时直接给提示，绝不上传录音（上传后云端在门禁阶段就拒了，文件会留在云存储）
+    if (this.data.needLogin) {
+      if (!account.isRegistered()) account.prompt(new Error('请先在「我的」页完成微信登录'), '跟读评分');
+      else wx.showModal({ title: '暂时不可用', content: this.data.needLoginText, showCancel: false });
+      return;
+    }
     const { item, tempFilePath, loading } = this.data;
     if (!item || loading) return;
     if (!tempFilePath) { wx.showToast({ title: '请先录音', icon: 'none' }); return; }

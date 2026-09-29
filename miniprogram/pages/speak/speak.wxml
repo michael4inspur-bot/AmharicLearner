@@ -5,7 +5,7 @@
   </view>
 
   <view class="card peach need-login" wx:if="{{needLogin}}">
-    <view class="muted">跟读评分需要先用微信登录。登录后可以录音打分，学习进度也会同步到云端。</view>
+    <view class="muted">{{needLoginText}}</view>
     <view class="btn small" bindtap="goLogin">去登录</view>
   </view>
 
@@ -77,7 +77,7 @@
       </view>
     </view>
     <view class="words" wx:if="{{result.words.length}}">
-      <view class="am word {{item.ok?'ok':'miss'}}" wx:for="{{result.words}}" wx:key="index">{{item.w}}</view>
+      <view class="am word {{item.ok?'ok':'miss'}}" wx:for="{{result.words}}" wx:key="w">{{item.w}}</view>
     </view>
     <view class="res-tip">{{result.tip}}</view>
     <view class="res-tip">分数由语音识别自动判定，仅供参考。</view>

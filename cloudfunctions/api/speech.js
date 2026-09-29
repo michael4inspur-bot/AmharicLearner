@@ -44,16 +44,24 @@ function cleanText(text) {
  * 抛出的错误由调用方映射。
  * @returns {Promise<{url: string, key: string, fileID: string} | {limited: 'day' | 'month', limit: number}>}
  */
-async function ensureTts(ctx, now, text, voice, rate) {
+async function ensureTts(ctx, now, text, voice, rate, budget) {
   const { openid, db, azure, storage } = ctx;
   const key = ttsKey(voice, rate, text);
   let cached = await db.getTtsCache(key);
   if (!cached) {
     const limits = getLimits();
-    const used = await db.countAiSince(openid, dayStartIso(now), ['tts']);
-    if (used >= limits.tts) return { limited: 'day', limit: limits.tts };
-    const monthChars = await db.sumTtsCharsSince(monthStartIso(now));
-    if (monthChars + text.length > limits.ttsMonthlyChars) return { limited: 'month', limit: limits.ttsMonthlyChars };
+    // budget 由调用方在请求开始时读一次基数，这里同步地"检查并占用"。
+    // 只查数据库的话，批量请求的几条会在各自的 await 里读到同一个旧值，
+    // 一次请求就能超发 BATCH_CONCURRENCY-1 次（额度检查与写日志之间的竞态）。
+    if (budget) {
+      const r = budget.reserve(text.length);
+      if (r) return r;
+    } else {
+      const used = await db.countAiSince(openid, dayStartIso(now), ['tts']);
+      if (used >= limits.tts) return { limited: 'day', limit: limits.tts };
+      const monthChars = await db.sumTtsCharsSince(monthStartIso(now));
+      if (monthChars + text.length > limits.ttsMonthlyChars) return { limited: 'month', limit: limits.ttsMonthlyChars };
+    }
     const audio = await azure.synthesize(text, VOICES[voice], rate);
     const fileID = await storage.upload(`tts/${key}.mp3`, audio);
     cached = { _id: key, fileID, text, voice, rate, chars: text.length, createdAt: now.toISOString() };
@@ -119,10 +127,37 @@ async function ttsBatch(data, ctx, now) {
     .filter((it) => it && (typeof it.id === 'string' || typeof it.id === 'number'))
     .map((it) => ({ id: String(it.id), text: cleanText(it.text) }))
     .filter((it) => it.text);
-  await runPool(valid, BATCH_CONCURRENCY, async (it) => {
+  // 同一批里重复的文本只合成一次。不去重的话 5 个 worker 会同时未命中缓存、
+  // 把同一段文本合成多次，Azure 重复计费、月字符统计被放大。
+  const byText = new Map();
+  valid.forEach((it) => {
+    const list = byText.get(it.text) || [];
+    list.push(it.id);
+    byText.set(it.text, list);
+  });
+  const unique = [...byText.entries()].map(([text, ids]) => ({ text, ids }));
+  // 基数只读一次，之后的检查与占用全是同步的，请求内不会再有竞态
+  const limits = getLimits();
+  let usedCount = await ctx.db.countAiSince(ctx.openid, dayStartIso(now), ['tts']);
+  let usedChars = await ctx.db.sumTtsCharsSince(monthStartIso(now));
+  const budget = {
+    reserve(len) {
+      if (usedCount >= limits.tts) return { limited: 'day', limit: limits.tts };
+      if (usedChars + len > limits.ttsMonthlyChars) return { limited: 'month', limit: limits.ttsMonthlyChars };
+      usedCount += 1;
+      usedChars += len;
+      return null;
+    }
+  };
+  await runPool(unique, BATCH_CONCURRENCY, async (it) => {
     try {
-      const r = await ensureTts(ctx, now, it.text, voice, rate);
-      if (!r.limited) { urls[it.id] = r.url; files[it.id] = r.fileID; }
+      const r = await ensureTts(ctx, now, it.text, voice, rate, budget);
+      if (r.limited) return;
+      it.ids.forEach((id) => {
+        // 用 Object.defineProperty 写，'__proto__' 这类键才不会被静默吞掉
+        Object.defineProperty(urls, id, { value: r.url, enumerable: true, writable: true, configurable: true });
+        Object.defineProperty(files, id, { value: r.fileID, enumerable: true, writable: true, configurable: true });
+      });
     } catch (err) {
       // 单条失败不影响其他：Azure/存储类错误静默省略该 id，其他异常向上抛
       if (!(err && UPSTREAM_CODES.includes(err.code))) throw err;
