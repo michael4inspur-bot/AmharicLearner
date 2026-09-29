@@ -110,15 +110,19 @@ const weeks = [
 
 const WEEK8_MISSIONS = ['给司机安排行程', '电话约时间', '现场布置任务', '敬语接待客户', '报告并解决一个问题'];
 
-function extraTask(w) {
+function extraTask(w, kind) {
   if (!w.extra) return null;
+  if (kind === 'dialog') {
+    // 自选单元也有对话，不给跟读任务的话这 4 个单元的对话永远练不到
+    return { type: 'dialog', title: `自选对话：${w.extra}`, desc: '补充单元的对话，时间充裕再练', minutes: 6, unit: w.extra, optional: true };
+  }
   return { type: 'learn', title: `自选：${w.extra}`, desc: '生活场景补充单元，时间充裕再学', minutes: 10, unit: w.extra, optional: true };
 }
 
 /**
  * 生成某周第 day 天（1–7）的任务列表。
  * 节奏：第 1–2 天学单元 A，第 3–4 天学单元 B，第 5 天对话与小测，第 6 天实战任务，第 7 天复盘。
- * 自选单元（extra）在第 5、6 天以可选任务出现。
+ * 自选单元（extra）在第 5 天出词句、第 6 天出对话，都是可选任务。
  */
 function getDayTasks(week, day) {
   const w = weeks[week - 1];
@@ -156,13 +160,15 @@ function getDayTasks(week, day) {
       tasks.push({ type: 'quiz', title: `单元小测：${ua}`, desc: '10 道选择题，做提取练习', minutes: DAILY_TEMPLATE.practiceMinutes, unit: ua });
       break;
     case 5:
-      tasks.push({ type: 'dialog', title: '对话跟读', desc: '本周单元的对话，读到不看转写，再用跟读页评分', minutes: 10, unit: ub || ua });
+      // 原来只跟读 ub，单元 A 的对话永远被跳过（含第 1 单元的问候对话）
+      tasks.push({ type: 'dialog', title: '对话跟读', desc: '本周单元的对话，读到不看转写，再用跟读页评分', minutes: 10, unit: ua });
+      if (ub) tasks.push({ type: 'dialog', title: `对话跟读：${ub}`, desc: '第二个单元的对话，同样读到不看转写', minutes: 6, unit: ub });
       tasks.push({ type: 'quiz', title: `单元小测：${ub || ua}`, desc: '10 道选择题', minutes: 5, unit: ub || ua });
       if (extraTask(w)) tasks.push(extraTask(w));
       break;
     case 6:
       tasks.push({ type: 'mission', title: '本周实战任务', desc: w.mission, minutes: 10, missionKey: `w${week}` });
-      if (extraTask(w)) tasks.push(extraTask(w));
+      if (extraTask(w, 'dialog')) tasks.push(extraTask(w, 'dialog'));
       break;
     default:
       tasks.push({ type: 'quiz', title: '本周综合小测', desc: '混合本周单元', minutes: 5, unit: 'week' });
