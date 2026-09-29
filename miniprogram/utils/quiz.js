@@ -23,7 +23,9 @@ function buildQuiz(scope, n, progress, withAudio = true) {
     pool = (learned.length ? learned : vocab.units.map((u) => u.id)).flatMap((id) => (vocab.getUnit(id) || { items: [] }).items);
   } else if (scope.startsWith('week:')) {
     const w = plan.weeks[Number(scope.slice(5)) - 1];
-    pool = (w ? w.units : []).flatMap((id) => vocab.getUnit(id).items);
+    // 自选单元（extra）也要进题池，否则这 4 个单元共 93 个词 56 天内从不被小测覆盖
+    const ids = w ? (w.extra ? [...w.units, w.extra] : w.units) : [];
+    pool = ids.flatMap((id) => (vocab.getUnit(id) || { items: [] }).items);
     if (!pool.length) pool = vocab.allItems();
   } else {
     const u = vocab.getUnit(scope);

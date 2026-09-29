@@ -1,0 +1,19 @@
+# 仓库原来没有任何 CI，PR 的绿灯不代表测试通过。这个工作流让每次推送和 PR 都跑一遍
+# 与本地 `npm test` 完全相同的检查：云函数单测 + 合规静态检查 + 小程序端到端模拟。
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: 运行全部检查
+        run: npm test
