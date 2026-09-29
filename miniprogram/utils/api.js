@@ -3,8 +3,8 @@ const config = require('../config.js');
 
 const MESSAGES = {
   NO_API_KEY: '管理员还没配置 Azure 语音密钥',
-  UPSTREAM: 'AI 服务暂时不可用，稍后再试',
-  TIMEOUT: 'AI 响应超时，请重试'
+  UPSTREAM: '语音服务暂时不可用，稍后再试',
+  TIMEOUT: '语音服务响应超时，请重试'
 };
 
 function configured() {

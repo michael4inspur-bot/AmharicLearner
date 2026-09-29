@@ -20,7 +20,7 @@
   </view>
 
   <view class="card lav">
-    <view class="card-title">AI 生成内容声明</view>
+    <view class="card-title">自动生成内容说明</view>
     <view class="li" wx:for="{{aigc}}" wx:key="*this">
       <view class="li-dot"></view>
       <view class="grow zh">{{item}}</view>

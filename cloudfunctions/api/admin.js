@@ -9,7 +9,7 @@ const ADMIN_SETTING_ID = 'admin';
 const MAX_NICKNAME = 20;
 const MAX_ANNOUNCEMENT = 500;
 const ANNOUNCEMENT_ID = 'announcement';
-const AI_DAILY_DAYS = 14; // admin.system 柱状图天数
+const USAGE_DAILY_DAYS = 14; // admin.system 柱状图天数
 const ERROR_LIST_LIMIT = 20;
 const TODAY_LOG_LIMIT = 2000; // 合并当日用量时最多扫描的日志条数
 const TTS_CLEAR_BATCH = 50;
@@ -198,10 +198,10 @@ async function deleteUser(data, ctx, now) {
   return ok({ deleted: true });
 }
 
-/** 最近 AI_DAILY_DAYS 天的东非日期键（升序），与 countAiByDay 的分组口径和配额计日一致。 */
+/** 最近 USAGE_DAILY_DAYS 天的东非日期键（升序），与 countUsageByDay 的分组口径和配额计日一致。 */
 function recentDays(now) {
   const days = [];
-  for (let i = AI_DAILY_DAYS - 1; i >= 0; i--) days.push(eatDayKey(new Date(now.getTime() - i * DAY_MS)));
+  for (let i = USAGE_DAILY_DAYS - 1; i >= 0; i--) days.push(eatDayKey(new Date(now.getTime() - i * DAY_MS)));
   return days;
 }
 
@@ -210,16 +210,16 @@ async function system(ctx, now) {
   const days = recentDays(now);
   const [monthUsed, rows, ttsCache, errors] = await Promise.all([
     db.sumTtsCharsSince(monthStartIso(now)),
-    db.countAiByDay(dayStartIso(new Date(now.getTime() - (AI_DAILY_DAYS - 1) * DAY_MS))),
+    db.countUsageByDay(dayStartIso(new Date(now.getTime() - (USAGE_DAILY_DAYS - 1) * DAY_MS))),
     db.ttsCacheStats(),
     db.listErrorLogs(ERROR_LIST_LIMIT)
   ]);
   const counts = new Map(rows.map((r) => [r.date, r.count]));
-  const aiDaily = days.map((date) => ({ date, count: counts.get(date) || 0 }));
+  const usageDaily = days.map((date) => ({ date, count: counts.get(date) || 0 }));
   return ok({
     monthChars: { used: monthUsed, limit: getLimits().ttsMonthlyChars },
-    aiToday: counts.get(days[days.length - 1]) || 0,
-    aiDaily,
+    usageToday: counts.get(days[days.length - 1]) || 0,
+    usageDaily,
     ttsCache,
     errors
   });

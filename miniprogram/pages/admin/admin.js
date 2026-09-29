@@ -78,7 +78,7 @@ Page({
     users: [],
     system: null,
     charsPercent: 0,
-    aiDaily: [],
+    usageDaily: [],
     errors: [],
     announcement: null,
     noticeText: '',
@@ -155,7 +155,7 @@ Page({
     const who = `${user.nickname || '未命名用户'}（尾号 ${user.tail}）`;
     wx.showModal({
       title: '删除用户',
-      content: `确定删除 ${who}？学习进度与 AI 记录会被清除，账号将停用，不可撤销。`,
+      content: `确定删除 ${who}？学习进度与使用记录会被清除，账号将停用，不可撤销。`,
       confirmText: '删除',
       confirmColor: '#B23A2E',
       success: (res) => { if (res.confirm) this.deleteUser(user); }
@@ -183,13 +183,13 @@ Page({
         system: {
           charsUsed: month.used || 0,
           charsLimit: month.limit || 0,
-          aiToday: res.aiToday || 0,
+          usageToday: res.usageToday || 0,
           cacheCount: cache.count || 0,
           cacheChars: cache.chars || 0,
           errorCount: (res.errors || []).length
         },
         charsPercent: percent(month.used || 0, month.limit || 0),
-        aiDaily: decorateDaily(res.aiDaily),
+        usageDaily: decorateDaily(res.usageDaily),
         errors: (res.errors || []).slice(0, 20).map(decorateError),
         loading: false
       });

@@ -41,7 +41,7 @@ Page({
   onNickname(e) { this.setData({ nickname: String((e.detail && e.detail.value) || '').trim().slice(0, 20) }); },
   async login() {
     if (this.data.loading) return;
-    if (!this.data.agreed) { this.setData({ error: '请先阅读并勾选同意《隐私政策与 AI 内容声明》' }); return; }
+    if (!this.data.agreed) { this.setData({ error: '请先阅读并勾选同意《隐私政策与自动生成内容说明》' }); return; }
     this.setData({ loading: true, error: '' });
     try {
       await requirePrivacy();

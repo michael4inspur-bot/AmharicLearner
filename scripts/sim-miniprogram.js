@@ -328,7 +328,7 @@ async function main() {
   const ann = await api.announcement();
   assert.equal(ann.text, '周五实战');
   const sys = await api.adminSystem();
-  assert.equal(sys.aiDaily.length, 14);
+  assert.equal(sys.usageDaily.length, 14);
   assert.ok(typeof sys.ttsCache.count === 'number');
   progress.addMinutes(1); // 触发进度变化后同步，带 meta
   assert.equal(await sync.syncNow(), true, '进度变化后再次上传');
