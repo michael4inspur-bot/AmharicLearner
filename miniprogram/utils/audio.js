@@ -139,6 +139,7 @@ function remember(key, saved, resolve) {
  * 省掉在公众平台配置云存储域名这一步。拿到临时文件后再落到 USER_DATA_PATH 持久化。
  * 不可用时回退到普通 wx.downloadFile。任何失败都 resolve('')，不抛错。
  */
+let lastDownloadErr = '';
 function downloadViaCloud(fileID, key) {
   return new Promise((resolve) => {
     if (!fileID || !w() || !wx.cloud || typeof wx.cloud.downloadFile !== 'function' || !ensureDir()) { resolve(''); return; }
@@ -148,7 +149,8 @@ function downloadViaCloud(fileID, key) {
         fileID,
         success: (res) => {
           const temp = res && res.tempFilePath;
-          if (!temp) { resolve(''); return; }
+          if (!temp) { lastDownloadErr = `云存储下载没有返回文件（statusCode ${res && res.statusCode}）`; resolve(''); return; }
+          lastDownloadErr = '';
           try {
             const fs = wx.getFileSystemManager();
             fs.saveFile({
@@ -160,9 +162,10 @@ function downloadViaCloud(fileID, key) {
             });
           } catch (e) { remember(key, temp, resolve); }
         },
-        fail: () => resolve('')
+        // 记下原因：云存储权限设成「仅创建者可读写」时，别人手机上会在这里失败
+        fail: (err) => { lastDownloadErr = `云存储下载失败：${(err && (err.errMsg || err.message)) || '未知原因'}`; resolve(''); }
       });
-    } catch (e) { resolve(''); }
+    } catch (e) { lastDownloadErr = `云存储下载失败：${(e && e.message) || e}`; resolve(''); }
   });
 }
 
@@ -203,12 +206,41 @@ function toast(text) {
   try { if (w() && typeof wx.showToast === 'function') wx.showToast({ title: text || TOAST_TEXT, icon: 'none' }); } catch (e) { /* ignore */ }
 }
 
+let lastFailAt = 0;
+let lastFailMsg = '';
+/**
+ * 朗读失败时把真实原因告诉用户。以前一律显示「语音暂时不可用」，
+ * 云端返回的 Azure 密钥错误、上游失败、播放器错误全被这一句吞掉，没法排查。
+ * 用弹框放完整文案（toast 只能显示很短的字），同一原因 3 秒内不重复弹，连点喇叭不会叠框。
+ */
+function fail(reason, raw) {
+  try { console.error('[audio] 朗读失败：', reason, raw || ''); } catch (e) { /* ignore */ }
+  const now = Date.now();
+  const msg = String(reason || TOAST_TEXT);
+  if (msg === lastFailMsg && now - lastFailAt < 3000) return;
+  lastFailAt = now;
+  lastFailMsg = msg;
+  try {
+    if (w() && typeof wx.showModal === 'function') {
+      wx.showModal({ title: '朗读失败', content: msg, showCancel: false });
+      return;
+    }
+  } catch (e) { /* ignore */ }
+  toast();
+}
+
 function player() {
   if (ctx) return ctx;
   try {
     if (w() && typeof wx.createInnerAudioContext === 'function') {
       ctx = wx.createInnerAudioContext() || null;
-      if (ctx && typeof ctx.onError === 'function') ctx.onError(() => toast());
+      if (ctx && typeof ctx.onError === 'function') {
+        ctx.onError((res) => {
+          const why = `音频播放出错：${(res && (res.errMsg || res.errCode)) || '未知原因'}`;
+          // 在线链接播不了时，把先前云存储下载失败的原因一起给出来，才看得出是权限还是域名问题
+          fail(lastDownloadErr ? `${why}\n${lastDownloadErr}` : why, res);
+        });
+      }
     }
   } catch (e) { ctx = null; }
   return ctx;
@@ -216,13 +248,13 @@ function player() {
 
 function play(src) {
   const c = player();
-  if (!c || !src) { toast(); return false; }
+  if (!c || !src) { fail(!c ? '当前环境无法创建音频播放器' : '没有可播放的音频'); return false; }
   try {
     if (typeof c.stop === 'function') c.stop();
     c.src = src;
     if (typeof c.play === 'function') c.play();
     return true;
-  } catch (e) { toast(); return false; }
+  } catch (e) { fail(`音频播放出错：${(e && e.message) || e}`, e); return false; }
 }
 
 /** 停止当前播放 */
@@ -233,11 +265,12 @@ function stop() {
 
 /**
  * 朗读文本。opts 可覆盖 voice / rate。
- * 本地缓存命中直接播放；否则取云端 url 立即播放，同时后台下载到本地。
- * 失败 toast "语音暂时不可用" 并 resolve，不阻塞学习。
- */
-/**
- * 朗读。opts.silent 为 true 时失败不弹任何提示（自动播放场景用：
+ * 本地缓存命中直接播放；否则先用 wx.cloud.downloadFile 把云端音频下载到本地再播。
+ * 不能直接播临时链接：InnerAudioContext 播网络地址要求该域名在「downloadFile 合法域名」里，
+ * 开发者工具（不校验合法域名）和打开了「开发调试」的手机会跳过这项检查，
+ * 于是出现「只有自己手机能播、同事手机都不能播」。云存储下载不受合法域名限制。
+ * 云存储下载失败时才退回直接播临时链接，失败原因会一起显示在弹框里。
+ * opts.silent 为 true 时失败不弹任何提示（自动播放场景用：
  * 小测切题、复习先听再看都是页面自动触发的，弹登录框等于没点按钮就被要求授权）。
  */
 function speak(text, opts) {
@@ -251,16 +284,21 @@ function speak(text, opts) {
   return api.ttsGet(text, s.voice, s.rate)
     .then((res) => {
       const url = res && res.url;
-      if (!url) { toast(); return; }
-      play(url);
-      download(url, key, res && res.fileID);
+      const fileID = res && res.fileID;
+      if (!url && !fileID) { fail('云端没有返回音频地址，请查看云函数 api 的日志', res); return; }
+      lastDownloadErr = '';
+      return downloadViaCloud(fileID, key).then((p) => {
+        if (p) { play(p); return; }
+        if (!url) { fail(lastDownloadErr || '音频下载失败', res); return; }
+        play(url);
+        downloadViaUrl(url, key);
+      });
     })
     .catch((err) => {
       if (opts && opts.silent) return;
       if (account.prompt(err, '朗读')) return;
-      // api.js 已经把断网 / 超时 / 未部署归一成可照做的中文提示，别再盖成一句没信息量的话
-      const msg = err && err.message;
-      toast(msg && msg.length <= 60 ? msg : undefined);
+      // api.js 已经把断网 / 超时 / 未部署 / 云端具体原因归一成中文，原样给用户看
+      fail((err && err.message) || TOAST_TEXT, err);
     });
 }
 
