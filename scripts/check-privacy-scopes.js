@@ -74,6 +74,20 @@ assert.deepEqual(aiHits, [], 'AI / 深度合成的代码回潮了（个人主体
 
 assert.ok(!fs.existsSync(path.join(root, 'pages', 'coach')), 'AI 教练页目录又出现了');
 
+// 用户看得见的「AI」字样。只查代码模式挡不住文案残留：删掉 AI 功能之后，
+// 登录页的同意链接、隐私页标题、管理页统计里还留着 11 处「AI」，审核员一眼就能看到。
+// 扫 wxml / json 全文，以及 js 里的字符串字面量（注释不算）。
+const uiHits = [];
+walk(root, ['.wxml', '.json']).forEach((f) => {
+  if (/\bAI\b/.test(fs.readFileSync(f, 'utf8'))) uiHits.push(rel(f));
+});
+walk(root, ['.js']).forEach((f) => {
+  const code = fs.readFileSync(f, 'utf8').split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
+  const literals = code.match(/(['"`])(?:\\.|(?!\1)[^\\\n])*\1/g) || [];
+  if (literals.some((x) => /\bAI\b/.test(x))) uiHits.push(rel(f));
+});
+assert.deepEqual(uiHits, [], '用户可见文案里出现了「AI」（个人主体未开放深度合成类目）：\n  ' + uiHits.join('\n  '));
+
 // ---------- 3. app.json ----------
 const app = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'));
 assert.ok(!app.pages.some((p) => /coach/.test(p)), 'app.json 的 pages 里还有 AI 教练页');

@@ -13,7 +13,7 @@ const TTS_CACHE = 'tts_cache';
 const USERS = 'users';
 const SETTINGS = 'settings';
 const ERRORS = 'error_logs';
-const AI_TYPES = ['diagnosis', 'plan', 'chat']; // countAiByDay 只统计这三类
+const USAGE_TYPES = ['tts', 'stt']; // countUsageByDay 统计朗读合成与跟读评分
 const PRUNE_BATCH = 100; // 单次裁剪最多删除的条数
 
 /** 集合尚未在控制台创建时云数据库报 -502005，视为空集合而不是错误。 */
@@ -166,12 +166,12 @@ module.exports = {
    * @returns {Promise<Array<{date: string, count: number}>>}
    */
   /** 自 sinceIso 起的 AI 日志按东非日分组计数：[{date: 'YYYY-MM-DD', count}] */
-  async countAiByDay(sinceIso) {
+  async countUsageByDay(sinceIso) {
     const by = new Map();
     let skip = 0;
     for (;;) {
       const r = await db.collection(LOGS)
-        .where({ type: _.in(AI_TYPES), date: _.gte(sinceIso) })
+        .where({ type: _.in(USAGE_TYPES), date: _.gte(sinceIso) })
         .orderBy('date', 'asc')
         .skip(skip)
         .limit(PAGE)

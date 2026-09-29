@@ -1,6 +1,6 @@
 // 内存实现，接口与 ../db.js 完全一致，供测试与小程序模拟脚本使用。
 const { eatDayKey } = require('../time.js');
-const AI_TYPES = ['diagnosis', 'plan', 'chat']; // countAiByDay 只统计这三类
+const USAGE_TYPES = ['tts', 'stt']; // countUsageByDay 统计朗读合成与跟读评分
 
 /**
  * @param {{registered?: boolean}} [opts] registered 默认 true：未显式写入的 openid 也视为已注册的正常账号，
@@ -106,10 +106,10 @@ function createFakeDb(opts) {
       for (let i = errors.length - 1; i >= 0; i--) if (drop.has(errors[i]._id)) errors.splice(i, 1);
     },
     /** 自 sinceIso 起 AI 类日志按 date 前 10 位（UTC 日期）分组计数。 */
-    async countAiByDay(sinceIso) {
+    async countUsageByDay(sinceIso) {
       const by = new Map();
       for (const l of logs) {
-        if (!AI_TYPES.includes(l.type) || l.date < sinceIso) continue;
+        if (!USAGE_TYPES.includes(l.type) || l.date < sinceIso) continue;
         const day = eatDayKey(l.date);
         by.set(day, (by.get(day) || 0) + 1);
       }

@@ -114,7 +114,7 @@ Page({
   },
   resetAll() {
     wx.showModal({
-      title: '清空全部进度', content: '闪卡、小测、AI 记录都会删除，无法恢复。', confirmColor: '#c0392b',
+      title: '清空全部进度', content: '闪卡、小测、学习记录都会删除，无法恢复。', confirmColor: '#c0392b',
       success: (r) => { if (r.confirm) { progress.reset(); this.onShow(); } }
     });
   }
