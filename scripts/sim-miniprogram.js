@@ -86,8 +86,9 @@ require(path.join(root, 'config.js')).cloudEnv = 'sim-env';
 
 const progress = require(path.join(root, 'utils/progress.js'));
 const quiz = require(path.join(root, 'utils/quiz.js'));
-const plan = require(path.join(root, 'data/plan.js'));
-const vocab = require(path.join(root, 'data/vocab.js'));
+const langs = require(path.join(root, 'langs/index.js'));
+const vocab = langs.pack('am');
+const plan = vocab.plan;
 const api = require(path.join(root, 'utils/api.js'));
 const sync = require(path.join(root, 'utils/sync.js'));
 const audio = require(path.join(root, 'utils/audio.js'));
@@ -159,7 +160,19 @@ async function main() {
   searchPage.setData = function (d) { this.data = { ...this.data, ...d }; };
   searchPage.data = { q: '', results: [], recent: [] };
   searchPage.search('多少钱');
-  assert.equal(searchPage.data.results[0].am, 'ስንት ነው?');
+  assert.equal(searchPage.data.results[0].text, 'ስንት ነው?');
+
+  // 界面文案来自语言包，不写死在模板里
+  const L = langs.meta('am').strings;
+  searchPage.onLoad();
+  assert.equal(searchPage.data.L.searchPlaceholder, L.searchPlaceholder, '搜索页文案来自语言包');
+  assert.equal(searchPage.data.tc, 'am', '埃塞文字用 .am 字体类');
+  const reviewPage = pageOf('review/review');
+  reviewPage.setData = function (d) { this.data = { ...this.data, ...d }; };
+  reviewPage.data = { ...reviewPage.data };
+  reviewPage.onShow();
+  assert.equal(reviewPage.data.L.modeShort, '看阿');
+  assert.equal(reviewPage.data.mode, 'text', '复习默认模式改名为 text');
 
   // 同步：未登记不上传（用户还没勾选隐私同意）
   assert.equal(api.configured(), true);
@@ -271,6 +284,54 @@ async function main() {
   assert.equal(progress.isEmpty(), true, '重置后是空进度');
   assert.equal(await sync.syncNow(), false, '空进度不上传，不会覆盖云端');
   progress.replace(realProgress);
+  // 多语言：注册一个最小的测试语言包，验证进度与云端文档按语言分开
+  const amPack = langs.pack('am');
+  const omUnit = { id: 'om-u01', week: 1, title: '测试单元', items: [
+    { id: 'om-u01-01', text: 'Akkam', zh: '你好', unit: 'om-u01' },
+    { id: 'om-u01-02', text: 'Galatoomi', zh: '谢谢', unit: 'om-u01' }
+  ], dialog: [] };
+  langs.register('om', {
+    ...amPack,
+    meta: { ...amPack.meta, code: 'om', script: 'latin', hasRom: false },
+    units: [omUnit],
+    getUnit: (id) => (id === 'om-u01' ? omUnit : undefined),
+    getItem: (id) => omUnit.items.find((it) => it.id === id),
+    allItems: () => omUnit.items.slice(),
+    unitsForWeek: (w) => (w === 1 ? [omUnit] : [])
+  });
+  assert.equal(progress.keyOf('am'), 'progress_v1', '阿姆哈拉语沿用老键名');
+  assert.equal(progress.keyOf('om'), 'progress_om_v1');
+  const amUnitsBefore = JSON.stringify(progress.load().unitsLearned);
+
+  // 旧版云函数不回显 lang：不能把奥罗莫语进度传上去（会写进阿姆哈拉语文档）
+  const realCallOld = wx.cloud.callFunction;
+  const oldCloudActions = [];
+  wx.cloud.callFunction = ({ data, success }) => {
+    oldCloudActions.push(data.action);
+    success({ result: { ok: true, data: data.action === 'progress.get' ? { progress: null, updatedAt: null } : { updatedAt: 'x' } } });
+  };
+  langs.set('om');
+  progress.learnUnit('om-u01');
+  assert.equal(await sync.syncNow(), false, '云端不支持多语言时不上传');
+  assert.ok(!oldCloudActions.includes('progress.put'), '一次 progress.put 都没发');
+  wx.cloud.callFunction = realCallOld;
+
+  // 新版云函数：奥罗莫语进度写到 openid:om，阿姆哈拉语文档不受影响
+  assert.ok(progress.load().srs['om-u01-01'], '奥罗莫语进度在奥罗莫语存储里');
+  assert.equal(await sync.syncNow(), true, '云端支持后上传');
+  const omDoc = await db.getProgress(`${simOpenid}:om`);
+  assert.ok(omDoc && omDoc.progress.srs['om-u01-01'], '云端奥罗莫语文档');
+  const amDoc = await db.getProgress(simOpenid);
+  assert.ok(!amDoc.progress.srs['om-u01-01'], '阿姆哈拉语文档没混进奥罗莫语');
+  const omFetched = await api.fetchProgress('om');
+  assert.equal(omFetched.lang, 'om');
+  assert.ok(omFetched.progress.unitsLearned['om-u01']);
+
+  // 切回阿姆哈拉语，原进度完好
+  langs.set('am');
+  assert.equal(JSON.stringify(progress.load().unitsLearned), amUnitsBefore, '切回后阿姆哈拉语进度不变');
+  assert.ok(!progress.load().srs['om-u01-01']);
+  assert.ok(wx.getStorageSync('progress_om_v1').srs['om-u01-01'], '奥罗莫语进度存在自己的键下');
 
 
   // 语音：朗读走云端合成 + 本地缓存
@@ -295,7 +356,7 @@ async function main() {
   assert.equal(q9.length, 9);
   assert.equal(q9[2].listen, true, '第 3 题为听力题');
   assert.ok(q9[2].audioText, '听力题带朗读文本');
-  assert.equal(q9[2].promptAm, '', '听力题题面不显示阿姆哈拉语');
+  assert.equal(q9[2].promptText, '', '听力题题面不显示阿姆哈拉语');
   assert.ok(!q9[0].listen && !q9[1].listen, '前两题非听力题');
   [5, 8].forEach((i) => assert.equal(q9[i].listen, true, `第 ${i + 1} 题为听力题`));
 
@@ -456,6 +517,13 @@ async function main() {
   // 未配置云环境时的失败路径
   require(path.join(root, 'config.js')).cloudEnv = '';
   await assert.rejects(api.ttsGet("ሰላም", "female", "normal"), (e) => e.code === 'NO_ENV');
+
+  const fs = require('fs');
+  const HARD = /阿姆哈拉语怎么说|在心里说出阿姆哈拉语|看阿<|ጥሩ ስራ|በጣም ጥሩ|ችግር የለም|ሰላም!/;
+  ['quiz/quiz', 'review/review', 'search/search', 'login/login', 'fidel/fidel'].forEach((p) => {
+    const wxml = fs.readFileSync(path.join(root, 'pages', p + '.wxml'), 'utf8');
+    assert.ok(!HARD.test(wxml), `${p}.wxml 里还有写死的语言文案`);
+  });
 
   console.log('OK: miniprogram simulation passed');
 }

@@ -28,6 +28,8 @@ page {
   --border: #F1E3D6;
 }
 .am { font-family: "NotoSansEthiopic", "Noto Sans Ethiopic", "Kefa", "Abyssinica SIL", system-ui, sans-serif; font-weight: 700; color: var(--accent); }
+/* 拉丁字母的外语原文（如奥罗莫语）：不用 Ethiopic 字体，字号与 .am 对齐 */
+.latin { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; letter-spacing: 0.2rpx; }
 /* 底部留白要覆盖悬浮导航条：24 + 安全区 + 128 rpx，刘海屏上安全区约 68rpx */
 .page { padding: 24rpx 40rpx calc(200rpx + env(safe-area-inset-bottom)); }
 .page.no-tab { padding-bottom: 60rpx; }

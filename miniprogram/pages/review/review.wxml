@@ -5,7 +5,7 @@
       <view class="muted">第 {{pos}} / {{sessionTotal}} 张 · 今天已得 {{todayStars}} 星</view>
     </view>
     <view class="modes">
-      <view class="mode {{mode==='am' ? 'on' : ''}}" data-m="am" bindtap="setMode">看阿</view>
+      <view class="mode {{mode==='text' ? 'on' : ''}}" data-m="text" bindtap="setMode">{{L.modeShort}}</view>
       <view class="mode {{mode==='zh' ? 'on' : ''}}" data-m="zh" bindtap="setMode">看中</view>
       <view class="mode {{mode==='listen' ? 'on' : ''}}" data-m="listen" bindtap="setMode">先听</view>
     </view>
@@ -28,11 +28,11 @@
           </block>
           <block wx:elif="{{mode==='zh'}}">
             <view class="fc-zh big">{{current.zh}}</view>
-            <view class="fc-hint">在心里说出阿姆哈拉语</view>
+            <view class="fc-hint">{{L.thinkSay}}</view>
           </block>
           <block wx:else>
-            <view class="am fc-am">{{current.am}}</view>
-            <view class="fc-rom">{{current.rom}}</view>
+            <view class="{{tc}} fc-am">{{current.text}}</view>
+            <view class="fc-rom" wx:if="{{hasRom}}">{{current.rom}}</view>
             <view class="fc-hint">在心里说出意思</view>
           </block>
         </view>
@@ -44,8 +44,8 @@
         <view class="deco deco-lav"></view>
         <view class="fc-unit">{{current.unitTitle}}</view>
         <view class="fc-body">
-          <view class="am fc-am">{{current.am}}</view>
-          <view class="fc-rom">{{current.rom}}</view>
+          <view class="{{tc}} fc-am">{{current.text}}</view>
+          <view class="fc-rom" wx:if="{{hasRom}}">{{current.rom}}</view>
           <view class="fc-zh">{{current.zh}}</view>
           <view class="fc-note" wx:if="{{current.note}}">{{current.note}}</view>
           <view class="fc-tools">
@@ -80,7 +80,7 @@
       <view class="btn" bindtap="goLessons">去课程</view>
     </block>
     <block wx:else>
-      <view class="am done-am">ጥሩ ስራ!</view>
+      <view class="{{tc}} done-am">{{L.praise}}</view>
       <view class="stars done-stars">
         <x-icon name="star" size="32" color="#F59E0B" />
         <text>今天已得 {{todayStars}} 星</text>

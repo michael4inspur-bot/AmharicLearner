@@ -1,12 +1,13 @@
 const progress = require('../../utils/progress.js');
 const points = require('../../utils/points.js');
-const vocab = require('../../data/vocab.js');
+const langs = require('../../langs/index.js');
 const audio = require('../../utils/audio.js');
 
 Page({
   data: { unit: null, tab: 'words', learned: false, showRom: true, showZh: true },
   onLoad(q) {
-    const unit = vocab.getUnit(q.id);
+    this.setData(langs.view());
+    const unit = langs.pack().getUnit(q.id);
     if (!unit) { wx.navigateBack(); return; }
     wx.setNavigationBarTitle({ title: unit.title });
     this.enterAt = Date.now();

@@ -25,9 +25,8 @@
 ```
 miniprogram/            微信小程序（原生 WXML/WXSS/JS，无第三方依赖）
   config.js             云开发环境 id
-  data/vocab.js         词汇与对话
-  data/plan.js          8 周计划与每日任务生成
-  data/fidel.js         Fidel 字母表
+  langs/index.js        语言包注册表（当前语言、切换、订阅）
+  langs/am/             阿姆哈拉语：vocab.js 词库、plan.js 8 周计划、alphabet.js Fidel 字母表、index.js 元数据与界面文案
   utils/srs.js          SM-2 算法
   utils/progress.js     进度存储、统计、给 AI 的摘要
   utils/api.js          云函数调用封装
@@ -204,8 +203,8 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 
 | action | 入参 | 说明 |
 | --- | --- | --- |
-| `progress.get` | 无 | 读取云端进度 |
-| `progress.put` | `{progress}` | 整份覆盖上传 |
+| `progress.get` | `{ lang? }` | 读取该语言的云端进度；返回 { progress, updatedAt, lang }。am 文档 _id = openid，其他语言 _id = openid:lang |
+| `progress.put` | `{ progress, meta?, baseUpdatedAt?, lang? }` | 上传该语言的进度；只有 am 的上传更新用户摘要 |
 | `tts.get` | `{text, voice: 'female'\|'male', rate: 'normal'\|'slow'}` | 合成朗读，返回 `{url, key}`；命中 `tts_cache` 不再调 Azure |
 | `tts.batch` | `{items: [{id, text}], voice, rate}`（最多 40 条） | 批量取 url，返回 `{urls: {id: url}}`，缺失项并行生成 |
 | `stt.score` | `{fileID, target}` | 识别云存储里的录音并评分，返回 `{transcript, score, words}`；处理完删除录音 |
@@ -222,7 +221,7 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 
 ## 转写约定
 
-`data/fidel.js` 生成的拉丁转写与 `data/vocab.js` 里的写法保持一致。三处与学术转写不同，都是迁就词库里的实际写法：
+`langs/am/alphabet.js` 生成的拉丁转写与 `langs/am/vocab.js` 里的写法保持一致。三处与学术转写不同，都是迁就词库里的实际写法：
 
 | 项 | 本项目写法 | 学术转写 | 依据 |
 | --- | --- | --- | --- |

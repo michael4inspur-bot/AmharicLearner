@@ -82,6 +82,7 @@ function createFakeDb(opts) {
     },
     async deleteUserData(openid) {
       progress.delete(openid);
+      progress.delete(`${openid}:om`);
       for (let i = logs.length - 1; i >= 0; i--) if (logs[i].openid === openid) logs.splice(i, 1);
     },
     async getSetting(id) {

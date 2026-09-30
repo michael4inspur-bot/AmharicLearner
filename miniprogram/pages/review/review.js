@@ -1,6 +1,6 @@
 const progress = require('../../utils/progress.js');
 const points = require('../../utils/points.js');
-const vocab = require('../../data/vocab.js');
+const langs = require('../../langs/index.js');
 const audio = require('../../utils/audio.js');
 
 const SEG_COUNT = 15;
@@ -22,7 +22,7 @@ function todayStars() {
 }
 
 function withUnit(c) {
-  const u = vocab.getUnit(c.unit);
+  const u = langs.pack().getUnit(c.unit);
   return { ...c, unitTitle: u ? u.title : '闪卡复习' };
 }
 
@@ -31,9 +31,10 @@ Page({
     queue: [], current: null, flipped: false,
     stats: { total: 0, due: 0, mature: 0, newWaiting: 0 },
     done: 0, sessionTotal: 0, pos: 0, sessionCorrect: 0, sessionWrong: 0,
-    mode: 'am', segs: buildSegs(0, 0), todayStars: 0
+    mode: 'text', segs: buildSegs(0, 0), todayStars: 0
   },
   onShow() {
+    this.setData(langs.view());
     if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().select('/pages/review/review');
     this.loadQueue();
     this.enterAt = Date.now();
@@ -71,12 +72,12 @@ Page({
   autoPlay() {
     const cur = this.data.current;
     // 自动播放：失败静默，用户没点任何按钮，不该被要求登录
-    if (this.data.mode === 'listen' && cur && cur.am) audio.speak(cur.am, { silent: true });
+    if (this.data.mode === 'listen' && cur && cur.text) audio.speak(cur.text, { silent: true });
   },
   /** 播当前卡的阿姆哈拉语（catchtap，不触发翻面） */
   play() {
     const cur = this.data.current;
-    if (cur && cur.am) audio.speak(cur.am);
+    if (cur && cur.text) audio.speak(cur.text);
   },
   /** 去跟读评分页 */
   goSpeak() {

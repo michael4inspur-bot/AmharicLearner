@@ -17,7 +17,7 @@ App({
     // 新版本下载好后弹框重启，省掉微信默认要求的第二次冷启动
     update.init();
     // 每次进度保存后 3 秒内合并上传一次
-    progress.setOnSaved(() => sync.scheduleSync(3000));
+    progress.setOnSaved((p, code) => sync.scheduleSync(3000, code));
   },
   onHide() {
     // 切到后台时把进度静默上传到云端（未配置云环境时跳过）

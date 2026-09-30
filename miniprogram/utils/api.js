@@ -90,8 +90,8 @@ function invoke(action, data) {
 
 module.exports = {
   configured,
-  syncProgress: (progress, meta, baseUpdatedAt) => call('progress.put', { progress, meta, baseUpdatedAt }),
-  fetchProgress: () => call('progress.get'),
+  syncProgress: (progress, meta, baseUpdatedAt, lang) => call('progress.put', { progress, meta, baseUpdatedAt, lang: lang || 'am' }),
+  fetchProgress: (lang) => call('progress.get', { lang: lang || 'am' }),
   ttsGet: (text, voice, rate) => call('tts.get', { text, voice, rate }),
   ttsBatch: (items, voice, rate) => call('tts.batch', { items, voice, rate }),
   sttScore: (fileID, target) => call('stt.score', { fileID, target }),

@@ -51,7 +51,7 @@
   </block>
 
   <view class="card result-card" wx:if="{{mode==='result'}}">
-    <view class="am result-am">{{pct >= 70 ? 'ጥሩ ስራ!' : 'ችግር የለም'}}</view>
+    <view class="am result-am">{{pct >= 70 ? L.praise : L.praiseLow}}</view>
     <view class="result-score">{{pct}}%</view>
     <view class="stars result-stars" wx:if="{{earned}}">
       <x-icon name="star" size="32" color="#F59E0B" />

@@ -13,9 +13,9 @@
         <view class="muted">听不清可以再点一次</view>
       </block>
       <block wx:else>
-        <view class="q-kind">{{current.promptAm ? '这是什么意思？' : '阿姆哈拉语怎么说？'}}</view>
-        <view class="row q-am-row" wx:if="{{current.promptAm}}">
-          <view class="am q-am">{{current.promptAm}}</view>
+        <view class="q-kind">{{current.promptText ? '这是什么意思？' : L.askSay}}</view>
+        <view class="row q-am-row" wx:if="{{current.promptText}}">
+          <view class="{{tc}} q-am">{{current.promptText}}</view>
           <view class="icon-btn" catchtap="playCurrent"><x-icon name="speaker" size="34" color="#2F7A5E" /></view>
         </view>
         <view class="rom" wx:if="{{current.promptRom}}">{{current.promptRom}}</view>
@@ -37,7 +37,7 @@
         </view>
       </view>
       <view class="row q-am-row ex-am" wx:if="{{current.listen}}">
-        <view class="am">{{current.audioText}}</view>
+        <view class="{{tc}}">{{current.audioText}}</view>
         <view class="icon-btn" catchtap="playCurrent"><x-icon name="speaker" size="34" color="#2F7A5E" /></view>
       </view>
       <view class="btn" bindtap="next">{{idx + 1 >= questions.length ? '看结果' : '下一题'}}</view>
@@ -45,7 +45,7 @@
   </block>
 
   <view class="card result-card" wx:else>
-    <view class="am result-am">{{pct >= 80 ? 'በጣም ጥሩ!' : pct >= 60 ? 'ጥሩ ነው' : 'ችግር የለም'}}</view>
+    <view class="{{tc}} result-am">{{pct >= 80 ? L.praiseHigh : pct >= 60 ? L.praiseMid : L.praiseLow}}</view>
     <view class="result-line">
       <text class="result-score">{{score}}</text>
       <text class="result-total">/ {{questions.length}}</text>

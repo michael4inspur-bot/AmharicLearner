@@ -3,7 +3,7 @@
 const progress = require('../../utils/progress.js');
 const points = require('../../utils/points.js');
 const account = require('../../utils/account.js');
-const vocab = require('../../data/vocab.js');
+const langs = require('../../langs/index.js');
 const audio = require('../../utils/audio.js');
 const api = require('../../utils/api.js');
 
@@ -61,7 +61,8 @@ Page({
   goLogin() { if (!account.isRegistered()) account.goLogin(); },
 
   onLoad(q) {
-    const item = vocab.getItem(q && q.id);
+    this.setData(langs.view());
+    const item = langs.pack().getItem(q && q.id);
     if (!item) { if (has('navigateBack')) wx.navigateBack(); return; }
     if (has('setNavigationBarTitle')) wx.setNavigationBarTitle({ title: '跟读练习' });
     this.setData({ item });
@@ -150,7 +151,7 @@ Page({
   playStandard() {
     if (!this.data.item) return;
     this.stopPlayback();
-    audio.speak(this.data.item.am);
+    audio.speak(this.data.item.text);
   },
 
   /** 独立的回放 InnerAudioContext（不与标准音共用） */
@@ -194,7 +195,7 @@ Page({
     if (!this.data.tempFilePath) { wx.showToast({ title: '请先录音', icon: 'none' }); return; }
     if (this.compareTimer) clearTimeout(this.compareTimer);
     this.playStandard();
-    const wait = Math.max(1500, this.data.item.am.length * 250);
+    const wait = Math.max(1500, this.data.item.text.length * 250);
     this.compareTimer = setTimeout(() => { this.compareTimer = null; this.playMine(); }, wait);
   },
 
@@ -233,7 +234,7 @@ Page({
     this.stopPlayback();
     this.setData({ loading: true });
     this.uploadRecording(tempFilePath)
-      .then((fileID) => api.sttScore(fileID, item.am))
+      .then((fileID) => api.sttScore(fileID, item.text))
       .then((res) => {
         res = res || {};
         const score = Math.max(0, Math.min(100, Math.round(Number(res.score) || 0)));

@@ -10,8 +10,8 @@
   </view>
 
   <view class="card word-card" wx:if="{{item}}">
-    <view class="am big">{{item.am}}</view>
-    <view class="rom">{{item.rom}}</view>
+    <view class="{{tc}} big">{{item.text}}</view>
+    <view class="rom" wx:if="{{item.rom}}">{{item.rom}}</view>
     <view class="zh big-zh">{{item.zh}}</view>
     <view class="note" wx:if="{{item.note}}">{{item.note}}</view>
     <view class="chips">
@@ -77,7 +77,7 @@
       </view>
     </view>
     <view class="words" wx:if="{{result.words.length}}">
-      <view class="am word {{item.ok?'ok':'miss'}}" wx:for="{{result.words}}" wx:key="w">{{item.w}}</view>
+      <view class="{{tc}} word {{item.ok?'ok':'miss'}}" wx:for="{{result.words}}" wx:key="w">{{item.w}}</view>
     </view>
     <view class="res-tip">{{result.tip}}</view>
     <view class="res-tip">分数由语音识别自动判定，仅供参考。</view>
