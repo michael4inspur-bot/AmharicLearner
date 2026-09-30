@@ -6,34 +6,47 @@ const path = require('path');
 const langs = require(path.join(__dirname, '..', 'miniprogram', 'langs', 'index.js'));
 
 const OUT = path.join(__dirname, '..', 'docs', 'oromo-review.md');
+const MANIFEST_PATH = path.join(__dirname, '..', 'cloudfunctions', 'api', 'audio-om', 'manifest.json');
 const cell = (s) => String(s == null ? '' : s).replace(/\|/g, '\\|').replace(/\n/g, ' ');
 
 function build() {
   const p = langs.pack('om');
+  const manifest = fs.existsSync(MANIFEST_PATH) ? JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8')) : {};
+
   const lines = [
     '# 奥罗莫语校对表',
     '',
-    '由 `node scripts/gen-oromo-review.js` 生成，请勿手改。请母语者逐行核对「奥罗莫语」一列的拼写与用词是否自然，在「意见」列写修改建议；中文意思不对也请指出。',
+    '由 `node scripts/gen-oromo-review.js` 生成，请勿手改。请母语者逐行核对「奥罗莫语」一列的拼写与用词是否自然，在「意见」列写修改建议；中文意思不对也请指出。音频文件在 cloudfunctions/api/audio-om/，可直接用播放器打开核对发音。',
     '',
     '## 问候语（首页）',
     '',
-    '| # | 奥罗莫语 | 中文 | 意见 |',
-    '| --- | --- | --- | --- |',
-    ...p.greetings.map((g, i) => `| ${i + 1} | ${cell(g.text)} | ${cell(g.zh)} |  |`),
+    '| # | 奥罗莫语 | 中文 | 音频（正常速） | 意见 |',
+    '| --- | --- | --- | --- | --- |',
+    ...p.greetings.map((g, i) => {
+      const audioFile = manifest['normal|' + g.text.trim()] || '';
+      return `| ${i + 1} | ${cell(g.text)} | ${cell(g.zh)} | ${cell(audioFile)} |  |`;
+    }),
     ''
   ];
   p.units.forEach((u) => {
-    lines.push(`## ${u.id} ${cell(u.title)}`, '', '| id | 奥罗莫语 | 中文 | 备注 | 意见 |', '| --- | --- | --- | --- | --- |');
-    u.items.forEach((it) => lines.push(`| ${it.id} | ${cell(it.text)} | ${cell(it.zh)} | ${cell(it.note)} |  |`));
+    lines.push(`## ${u.id} ${cell(u.title)}`, '', '| id | 奥罗莫语 | 中文 | 备注 | 音频（正常速） | 意见 |', '| --- | --- | --- | --- | --- | --- |');
+    u.items.forEach((it) => {
+      const audioFile = manifest['normal|' + it.text.trim()] || '';
+      lines.push(`| ${it.id} | ${cell(it.text)} | ${cell(it.zh)} | ${cell(it.note)} | ${cell(audioFile)} |  |`);
+    });
     if (u.dialog && u.dialog.length) {
-      lines.push('', '对话：', '', '| 说话人 | 奥罗莫语 | 中文 | 意见 |', '| --- | --- | --- | --- |');
-      u.dialog.forEach((d) => lines.push(`| ${cell(d.who)} | ${cell(d.text)} | ${cell(d.zh)} |  |`));
+      lines.push('', '对话：', '', '| 说话人 | 奥罗莫语 | 中文 | 音频（正常速） | 意见 |', '| --- | --- | --- | --- | --- |');
+      u.dialog.forEach((d) => {
+        const audioFile = manifest['normal|' + d.text.trim()] || '';
+        lines.push(`| ${cell(d.who)} | ${cell(d.text)} | ${cell(d.zh)} | ${cell(audioFile)} |  |`);
+      });
     }
     lines.push('');
   });
-  lines.push('## Qubee 拼写规则例词', '', '| 批次 | 规则 | 例词 | 中文 | 意见 |', '| --- | --- | --- | --- | --- |');
+  lines.push('## Qubee 拼写规则例词', '', '| 批次 | 规则 | 例词 | 中文 | 音频（正常速） | 意见 |', '| --- | --- | --- | --- | --- | --- |');
   p.alphabet.groups.forEach((g) => g.rules.forEach((r) => r.examples.forEach((ex) => {
-    lines.push(`| ${g.group} | ${cell(r.pattern)} | ${cell(ex.text)} | ${cell(ex.zh)} |  |`);
+    const audioFile = manifest['normal|' + ex.text.trim()] || '';
+    lines.push(`| ${g.group} | ${cell(r.pattern)} | ${cell(ex.text)} | ${cell(ex.zh)} | ${cell(audioFile)} |  |`);
   })));
   lines.push('');
   return lines.join('\n');
