@@ -259,7 +259,8 @@ function completeMission(key) {
   return save(p);
 }
 
-function completeFidelGroup(group) {
+// 字母批次完成记录。字段名 fidelGroupsDone 沿用老名字，本地和云端老数据才能直接读
+function completeAlphabetGroup(group) {
   const p = load();
   p.fidelGroupsDone[group] = todayStr();
   return save(p);
@@ -325,5 +326,5 @@ function summary(p) {
 
 module.exports = {
   todayStr, keyOf, load, save, reset, replace, sanitize, isEmpty, setOnSaved, currentPosition, todayLog, addMinutes, streak,
-  learnUnit, dueCards, gradeCard, srsStats, recordQuiz, completeMission, completeReflection, completeFidelGroup, summary
+  learnUnit, dueCards, gradeCard, srsStats, recordQuiz, completeMission, completeReflection, completeAlphabetGroup, summary
 };

@@ -78,4 +78,4 @@ function groupsUpTo(g) {
   return buildTable().filter((c) => c.group <= g);
 }
 
-module.exports = { ORDERS, ORDER_LABELS, consonants, buildTable, groupsUpTo, formsOf };
+module.exports = { name: 'Fidel 字母表', page: '/pages/fidel/fidel', ORDERS, ORDER_LABELS, consonants, buildTable, groupsUpTo, formsOf };

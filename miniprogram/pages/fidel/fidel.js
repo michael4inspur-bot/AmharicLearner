@@ -32,8 +32,8 @@ Page({
       if (pct >= 70 && this.data.group > 0) {
         // 只在本次首次通过该批时加星
         const firstPass = !progress.load().fidelGroupsDone[this.data.group];
-        progress.completeFidelGroup(this.data.group);
-        if (firstPass) { earned = points.award('fidel'); points.celebrate(); }
+        progress.completeAlphabetGroup(this.data.group);
+        if (firstPass) { earned = points.award('alphabet'); points.celebrate(); }
       }
       this.setData({ mode: 'result', pct, earned, done: pct >= 70 });
       return;

@@ -147,6 +147,8 @@ async function main() {
   assert.ok(plan.getDayTasks(2, 5).some((t) => t.optional === true && t.unit === 'u13'), '第 2 周第 5 天含自选 u13');
   assert.equal(plan.planOutline().weeks[1].extra, 'u13', '大纲第 2 周 extra 为 u13');
   assert.equal(plan.planOutline().dailyMinutes, 33, '每日 33 分钟');
+  assert.ok(plan.getDayTasks(1, 1).some((t) => t.type === 'alphabet' && t.group === 1 && /Fidel 字母表 第 1 批/.test(t.title)), '字母任务按语言包命名');
+  assert.equal(vocab.alphabet.page, '/pages/fidel/fidel');
 
   // 今日页
   const indexPage = pageOf('index/index');

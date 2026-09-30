@@ -9,7 +9,7 @@ const STAR_RULES = {
   quiz_bonus: 10,   // 小测 ≥ 80%
   mission: 40,      // 实战任务
   score: 8,         // 跟读评分一次
-  fidel: 15         // Fidel 批次通过
+  alphabet: 15      // 字母批次通过
 };
 
 function ensure(p) {

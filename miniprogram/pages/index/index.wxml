@@ -90,11 +90,11 @@
     <view class="progress-bar gap-top"><view class="fill" style="width:{{weekPct}}%"></view></view>
   </view>
 
-  <view class="card row between" bindtap="goFidel">
-    <view class="square mint"><text class="am">ፊ</text></view>
+  <view class="card row between" bindtap="goAlphabet">
+    <view class="square mint"><text class="{{tc}}">{{tc === 'am' ? 'ፊ' : 'Q'}}</text></view>
     <view class="grow side-gap">
-      <view class="card-title">Fidel 字母表</view>
-      <view class="muted-2">本周学第 {{week.fidelGroup}} 批</view>
+      <view class="card-title">{{alphabetName}}</view>
+      <view class="muted-2">本周学第 {{week.alphabetGroup}} 批</view>
     </view>
     <x-icon name="chevron-right" size="32" color="#B08A78" />
   </view>

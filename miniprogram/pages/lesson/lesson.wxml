@@ -50,7 +50,8 @@
   </block>
 
   <block wx:if="{{tab==='dialog'}}">
-    <view class="dialog-hint">先看着转写读，再遮住转写读，最后只看中文说出来。</view>
+    <view class="dialog-hint" wx:if="{{hasRom}}">先看着转写读，再遮住转写读，最后只看中文说出来。</view>
+    <view class="dialog-hint" wx:else>先跟着读，再遮住中文自己说</view>
     <view class="line {{item.who==='A'?'a':'b'}}" wx:for="{{unit.dialog}}" wx:key="index">
       <view class="who">{{item.who}}</view>
       <view class="bubble">

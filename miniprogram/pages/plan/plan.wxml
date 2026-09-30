@@ -17,7 +17,7 @@
       <view class="grow muted-2">{{w.mission}}</view>
       <x-icon wx:if="{{w.missionDone}}" name="check" size="32" color="#2F7A5E" />
     </view>
-    <view class="line muted">里程碑：{{w.milestone}} · 单元 {{w.unitsDone}}/{{w.units.length}} · Fidel 第 {{w.fidelGroup}} 批</view>
+    <view class="line muted">里程碑：{{w.milestone}} · 单元 {{w.unitsDone}}/{{w.units.length}} · {{alphabetName}} 第 {{w.alphabetGroup}} 批</view>
     <view class="line" wx:if="{{w.extraTitle}}">
       <text class="tag gray">自选</text>
       <view class="grow muted">补充单元：{{w.extraTitle}}</view>

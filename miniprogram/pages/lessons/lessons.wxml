@@ -34,10 +34,10 @@
       <x-icon name="chevron-right" size="32" color="#B08A78" />
     </view>
 
-    <view class="list-item unit" data-group="{{w.fidelGroup}}" bindtap="goFidel">
-      <view class="usq mint"><text class="am">ፊ</text></view>
+    <view class="list-item unit" data-group="{{w.alphabetGroup}}" bindtap="goAlphabet">
+      <view class="usq mint"><text class="{{tc}}">{{tc === 'am' ? 'ፊ' : 'Q'}}</text></view>
       <view class="grow side-gap">
-        <view class="unit-title">Fidel 字母 第 {{w.fidelGroup}} 批</view>
+        <view class="unit-title">{{alphabetName}} 第 {{w.alphabetGroup}} 批</view>
         <view class="muted">和本周词汇绑定认读</view>
       </view>
       <x-icon name="chevron-right" size="32" color="#B08A78" />

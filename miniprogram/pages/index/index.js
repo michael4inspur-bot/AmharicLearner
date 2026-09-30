@@ -18,7 +18,7 @@ const TASK_STARS = {
   learn: R.learn_unit,
   quiz: R.quiz,
   mission: R.mission,
-  fidel: R.fidel,
+  alphabet: R.alphabet,
   dialog: 0,
   reflect: 0
 };
@@ -94,6 +94,7 @@ Page({
     const nb = points.nextBadge(p);
 
     this.setData({
+      alphabetName: pk.alphabet.name,
       pos,
       week,
       greet,
@@ -127,7 +128,7 @@ Page({
       case 'learn': d.done = !!p.unitsLearned[t.unit]; break;
       case 'quiz': d.done = p.quizScores.some((q) => q.date === today && (q.unit === t.unit || t.unit === 'week' || t.unit === 'all')); break;
       case 'mission': d.done = !!p.missions[t.missionKey]; break;
-      case 'fidel': d.done = !!p.fidelGroupsDone[t.group]; break;
+      case 'alphabet': d.done = !!p.fidelGroupsDone[t.group]; break;
       case 'dialog': d.done = !!p.unitsLearned[t.unit]; break;
       case 'reflect': d.done = !!p.reflections[t.reflectKey]; break;
       default: d.done = false;
@@ -147,7 +148,7 @@ Page({
         wx.navigateTo({ url: `/pages/quiz/quiz?scope=${scope}` });
         break;
       }
-      case 'fidel': wx.navigateTo({ url: `/pages/fidel/fidel?group=${t.group}` }); break;
+      case 'alphabet': wx.navigateTo({ url: `${langs.pack().alphabet.page}?group=${t.group}` }); break;
       case 'mission': this.confirmMission(t); break;
       case 'reflect': this.confirmReflect(t); break;
       default: break;
@@ -195,5 +196,5 @@ Page({
   goProfile() { wx.switchTab({ url: '/pages/profile/profile' }); },
   goSearch() { wx.navigateTo({ url: '/pages/search/search' }); },
   goReview() { wx.switchTab({ url: '/pages/review/review' }); },
-  goFidel() { wx.navigateTo({ url: `/pages/fidel/fidel?group=${this.data.week.fidelGroup}` }); }
+  goAlphabet() { wx.navigateTo({ url: `${langs.pack().alphabet.page}?group=${this.data.week.alphabetGroup}` }); }
 });

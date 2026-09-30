@@ -51,6 +51,14 @@ metas.forEach((meta) => {
     w.units.forEach((id) => assert.ok(p.getUnit(id), at(`第 ${w.week} 周单元 ${id} 不存在`)));
     if (w.extra) assert.ok(p.getUnit(w.extra), at(`第 ${w.week} 周自选单元 ${w.extra} 不存在`));
   });
+  assert.ok(typeof p.alphabet.name === 'string' && p.alphabet.name, at('alphabet.name'));
+  assert.ok(/^\/pages\/\w+\/\w+$/.test(p.alphabet.page), at('alphabet.page'));
+  p.plan.weeks.forEach((w) => assert.ok(Number.isInteger(w.alphabetGroup) && w.alphabetGroup >= 1 && w.alphabetGroup <= 5, at(`第 ${w.week} 周 alphabetGroup`)));
+  for (let wk = 1; wk <= p.plan.weeks.length; wk += 1) {
+    for (let d = 1; d <= 7; d += 1) {
+      p.plan.getDayTasks(wk, d).forEach((t) => assert.notEqual(t.type, 'fidel', at('任务类型已统一为 alphabet')));
+    }
+  }
   ['phone', 'site', 'formal'].forEach((k) => assert.ok(p.getUnit(p.badgeUnits[k]), at(`badgeUnits.${k}`)));
   assert.ok(Array.isArray(p.greetings) && p.greetings.length >= 3, at('greetings 至少 3 条：首页按下标 1、2 取早上好 / 下午好'));
   p.greetings.forEach((g, i) => checkText(g, `greetings[${i}]`));
