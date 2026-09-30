@@ -11,6 +11,18 @@ const ADMIN_LOG_LIMIT = 2000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const GATED_PREFIXES = ['tts.', 'stt.']; // 非 active 账号不可用
 const ADMIN_PREFIXES = ['user.', 'announcement.', 'admin.'];
+const PROGRESS_LANGS = ['am', 'om'];
+
+/** 进度的语言码：缺省为 am；不认识的返回 ''，由调用方回 BAD_REQUEST */
+function progressLang(v) {
+  if (v == null || v === '') return 'am';
+  return PROGRESS_LANGS.includes(v) ? v : '';
+}
+
+/** 阿姆哈拉语沿用 _id = openid（老数据零迁移），其他语言为 openid:lang */
+function progressId(openid, lang) {
+  return lang === 'am' ? openid : `${openid}:${lang}`;
+}
 
 function ok(data) { return { ok: true, data }; }
 function fail(code, error) { return { ok: false, code, error }; }
@@ -113,28 +125,36 @@ async function handle(action, data, ctx) {
 
   switch (action) {
     case 'progress.get': {
-      const doc = await db.getProgress(openid);
-      return ok(doc ? { progress: doc.progress, updatedAt: doc.updatedAt } : { progress: null, updatedAt: null });
+      const lang = progressLang(data.lang);
+      if (!lang) return fail('BAD_REQUEST', `lang 非法: ${data.lang}`);
+      const doc = await db.getProgress(progressId(openid, lang));
+      // 回显 lang：前端据此确认云函数已支持多语言，旧版云函数不会带这个字段
+      return ok(doc ? { progress: doc.progress, updatedAt: doc.updatedAt, lang } : { progress: null, updatedAt: null, lang });
     }
     case 'progress.put': {
       if (!data.progress || typeof data.progress !== 'object') return fail('BAD_REQUEST', 'progress 必须是对象');
+      const lang = progressLang(data.lang);
+      if (!lang) return fail('BAD_REQUEST', `lang 非法: ${data.lang}`);
+      const id = progressId(openid, lang);
       // 客户端可带上它上次读到的 updatedAt。云端更新过就拒绝，
       // 避免旧设备的快照静默覆盖新设备刚上传的进度。
       if (typeof data.baseUpdatedAt === 'string' && data.baseUpdatedAt) {
-        const current = await db.getProgress(openid);
+        const current = await db.getProgress(id);
         if (current && current.updatedAt && current.updatedAt > data.baseUpdatedAt) {
           return fail('CONFLICT', '云端有更新的进度，请先从云端恢复再上传');
         }
       }
       const updatedAt = now.toISOString();
-      await db.putProgress(openid, { progress: data.progress, updatedAt });
-      // 摘要只服务于管理端列表，写失败不能让已经存好的进度上传变成失败
-      try {
-        await putUserSummary(ctx, now, data.meta);
-      } catch (err) {
-        console.error('写入用户摘要失败', err);
+      await db.putProgress(id, { progress: data.progress, updatedAt });
+      // 摘要只服务于管理端列表，只看阿姆哈拉语；写失败不能让已经存好的进度上传变成失败
+      if (lang === 'am') {
+        try {
+          await putUserSummary(ctx, now, data.meta);
+        } catch (err) {
+          console.error('写入用户摘要失败', err);
+        }
       }
-      return ok({ updatedAt });
+      return ok({ updatedAt, lang });
     }
     case 'usage.get':
       return usageGet(ctx, now);

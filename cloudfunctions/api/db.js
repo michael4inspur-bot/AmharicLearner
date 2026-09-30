@@ -125,7 +125,7 @@ module.exports = {
   },
   /** 删除某用户的 progress 文档与全部 ai_logs（where().remove() 服务端一次删多条）。 */
   async deleteUserData(openid) {
-    await db.collection(PROGRESS).where({ _id: openid }).remove();
+    await db.collection(PROGRESS).where({ _id: _.in([openid, `${openid}:om`]) }).remove();
     await db.collection(LOGS).where({ openid }).remove();
   },
   /** @returns {Promise<object|null>} settings 文档 */

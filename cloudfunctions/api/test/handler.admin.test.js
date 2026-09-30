@@ -171,12 +171,14 @@ test('admin.deleteUser：进度与日志被删，users 文档变 blocked 且保�
   await withEnv({ ADMIN_OPENIDS: 'u1' }, async () => {
     const db = createFakeDb();
     await db.putProgress('u2', { progress: { streak: 3 }, updatedAt: NOW });
+    await db.putProgress('u2:om', { progress: { streak: 1 }, updatedAt: NOW });
     await db.putUser('u2', { nickname: '小王', status: 'active', week: 2, streak: 3, stars: 9 });
     await db.addAiLog(log('u2', 'chat', '2026-09-11T08:00:00.000Z', { reply: 'a' }));
     await db.addAiLog(log('u1', 'chat', '2026-09-11T08:00:00.000Z', { reply: 'keep' }));
     const res = await handle('admin.deleteUser', { openid: 'u2', confirm: true }, ctx({ openid: 'u1', db }));
     assert.deepEqual(res, { ok: true, data: { deleted: true } });
     assert.equal(await db.getProgress('u2'), null);
+    assert.equal(await db.getProgress('u2:om'), null, '奥罗莫语进度一并删除');
     assert.deepEqual(db._logs.map((l) => l.openid), ['u1']);
     const doc = await db.getUser('u2');
     assert.equal(doc.status, 'blocked');
