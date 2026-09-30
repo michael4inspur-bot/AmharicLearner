@@ -136,8 +136,7 @@ async function main() {
   progress.recordQuiz('u01', 8, 10);
   progress.addMinutes(12);
   progress.completeMission('w1');
-  const s = progress.summary();
-  assert.equal(s.streak, 1);
+  assert.equal(progress.streak(), 1);
   assert.equal(plan.planOutline().weeks.length, 8);
   plan.weeks.forEach((w) => w.units.forEach((id) => assert.ok(vocab.getUnit(id), 'unit ' + id)));
 

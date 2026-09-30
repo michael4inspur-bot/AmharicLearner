@@ -3,6 +3,8 @@
 面向在埃塞俄比亚工作/生活的中文使用者的阿姆哈拉语速成微信小程序，以工作沟通为主线。
 8 周学习计划按成人学习特性设计，面向 IT / 通信 / 设备交付行业的司机后勤、一线班组、办公室同事、客户与政府沟通，接 Azure 语音做阿姆哈拉语朗读与发音评分。
 
+第二版起支持奥罗莫语（试用版），在首页顶部或「我的 → 学习语言」切换，两种语言进度分开。
+
 ## 功能
 
 | 模块 | 说明 |
@@ -27,12 +29,15 @@ miniprogram/            微信小程序（原生 WXML/WXSS/JS，无第三方依�
   config.js             云开发环境 id
   langs/index.js        语言包注册表（当前语言、切换、订阅）
   langs/am/             阿姆哈拉语：vocab.js 词库、plan.js 8 周计划、alphabet.js Fidel 字母表、index.js 元数据与界面文案
+  langs/om/             奥罗莫语（试用版）：vocab.js、plan.js、alphabet.js（Qubee 拼写规则）、index.js
+  langs/plan-engine.js  8 周计划任务生成（两种语言共用）
   utils/srs.js          SM-2 算法
-  utils/progress.js     进度存储、统计、给 AI 的摘要
+  utils/progress.js     进度存储、统计
   utils/api.js          云函数调用封装
   utils/sync.js         进度自动同步
   utils/audio.js        语音播放、本地缓存、预取
   pages/                11 个页面（含 speak 跟读评分）
+  pages/qubee/          Qubee 字母规则与小测
 cloudfunctions/api/     微信云函数：进度存储 + Azure 语音
   handler.js            纯逻辑（可本地测试）
   prompts.js            提示词（含成人学习原则）
@@ -42,6 +47,7 @@ cloudfunctions/api/     微信云函数：进度存储 + Azure 语音
   storage.js            云存储适配器
   db.js                 云数据库适配器
 scripts/sim-miniprogram.js  小程序端到端模拟
+scripts/gen-oromo-review.js  生成母语者校对表 docs/oromo-review.md
 docs/learning-plan.md   学习计划设计说明
 docs/superpowers/       设计 spec 与实施计划
 ```
@@ -232,6 +238,12 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 代价是由转写反推 Fidel 不唯一（`te` 既可能是 ተ 也可能是 ጠ），但词库全篇如此，两边必须统一。字母表的认读自测按转写判对错，同音字母共用一个转写不会判错。
 
 按这套规则逐字拼出的转写，与词库 378 条词句的实际写法一致率 92%，剩下的差异是双辅音（birr、alle）、ayin 撇号（se'at）这类词一级的拼写选择，逐字表生成不了。改规则前的一致率是 33%。
+
+## 奥罗莫语（试用版）
+
+奥罗莫语（Afaan Oromoo）内容为初稿，需母语者按 [docs/oromo-review.md](docs/oromo-review.md) 逐行校对；校对前入口显示「试用版」。校对表由 `node scripts/gen-oromo-review.js` 从词库生成，`npm test` 会检查它与词库一致，改了词库记得重新生成。
+
+语音将在后续版本上线，目前奥罗莫语不显示朗读、听力和跟读入口。
 
 ## 学习计划概览
 

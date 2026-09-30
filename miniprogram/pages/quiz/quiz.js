@@ -30,7 +30,7 @@ Page({
     // 自动播放：失败静默，用户没点任何按钮，不该被要求登录
     if (cur && cur.listen && cur.audioText) audio.speak(cur.audioText, { silent: true });
   },
-  /** 听力题大圆钮与题面小喇叭共用：播当前题的阿姆哈拉语 */
+  /** 听力题大圆钮与题面小喇叭共用：播当前题的原文 */
   playCurrent() {
     const cur = this.data.current;
     if (!cur) return;

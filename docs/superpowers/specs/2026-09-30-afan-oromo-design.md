@@ -59,14 +59,14 @@ miniprogram/langs/
 - 本地进度：阿姆哈拉语仍是 `progress_v1`，奥罗莫语 `progress_om_v1`。星星、徽章、复习卡片、周任务各语言独立。
 - 云端进度：`progress.get` / `progress.put` 增加可选参数 `lang`。阿姆哈拉语文档仍是 `_id = openid`（老数据零迁移），奥罗莫语 `_id = openid + ':om'`。冲突检测（`baseUpdatedAt`）按文档各自进行。
 - 用户摘要（管理端列表）只由阿姆哈拉语的上传写入，保持现状。
-- 徽章里写死的 `u14/u15/u16`、`missions.w1/w4` 改为读当前语言包的配置。
+- 徽章里写死的 `u14/u15/u16` 改为读当前语言包的配置。实战任务键 `missions.w1/w4` 不改为语言包配置：两种语言的 8 周结构一致，任务键按周编号，进度又按语言分开存，不会串。
 
 ### 2.4 字母页
 
-`pages/fidel` 改名为 `pages/alphabet`，按 `meta.script` 渲染：
+不把 `pages/fidel` 改名为通用页，而是保留 `pages/fidel`（阿姆哈拉语）、新增 `pages/qubee`（奥罗莫语），由语言包的 `alphabet.page` 决定跳转。两种文字的交互完全不同，拆成两页比一个页面里分支渲染简单，也不影响现有 Fidel 页。
 
-- `ethiopic`：现有 Fidel 字母表，功能不变。
-- `latin`：Qubee 页，按以下几项讲解，每项配例词与发音：元音长短（`a`/`aa`）、辅音重读（`d`/`dd`）、撇号 `'`（hudhaa，喉塞音）、双字母 `ch dh ny ph sh`、特殊字母 `c q x`。
+- `pages/fidel`（`ethiopic`）：现有 Fidel 字母表，功能不变。
+- `pages/qubee`（`latin`）：Qubee 页，按以下几项讲解，每项配例词与发音：元音长短（`a`/`aa`）、辅音重读（`d`/`dd`）、撇号 `'`（hudhaa，喉塞音）、双字母 `ch dh ny ph sh`、特殊字母 `c q x`。
 
 计划里的 `type: 'fidel'` 任务改为 `type: 'alphabet'`，文案取自语言包。
 
@@ -104,6 +104,7 @@ miniprogram/langs/
   - 本地缓存 key：阿姆哈拉语保持 `voice|rate|text`（老缓存继续有效），奥罗莫语为 `om|rate|text`。
   - 奥罗莫语自动播放（`silent`）不再因为未登录而跳过。
   - 上一轮的「先云存储下载 → 换源 → 坏缓存重下」逻辑全部复用。
+- PR 2 起语言包有 `audio` 开关；奥罗莫语语音上线前为 false。
 - 设置：`meta.voices` 只有一种时隐藏「男声 / 女声」，保留语速。
 - 小测听力题、复习「先听再看」：奥罗莫语不要求登录即可出现。
 

@@ -266,65 +266,7 @@ function completeAlphabetGroup(group) {
   return save(p);
 }
 
-// ---------- 给 AI 的摘要 ----------
-function summary(p) {
-  p = p || load();
-  const pos = currentPosition(p);
-  const plannedUnits = langs.pack().plan.weeks.slice(0, pos.week).flatMap((w) => w.units);
-  const learned = Object.keys(p.unitsLearned);
-  const titles = (ids) => ids.map((id) => { const u = langs.pack().getUnit(id); return u ? `${id} ${u.title}` : id; });
-
-  const quizByUnit = {};
-  p.quizScores.forEach((q) => {
-    const k = q.unit;
-    if (!quizByUnit[k]) quizByUnit[k] = { unit: k, attempts: 0, best: 0, last: 0 };
-    const pct = Math.round((q.score / q.total) * 100);
-    quizByUnit[k].attempts += 1;
-    quizByUnit[k].best = Math.max(quizByUnit[k].best, pct);
-    quizByUnit[k].last = pct;
-  });
-
-  const days14 = [];
-  let correct7 = 0; let wrong7 = 0;
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date(); d.setDate(d.getDate() - i);
-    const k = todayStr(d);
-    const l = p.logs[k] || { minutes: 0, correct: 0, wrong: 0 };
-    days14.push({ date: k.slice(5), minutes: l.minutes });
-    if (i < 7) { correct7 += l.correct; wrong7 += l.wrong; }
-  }
-  const retention7d = correct7 + wrong7 ? Math.round((correct7 / (correct7 + wrong7)) * 100) : null;
-
-  const weakItems = Object.keys(p.srs)
-    .map((id) => ({ id, lapses: p.srs[id].lapses || 0 }))
-    .filter((x) => x.lapses > 0)
-    .sort((a, b) => b.lapses - a.lapses)
-    .slice(0, 10)
-    .map((x) => { const it = langs.pack().getItem(x.id); return it ? { text: it.text, zh: it.zh, lapses: x.lapses } : null; })
-    .filter(Boolean);
-
-  const stats = srsStats(p);
-  return {
-    today: todayStr(),
-    startDate: p.startDate,
-    currentWeek: pos.week,
-    currentDay: pos.day,
-    dailyMinutesGoal: p.dailyMinutesGoal,
-    newCardsPerDay: p.newCardsPerDay,
-    streak: streak(p),
-    unitsPlannedSoFar: titles(plannedUnits),
-    unitsLearned: titles(learned),
-    unitsBehind: titles(plannedUnits.filter((id) => !p.unitsLearned[id])),
-    quiz: Object.values(quizByUnit),
-    srs: { total: stats.total, due: stats.due, mature: stats.mature, retention7d, wrong7d: wrong7, reviews7d: correct7 + wrong7 },
-    minutesLast14: days14,
-    missionsDone: Object.keys(p.missions),
-    fidelGroupsDone: Object.keys(p.fidelGroupsDone).map(Number),
-    weakItems,
-  };
-}
-
 module.exports = {
   todayStr, keyOf, load, save, reset, replace, sanitize, isEmpty, setOnSaved, currentPosition, todayLog, addMinutes, streak,
-  learnUnit, dueCards, gradeCard, srsStats, recordQuiz, completeMission, completeReflection, completeAlphabetGroup, summary
+  learnUnit, dueCards, gradeCard, srsStats, recordQuiz, completeMission, completeReflection, completeAlphabetGroup
 };

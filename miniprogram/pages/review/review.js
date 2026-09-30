@@ -75,7 +75,7 @@ Page({
     // 自动播放：失败静默，用户没点任何按钮，不该被要求登录
     if (this.data.mode === 'listen' && cur && cur.text) audio.speak(cur.text, { silent: true });
   },
-  /** 播当前卡的阿姆哈拉语（catchtap，不触发翻面） */
+  /** 播当前卡的原文（catchtap，不触发翻面） */
   play() {
     const cur = this.data.current;
     if (cur && cur.text) audio.speak(cur.text);
