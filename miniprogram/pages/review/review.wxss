@@ -81,3 +81,4 @@
 .done-am { font-size: 64rpx; line-height: 1.3; }
 .done-stars { margin: 18rpx 0 10rpx; font-size: 26rpx; }
 .done-title { font-size: 32rpx; font-weight: 800; margin-bottom: 10rpx; }
+.fc-syn { margin-top: 8rpx; }

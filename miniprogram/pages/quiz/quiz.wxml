@@ -9,7 +9,7 @@
     <view class="card qcard">
       <block wx:if="{{current.listen}}">
         <view class="q-play" wx:if="{{audio}}" bindtap="playCurrent"><x-icon name="speaker" size="72" color="#FFFFFF" /></view>
-        <view class="q-kind">听音选意思</view>
+        <view class="q-kind">听音选意思<text class="syn-tag" wx:if="{{voiceNote}}">{{voiceNote}}</text></view>
         <view class="muted">听不清可以再点一次</view>
       </block>
       <block wx:else>

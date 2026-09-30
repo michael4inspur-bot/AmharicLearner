@@ -13,6 +13,7 @@ const meta = {
   scoring: true,
   beta: false,
   audio: true,
+  voiceNote: '',
   ttsLogin: true,
   strings: {
     langName: '阿姆哈拉语',

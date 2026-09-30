@@ -18,6 +18,7 @@
       <view class="chip mint" bindtap="playStandard">
         <x-icon name="speaker" size="32" color="#1E5C45" />
         <text>标准音</text>
+        <text class="syn-tag" wx:if="{{voiceNote}}">{{voiceNote}}</text>
       </view>
       <view class="chip lav {{tempFilePath?'':'dim'}}" bindtap="playMine">
         <x-icon name="play" size="30" color="#4C3D8F" />

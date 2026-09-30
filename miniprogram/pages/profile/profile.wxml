@@ -165,6 +165,7 @@
   <view class="card">
     <view class="card-title">关于</view>
     <view class="muted">Amharic Learner · {{L.about}}学习计划依据成人学习特性设计：知道为什么学、自主导向、经验为本、问题驱动、微学习、间隔重复。</view>
+    <view class="muted-2 about-credit">奥罗莫语发音：Meta MMS 开源模型（facebook/mms-tts-orm，CC BY-NC 4.0）预先合成，仅供学习参考。</view>
     <view class="divider"></view>
     <view class="list-item row between update-row">
       <view class="grow">

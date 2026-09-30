@@ -102,4 +102,17 @@ assert.ok(!/pagePath:\s*['"][^'"]*coach/.test(tabBarSrc), '自定义 tabBar 里�
 assert.notEqual(app.__usePrivacyCheck__, true,
   'app.json 打开了 __usePrivacyCheck__；后台指引配好之前请保持关闭（见 README 合规说明）');
 
+// ---------- 4. 奥罗莫语合成语音的标注与署名 ----------
+const mustTag = ['lesson/lesson', 'review/review', 'quiz/quiz', 'speak/speak', 'search/search'];
+mustTag.forEach((p) => {
+  const f = path.join(root, 'pages', `${p}.wxml`);
+  const src = fs.readFileSync(f, 'utf8');
+  assert.ok(/wx:if\s*=\s*['"]\{\{\s*voiceNote\s*\}\}['"]/.test(src) && /\{\{\s*voiceNote\s*\}\}/.test(src), `${rel(f)} 的朗读入口旁缺少「合成音」标注（voiceNote）`);
+});
+const privacySrc = fs.readFileSync(path.join(root, 'utils', 'privacy.js'), 'utf8');
+const aboutSrc = fs.readFileSync(path.join(root, 'pages', 'profile', 'profile.wxml'), 'utf8');
+[['utils/privacy.js', privacySrc], ['pages/profile/profile.wxml', aboutSrc]].forEach(([name, src]) => {
+  assert.ok(/MMS/.test(src) && /mms-tts-orm/.test(src) && /CC BY-NC 4\.0/.test(src), `${name} 缺少奥罗莫语语音模型署名（Meta MMS、facebook/mms-tts-orm、CC BY-NC 4.0）`);
+});
+
 console.log(`OK: 合规静态检查通过（扫描 ${srcFiles.length} 个源文件）`);

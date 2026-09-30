@@ -5,7 +5,7 @@
       <x-icon name="chevron-left" size="30" color="#7C5A4C" />
       <text class="hero-back-text">第 {{unit.week}} 周 · 单元</text>
     </view>
-    <view class="hero-title">{{unit.title}}</view>
+    <view class="hero-title">{{unit.title}}<text class="syn-tag" wx:if="{{voiceNote}}">{{voiceNote}}</text></view>
     <view class="hero-scene">{{unit.scene}}</view>
     <view class="hero-why">
       <text class="why-label">为什么学 · </text>

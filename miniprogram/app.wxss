@@ -149,3 +149,6 @@ textarea.input.on-card, input.input.on-card { background: var(--bg); box-shadow:
 @keyframes pulse { 0% { transform: scale(1); } 40% { transform: scale(1.03); } 100% { transform: scale(1); } }
 .pop { animation: pop 240ms ease-out both; }
 .pulse { animation: pulse 300ms ease-out both; }
+
+/* 合成语音标注（奥罗莫语朗读为模型预生成） */
+.syn-tag { display: inline-block; font-size: 20rpx; line-height: 1.6; padding: 0 10rpx; border-radius: 8rpx; background: var(--lav, #EEEAFB); color: #4C3D8F; margin-left: 8rpx; vertical-align: middle; }

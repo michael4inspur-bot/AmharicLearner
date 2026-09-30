@@ -14,6 +14,7 @@ const meta = {
   scoring: false,
   beta: true,
   audio: true,
+  voiceNote: '合成音',
   ttsLogin: false,
   strings: {
     langName: '奥罗莫语',

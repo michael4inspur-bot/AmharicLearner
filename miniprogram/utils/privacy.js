@@ -8,16 +8,17 @@ const ITEMS = [
 ];
 
 const THIRD_PARTIES = [
-  { name: 'Microsoft Azure 语音（朗读与发音评分）', data: '待朗读的阿姆哈拉语文本、跟读录音' },
+  { name: 'Microsoft Azure 语音（朗读与发音评分）', data: '待朗读的阿姆哈拉语文本、阿姆哈拉语跟读录音' },
   { name: '微信云开发（存储与云函数）', data: '以上全部数据的存储与处理' }
 ];
 
 const AIGC = [
   '朗读语音由语音合成生成，发音评分由语音识别自动判定，只反映识别结果，不是权威口语评价。',
+  '奥罗莫语发音为 Meta MMS 开源模型（facebook/mms-tts-orm，CC BY-NC 4.0）预先合成的机器语音，界面标有「合成音」，可能与真人发音有差异；阿姆哈拉语朗读由 Azure 语音实时合成。',
   '对自动生成的内容有异议，或发现不当内容，可在「我的」或本页点「意见反馈」提交，管理员会核查处理。',
   '你可以随时在「我的」页清空本地进度；需要删除云端账号与全部数据，请联系管理员或通过意见反馈提出。'
 ];
 
-const UPDATED = '2026-09-29';
+const UPDATED = '2026-09-30';
 
 module.exports = { ITEMS, THIRD_PARTIES, AIGC, UPDATED };
