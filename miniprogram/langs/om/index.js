@@ -38,7 +38,7 @@ const greetings = [
   { text: 'Akkam bulte?', zh: '早上好（昨晚过得好吗）' },
   { text: 'Akkam oolte?', zh: '下午好（今天过得好吗）' },
   { text: "Baay'ee gaarii!", zh: '非常好！' },
-  { text: 'Afaan Oromoo nan barachaa jira', zh: '我在学奥罗莫语' }
+  { text: 'Ani Afaan Oromoo barachaa jira', zh: '我在学奥罗莫语' }
 ];
 
 // 徽章绑定的单元：电话达人 / 现场指挥 / 敬语大师

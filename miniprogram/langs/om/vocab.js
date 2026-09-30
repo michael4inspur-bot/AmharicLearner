@@ -189,8 +189,8 @@ const units = [
       { id: 'om-u05-04', text: 'Gara Boolee meeqa?', zh: '去博莱多少钱？' },
       { id: 'om-u05-05', text: 'Asitti', zh: '这里', note: '也说 as' },
       { id: 'om-u05-06', text: 'Achitti', zh: '那里', note: '也说 achi' },
-      { id: 'om-u05-07', text: 'Mirga', zh: '右', note: '右转：Mirgatti gori' },
-      { id: 'om-u05-08', text: 'Bitaa', zh: '左', note: '左转：Bitaatti gori' },
+      { id: 'om-u05-07', text: 'Mirga', zh: '右', note: '右转：Gara mirgaatti gori' },
+      { id: 'om-u05-08', text: 'Bitaa', zh: '左', note: '左转：Gara bitaatti gori' },
       { id: 'om-u05-09', text: 'Qajeelaa deemi', zh: '直走' },
       { id: 'om-u05-10', text: 'Dhaabi', zh: '停（熟人）', note: '敬称：Dhaabaa；这里停：Asitti dhaabi' },
       { id: 'om-u05-11', text: 'Asitti nan bu\'a', zh: '我在这儿下车（小巴用语）' },
@@ -213,7 +213,7 @@ const units = [
       { who: 'B', text: 'Qarshii dhibba sadii.', zh: '三百比尔。' },
       { who: 'A', text: 'Qaalii dha. Dhibba lama?', zh: '太贵了。两百？' },
       { who: 'B', text: 'Tole, seeni.', zh: '好，上车吧。' },
-      { who: 'A', text: 'Qajeelaa deemi... asitti mirgatti gori... tole, asitti dhaabi.', zh: '直走……这里右转……好，这里停。' }
+      { who: 'A', text: 'Qajeelaa deemi... asitti gara mirgaatti gori... tole, asitti dhaabi.', zh: '直走……这里右转……好，这里停。' }
     ]
   },
   {
@@ -313,7 +313,7 @@ const units = [
     why: '前面学的都是"积木"，这一单元是"粘合剂"。掌握 7 个代词、"有 / 在"、7 个疑问词和"我的 / 你的"，就能自己造出大部分生存句。',
     tips: [
       'jira 既是"有"也是"在"：Bishaan jiraa? 有水吗？ Caalaan jiraa? 查拉在吗？',
-      '疑问词放在动词前，不用调整语序：Maqaan kee eenyu?（你的名字 谁）。',
+      '疑问词放在动词前，不用调整语序：Eessa deemta?（哪里 去 → 去哪儿？）。',
       '"我的 / 你的"放在名词后面：maqaa koo（我的名字）；名词作主语时加 -n：Maqaan koo Lii dha。'
     ],
     items: [
@@ -366,7 +366,7 @@ const units = [
       { id: 'om-u09-04', text: 'Xiqqaa', zh: '小' },
       { id: 'om-u09-05', text: 'Ho\'aa', zh: '热' },
       { id: 'om-u09-06', text: 'Qabbanaa\'aa', zh: '冷' },
-      { id: 'om-u09-07', text: 'Haaraa', zh: '新', note: '亚的斯亚贝巴的奥罗莫语名是 Finfinnee' },
+      { id: 'om-u09-07', text: 'Haaraa', zh: '新', note: 'mana haaraa 新房子' },
       { id: 'om-u09-08', text: 'Moofaa', zh: '旧' },
       { id: 'om-u09-09', text: 'Bareedaa', zh: '漂亮' },
       { id: 'om-u09-10', text: 'Qulqulluu', zh: '干净' },
@@ -460,7 +460,7 @@ const units = [
       { id: 'om-u11-15', text: 'Nan barbaada', zh: '我想要' },
       { id: 'om-u11-16', text: 'Deemuu qaba', zh: '我必须走', note: '动词原形 + qaba = 必须：Hojjechuu qaba 我必须工作' },
       { id: 'om-u11-17', text: 'Gara hojii nan deema', zh: '我去上班' },
-      { id: 'om-u11-18', text: 'Afaan Oromoo nan barachaa jira', zh: '我在学奥罗莫语' },
+      { id: 'om-u11-18', text: 'Ani Afaan Oromoo barachaa jira', zh: '我在学奥罗莫语' },
       { id: 'om-u11-19', text: 'Buna nan dhuga', zh: '我喝咖啡' },
       { id: 'om-u11-20', text: 'Boru nan dhufa', zh: '我明天来' }
     ],
@@ -627,13 +627,13 @@ const units = [
       { id: 'om-u15-05', text: 'Irra deebi\'i', zh: '再说一遍（熟人）', note: '敬称：Irra deebi\'aa' },
       { id: 'om-u15-06', text: 'Suuta dubbadhu', zh: '慢点说（熟人）', note: '敬称：Suuta dubbadhaa' },
       { id: 'om-u15-07', text: 'Xiqqoo eegi', zh: '稍等（熟人）', note: '敬称：Xiqqoo eegaa' },
-      { id: 'om-u15-08', text: 'Booda sitti bilbila', zh: '我一会儿打给你（熟人）', note: '对您：Booda isinitti bilbila' },
+      { id: 'om-u15-08', text: 'Booda sitti nan bilbila', zh: '我一会儿打给你（熟人）', note: '对您：Booda isinitti nan bilbila' },
       { id: 'om-u15-09', text: 'Ergaa', zh: '消息 / 短信' },
       { id: 'om-u15-10', text: 'Naaf ergi', zh: '发给我（熟人）', note: '敬称：Naaf ergaa' },
       { id: 'om-u15-11', text: 'Telegiraamii', zh: '电报（Telegram，常用聊天软件）', note: 'Telegiraamiin naaf ergi 用 Telegram 发我' },
       { id: 'om-u15-12', text: 'Lakkoofsa kee naaf kenni', zh: '把你的号码给我（熟人）', note: '敬称：Lakkoofsa keessan naaf kennaa' },
       { id: 'om-u15-13', text: 'Hojii baay\'ee qaba', zh: '我很忙', note: '字面：我有很多工作' },
-      { id: 'om-u15-14', text: 'Karaa irra jira', zh: '我在路上' },
+      { id: 'om-u15-14', text: 'Karaa irran jira', zh: '我在路上' },
       { id: 'om-u15-15', text: 'Ga\'eera', zh: '我到了', note: '也说 Nan ga\'e' },
       { id: 'om-u15-16', text: 'Harkifadheera', zh: '我迟到了 / 我晚了' },
       { id: 'om-u15-17', text: 'Sa\'aatii meeqatti geessa?', zh: '你几点到？（熟人）', note: '敬称：Sa\'aatii meeqatti geessu?' },
@@ -644,12 +644,12 @@ const units = [
       { id: 'om-u15-22', text: 'Chaaw', zh: '再见（口语，电话常用）', note: '来自意大利语 ciao；正式一点说 Nagaatti' },
       { id: 'om-u15-23', text: 'Bilbilli hin hojjetu', zh: '电话打不通 / 手机不工作' },
       { id: 'om-u15-24', text: 'Ammas bilbili', zh: '再打一次（熟人）', note: '敬称：Ammas bilbilaa' },
-      { id: 'om-u15-25', text: 'Si eega', zh: '我等你（熟人）', note: '对您：Isin eega' }
+      { id: 'om-u15-25', text: 'Si nan eega', zh: '我等你（熟人）', note: '对您：Isin nan eega' }
     ],
     dialog: [
       { who: 'A', text: 'Haloo, eenyu dubbata?', zh: '喂，是谁？' },
       { who: 'B', text: 'Akkam, ani Caalaa dha. Eessa jirta?', zh: '你好，我是查拉。你在哪儿？' },
-      { who: 'A', text: 'Karaa irra jira. Harkifadheera, dhiifama.', zh: '我在路上。我晚了，抱歉。' },
+      { who: 'A', text: 'Karaa irran jira. Harkifadheera, dhiifama.', zh: '我在路上。我晚了，抱歉。' },
       { who: 'B', text: 'Rakkoo hin qabu. Sa\'aatii meeqatti geessa?', zh: '没关系。你几点到？' },
       { who: 'A', text: 'Daqiiqaa kudhan keessatti.', zh: '十分钟内。' },
       { who: 'B', text: 'Tole, si eega. Nagaatti.', zh: '好，我等你。再见。' }

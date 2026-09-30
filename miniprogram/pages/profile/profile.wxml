@@ -131,7 +131,7 @@
       <view class="card-title" style="margin-bottom:0">云端同步</view>
       <text class="tag {{cloudReady ? 'mint' : 'gray'}}">{{cloudReady ? '已连接' : '未配置'}}</text>
     </view>
-    <view class="muted" style="margin-top:10rpx">{{cloudReady ? '微信云开发，进度会自动同步。' : '还没配置云环境，请管理员在 miniprogram/config.js 填写 cloudEnv。'}}</view>
+    <view class="muted" style="margin-top:10rpx">{{cloudReady ? '微信云开发，进度会自动同步。当前语言：' + L.langName + '，每种语言的进度分开保存。' : '还没配置云环境，请管理员在 miniprogram/config.js 填写 cloudEnv。'}}</view>
     <view class="usage" wx:if="{{usage}}">
       <view class="usage-row">
         <view class="usage-cell">
@@ -193,6 +193,6 @@
       <x-icon name="chevron-right" size="28" color="#9C8C82" />
     </view>
     <button class="btn ghost" open-type="feedback">意见反馈</button>
-    <view class="btn danger" bindtap="resetAll">清空全部进度</view>
+    <view class="btn danger" bindtap="resetAll">清空{{L.langName}}进度</view>
   </view>
 </view>

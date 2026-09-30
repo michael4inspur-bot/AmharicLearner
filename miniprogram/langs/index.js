@@ -3,6 +3,8 @@
 const KEY = 'lang_v1';
 const DEFAULT = 'am';
 
+const config = require('../config.js');
+
 const packs = { am: require('./am/index.js'), om: require('./om/index.js') };
 const order = ['am', 'om'];
 let cur = '';
@@ -15,17 +17,24 @@ function readStored() {
   } catch (e) { return ''; }
 }
 
-/** 当前语言码；存储里的值无效时回退到缺省语言 */
-function current() {
-  if (cur && packs[cur]) return cur;
-  const v = readStored();
-  cur = packs[v] ? v : DEFAULT;
-  return cur;
+/** 语言是否对用户可见：config.showBetaLangs === false 时隐藏试用版（meta.beta）语言 */
+function visible(code) {
+  if (!packs[code]) return false;
+  return !(config.showBetaLangs === false && packs[code].meta.beta);
 }
 
-/** 切换语言并持久化；未注册的语言返回 false。语言真的变化才通知订阅者 */
+/** 当前语言码；存储里的值无效或已隐藏时回退到缺省语言（不改存储，重新显示后回到原语言） */
+function current() {
+  if (!cur || !packs[cur]) {
+    const v = readStored();
+    cur = packs[v] ? v : DEFAULT;
+  }
+  return visible(cur) ? cur : DEFAULT;
+}
+
+/** 切换语言并持久化；未注册或已隐藏的语言返回 false。语言真的变化才通知订阅者 */
 function set(code) {
-  if (!packs[code]) return false;
+  if (!visible(code)) return false;
   const changed = code !== current();
   cur = code;
   try { if (typeof wx !== 'undefined' && typeof wx.setStorageSync === 'function') wx.setStorageSync(KEY, code); } catch (e) { /* ignore */ }
@@ -45,7 +54,8 @@ function view(code) {
   const m = meta(code);
   return { L: m.strings, tc: m.script === 'ethiopic' ? 'am' : 'latin', hasRom: m.hasRom, audio: m.audio };
 }
-function list() { return order.map((c) => packs[c].meta); }
+/** 语言入口列表（按 order），不含已隐藏的试用版语言 */
+function list() { return order.filter(visible).map((c) => packs[c].meta); }
 
 /** 订阅语言切换，返回取消订阅函数 */
 function onChange(fn) {

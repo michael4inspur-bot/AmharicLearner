@@ -33,7 +33,7 @@
     </view>
     <view class="card qbox">
       <view class="{{tc}} big">{{q.text}}</view>
-      <view class="muted">这个词是什么意思？</view>
+      <view class="muted">这是什么意思？</view>
     </view>
     <view class="opt {{qPicked ? (item === q.answer ? 'right pulse' : (item === qPicked ? 'wrong pulse' : 'dim')) : ''}}"
           wx:for="{{q.options}}" wx:key="*this" data-opt="{{item}}" bindtap="pickQ">{{item}}</view>

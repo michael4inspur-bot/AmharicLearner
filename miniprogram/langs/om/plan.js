@@ -31,11 +31,11 @@ const weeks = [
     week: 3,
     theme: '电话沟通 + 交通方位',
     goal: '接打电话不慌：能说我在哪、几点到、听不清请再说一遍；能指路。',
-    why: '电话没有手势表情，是最难的场景；本周先把 Haloo、Karaa irra jira、Irra deebi\'i 这些"撑住一通电话"的句子练到反射。',
+    why: '电话没有手势表情，是最难的场景；本周先把 Haloo、Karaa irran jira、Irra deebi\'i 这些"撑住一通电话"的句子练到反射。',
     units: ['om-u15', 'om-u05'],
     extra: 'om-u03',
     alphabetGroup: 3,
-    mission: '给一位本地同事打一个奥罗莫语电话：用 Karaa irra jira（我在路上）说明你在哪，用 Daqiiqaa kudhan keessatti（十分钟内）说几点到，听不清就说 Irra deebi\'i。',
+    mission: '给一位本地同事打一个奥罗莫语电话：用 Karaa irran jira（我在路上）说明你在哪，用 Daqiiqaa kudhan keessatti（十分钟内）说几点到，听不清就说 Irra deebi\'i。',
     milestone: '独立完成一通 1 分钟的电话'
   },
   {
@@ -116,5 +116,7 @@ module.exports = createPlan({
   weeks,
   week8Missions: WEEK8_MISSIONS,
   principles,
-  alphabet: { name: 'Qubee 字母', groupDesc: '读本批拼写规则与例词，做 10 题小测', finalDesc: '全部拼写规则综合自测' }
+  alphabet: { name: 'Qubee 字母', groupDesc: '读本批拼写规则与例词，做 10 题小测', finalDesc: '全部拼写规则综合自测' },
+  // 没有转写、暂无跟读评分：对话读到不看中文
+  dialog: { desc: '本周单元的对话，读到不看中文', secondDesc: '第二个单元的对话，同样读到不看中文' }
 });

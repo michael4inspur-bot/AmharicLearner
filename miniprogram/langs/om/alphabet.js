@@ -14,6 +14,7 @@ const groups = [
         examples: [
           { text: 'Lama', zh: '二' },
           { text: 'Sagal', zh: '九' },
+          { text: 'Tole', zh: '好的 / 行' },
           { text: 'Boru', zh: '明天' },
           { text: 'Miti', zh: '不是' }
         ]
@@ -25,6 +26,7 @@ const groups = [
           { text: 'Maaloo', zh: '请' },
           { text: 'Muuzii', zh: '香蕉' },
           { text: 'Sadii', zh: '三' },
+          { text: 'Siree', zh: '床' },
           { text: 'Gabaa', zh: '市场' }
         ]
       },
@@ -74,8 +76,11 @@ const groups = [
         pattern: 'll mm nn rr yy',
         zh: '双写的响音：把音拖长，nn 像「嗯—n」，ll 像拉长的 l',
         examples: [
+          { text: 'Ollaa', zh: '邻居' },
+          { text: 'Amma', zh: '现在' },
           { text: 'Aannan', zh: '牛奶' },
           { text: 'Boqonnaa', zh: '休息 / 假期' },
+          { text: 'Herrega', zh: '账单 / 结账' },
           { text: 'Eeyyee', zh: '是' }
         ]
       },
@@ -193,11 +198,13 @@ const groups = [
     rules: [
       {
         pattern: 'b d f g k t',
-        zh: '和汉语拼音的 b d f g k t 接近；g 总是读「哥」的 g。p v z 只出现在借词里',
+        zh: 'b d g 是浊音：发音时声带振动，比拼音 b d g 更浊；f k t 和拼音的 f k t 接近；g 总是读「哥」的 g。p v z 只出现在借词里',
         examples: [
           { text: 'Daabboo', zh: '面包' },
           { text: 'Foon', zh: '肉' },
           { text: 'Gaarii', zh: '好' },
+          { text: 'Kuma', zh: '一千' },
+          { text: 'Torba', zh: '七' },
           { text: 'Poolisii', zh: '警察' }
         ]
       },
@@ -214,8 +221,11 @@ const groups = [
         pattern: 'l m n r s w y',
         zh: 'r 是舌尖轻弹一下的弹舌音；s 总是清音；w、y 和英语相同',
         examples: [
-          { text: 'Rooba', zh: '雨' },
+          { text: 'Lakki', zh: '不' },
           { text: 'Mirga', zh: '右' },
+          { text: 'Nuti', zh: '我们' },
+          { text: 'Rooba', zh: '雨' },
+          { text: 'Suuqii', zh: '商店' },
           { text: 'Waggaa', zh: '年' },
           { text: 'Yoom?', zh: '什么时候？' }
         ]

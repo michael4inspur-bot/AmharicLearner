@@ -61,6 +61,9 @@ Page({
   goLogin() { if (!account.isRegistered()) account.goLogin(); },
 
   onLoad(q) {
+    // 只有支持评分且有标准音的语言能进跟读页：旧链接在别的语言下打开时直接返回，原文绝不送去评分
+    const m = langs.meta();
+    if (!m.scoring || !m.audio) { if (has('navigateBack')) wx.navigateBack(); return; }
     this.setData(langs.view());
     const item = langs.pack().getItem(q && q.id);
     if (!item) { if (has('navigateBack')) wx.navigateBack(); return; }

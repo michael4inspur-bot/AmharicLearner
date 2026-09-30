@@ -9,8 +9,13 @@ const QUIZ_SIZE = 10;
 Page({
   data: { group: 1, groups: [], sections: [], mode: 'rules', q: null, qIdx: 0, qTotal: QUIZ_SIZE, qScore: 0, qPicked: null, pct: 0, earned: 0, done: false },
   onLoad(q) {
-    // 进度按当前语言读写：只能从奥罗莫语入口进入，旧链接在别的语言下打开时直接返回，避免写错语言
-    if (langs.current() !== 'om') { wx.navigateBack(); return; }
+    // 进度按当前语言读写：只能从奥罗莫语入口进入，旧链接在别的语言下打开时直接返回，避免写错语言。
+    // 从分享 / 最近使用直接打开时页面栈只有这一页，返回不了，改为跳到当前语言自己的字母页
+    if (langs.current() !== 'om') {
+      if (getCurrentPages().length <= 1) wx.redirectTo({ url: langs.pack().alphabet.page });
+      else wx.navigateBack();
+      return;
+    }
     const qb = langs.pack('om').alphabet;
     this.qb = qb;
     this.setData({ ...langs.view('om'), groups: qb.groups.map((g) => ({ group: g.group, title: g.title })) });

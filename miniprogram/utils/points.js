@@ -88,7 +88,7 @@ function allBadges(p) {
 function celebrate() {
   const fresh = checkBadges();
   if (fresh.length && typeof wx !== 'undefined' && wx.showModal) {
-    wx.showModal({ title: `获得徽章「${fresh[0].name}」`, content: fresh[0].desc, showCancel: false, confirmText: langs.meta().strings.praise });
+    wx.showModal({ title: `获得徽章「${fresh[0].name}」`, content: fresh[0].desc, showCancel: false, confirmText: '好的' });
   }
   return fresh;
 }

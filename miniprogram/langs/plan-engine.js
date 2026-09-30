@@ -11,9 +11,13 @@ const DAILY_TEMPLATE = {
  * @param {string[]} cfg.week8Missions 第 8 周 5 个实战任务名
  * @param {Array} cfg.principles 学习原则 [{ title, desc }]
  * @param {object} cfg.alphabet { name: 字母页名称, groupDesc: 每批字母任务说明, finalDesc: 结业字母自测说明 }
+ * @param {object} [cfg.dialog] { desc: 第 5 天对话任务说明, secondDesc: 第二个单元的对话任务说明 }；缺省为阿姆哈拉语原文
  */
+const DEFAULT_DIALOG = { desc: '本周单元的对话，读到不看转写，再用跟读页评分', secondDesc: '第二个单元的对话，同样读到不看转写' };
+
 function createPlan(cfg) {
   const { weeks, week8Missions, principles, alphabet } = cfg;
+  const dialog = { ...DEFAULT_DIALOG, ...(cfg.dialog || {}) };
 
   function extraTask(w, kind) {
     if (!w.extra) return null;
@@ -66,8 +70,8 @@ function createPlan(cfg) {
         break;
       case 5:
         // 原来只跟读 ub，单元 A 的对话永远被跳过（含第 1 单元的问候对话）
-        tasks.push({ type: 'dialog', title: '对话跟读', desc: '本周单元的对话，读到不看转写，再用跟读页评分', minutes: 10, unit: ua });
-        if (ub) tasks.push({ type: 'dialog', title: `对话跟读：${ub}`, desc: '第二个单元的对话，同样读到不看转写', minutes: 6, unit: ub });
+        tasks.push({ type: 'dialog', title: '对话跟读', desc: dialog.desc, minutes: 10, unit: ua });
+        if (ub) tasks.push({ type: 'dialog', title: `对话跟读：${ub}`, desc: dialog.secondDesc, minutes: 6, unit: ub });
         tasks.push({ type: 'quiz', title: `单元小测：${ub || ua}`, desc: '10 道选择题', minutes: 5, unit: ub || ua });
         if (extraTask(w)) tasks.push(extraTask(w));
         break;

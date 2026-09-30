@@ -53,6 +53,9 @@ Page({
     const queue = progress.dueCards(p, 30).map(withUnit);
     // tabBar 页实例常驻，不跨天重置的话第二天进来还显示「第 41 / 45 张」
     const today = progress.todayStr();
+    // 换了学习语言：本次学习的计数（第几张、答对 / 答错、清空加星）都从零开始
+    const lang = langs.current();
+    if (this.sessionLang !== lang) { this.sessionLang = lang; this.sessionDay = ''; this.setData({ sessionCorrect: 0, sessionWrong: 0 }); }
     if (this.sessionDay !== today) { this.sessionDay = today; this.cleared = false; this.setData({ done: 0, sessionTotal: 0 }); }
     const done = this.sessionDay === today ? this.data.done : 0;
     const sessionTotal = Math.max(this.data.sessionTotal, done + queue.length);

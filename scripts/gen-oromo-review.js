@@ -39,10 +39,19 @@ function build() {
   return lines.join('\n');
 }
 
+/** 比对时统一换行符：Windows 上 git 的 autocrlf 会把检出的文件改成 CRLF，内容相同不应判为不一致 */
+const normalize = (s) => s.replace(/\r\n/g, '\n');
+const sameText = (a, b) => normalize(a) === normalize(b);
+
 const text = build();
 if (process.argv.includes('--check')) {
+  // 自检：CRLF 版本的同一内容必须判为一致，内容不同必须判为不一致
+  if (!sameText(text.replace(/\n/g, '\r\n'), text) || sameText(`${text}x`, text)) {
+    console.error('gen-oromo-review 自检失败：换行符归一化不正确');
+    process.exit(1);
+  }
   const cur = fs.existsSync(OUT) ? fs.readFileSync(OUT, 'utf8') : '';
-  if (cur !== text) {
+  if (!sameText(cur, text)) {
     console.error('docs/oromo-review.md 与词库不一致，请运行 node scripts/gen-oromo-review.js 重新生成');
     process.exit(1);
   }

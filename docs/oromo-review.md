@@ -10,7 +10,7 @@
 | 2 | Akkam bulte? | 早上好（昨晚过得好吗） |  |
 | 3 | Akkam oolte? | 下午好（今天过得好吗） |  |
 | 4 | Baay'ee gaarii! | 非常好！ |  |
-| 5 | Afaan Oromoo nan barachaa jira | 我在学奥罗莫语 |  |
+| 5 | Ani Afaan Oromoo barachaa jira | 我在学奥罗莫语 |  |
 
 ## om-u01 问候与礼貌
 
@@ -166,8 +166,8 @@
 | om-u05-04 | Gara Boolee meeqa? | 去博莱多少钱？ |  |  |
 | om-u05-05 | Asitti | 这里 | 也说 as |  |
 | om-u05-06 | Achitti | 那里 | 也说 achi |  |
-| om-u05-07 | Mirga | 右 | 右转：Mirgatti gori |  |
-| om-u05-08 | Bitaa | 左 | 左转：Bitaatti gori |  |
+| om-u05-07 | Mirga | 右 | 右转：Gara mirgaatti gori |  |
+| om-u05-08 | Bitaa | 左 | 左转：Gara bitaatti gori |  |
 | om-u05-09 | Qajeelaa deemi | 直走 |  |  |
 | om-u05-10 | Dhaabi | 停（熟人） | 敬称：Dhaabaa；这里停：Asitti dhaabi |  |
 | om-u05-11 | Asitti nan bu'a | 我在这儿下车（小巴用语） |  |  |
@@ -193,7 +193,7 @@
 | B | Qarshii dhibba sadii. | 三百比尔。 |  |
 | A | Qaalii dha. Dhibba lama? | 太贵了。两百？ |  |
 | B | Tole, seeni. | 好，上车吧。 |  |
-| A | Qajeelaa deemi... asitti mirgatti gori... tole, asitti dhaabi. | 直走……这里右转……好，这里停。 |  |
+| A | Qajeelaa deemi... asitti gara mirgaatti gori... tole, asitti dhaabi. | 直走……这里右转……好，这里停。 |  |
 
 ## om-u06 时间与日期
 
@@ -320,7 +320,7 @@
 | om-u09-04 | Xiqqaa | 小 |  |  |
 | om-u09-05 | Ho'aa | 热 |  |  |
 | om-u09-06 | Qabbanaa'aa | 冷 |  |  |
-| om-u09-07 | Haaraa | 新 | 亚的斯亚贝巴的奥罗莫语名是 Finfinnee |  |
+| om-u09-07 | Haaraa | 新 | mana haaraa 新房子 |  |
 | om-u09-08 | Moofaa | 旧 |  |  |
 | om-u09-09 | Bareedaa | 漂亮 |  |  |
 | om-u09-10 | Qulqulluu | 干净 |  |  |
@@ -402,7 +402,7 @@
 | om-u11-15 | Nan barbaada | 我想要 |  |  |
 | om-u11-16 | Deemuu qaba | 我必须走 | 动词原形 + qaba = 必须：Hojjechuu qaba 我必须工作 |  |
 | om-u11-17 | Gara hojii nan deema | 我去上班 |  |  |
-| om-u11-18 | Afaan Oromoo nan barachaa jira | 我在学奥罗莫语 |  |  |
+| om-u11-18 | Ani Afaan Oromoo barachaa jira | 我在学奥罗莫语 |  |  |
 | om-u11-19 | Buna nan dhuga | 我喝咖啡 |  |  |
 | om-u11-20 | Boru nan dhufa | 我明天来 |  |  |
 
@@ -546,13 +546,13 @@
 | om-u15-05 | Irra deebi'i | 再说一遍（熟人） | 敬称：Irra deebi'aa |  |
 | om-u15-06 | Suuta dubbadhu | 慢点说（熟人） | 敬称：Suuta dubbadhaa |  |
 | om-u15-07 | Xiqqoo eegi | 稍等（熟人） | 敬称：Xiqqoo eegaa |  |
-| om-u15-08 | Booda sitti bilbila | 我一会儿打给你（熟人） | 对您：Booda isinitti bilbila |  |
+| om-u15-08 | Booda sitti nan bilbila | 我一会儿打给你（熟人） | 对您：Booda isinitti nan bilbila |  |
 | om-u15-09 | Ergaa | 消息 / 短信 |  |  |
 | om-u15-10 | Naaf ergi | 发给我（熟人） | 敬称：Naaf ergaa |  |
 | om-u15-11 | Telegiraamii | 电报（Telegram，常用聊天软件） | Telegiraamiin naaf ergi 用 Telegram 发我 |  |
 | om-u15-12 | Lakkoofsa kee naaf kenni | 把你的号码给我（熟人） | 敬称：Lakkoofsa keessan naaf kennaa |  |
 | om-u15-13 | Hojii baay'ee qaba | 我很忙 | 字面：我有很多工作 |  |
-| om-u15-14 | Karaa irra jira | 我在路上 |  |  |
+| om-u15-14 | Karaa irran jira | 我在路上 |  |  |
 | om-u15-15 | Ga'eera | 我到了 | 也说 Nan ga'e |  |
 | om-u15-16 | Harkifadheera | 我迟到了 / 我晚了 |  |  |
 | om-u15-17 | Sa'aatii meeqatti geessa? | 你几点到？（熟人） | 敬称：Sa'aatii meeqatti geessu? |  |
@@ -563,7 +563,7 @@
 | om-u15-22 | Chaaw | 再见（口语，电话常用） | 来自意大利语 ciao；正式一点说 Nagaatti |  |
 | om-u15-23 | Bilbilli hin hojjetu | 电话打不通 / 手机不工作 |  |  |
 | om-u15-24 | Ammas bilbili | 再打一次（熟人） | 敬称：Ammas bilbilaa |  |
-| om-u15-25 | Si eega | 我等你（熟人） | 对您：Isin eega |  |
+| om-u15-25 | Si nan eega | 我等你（熟人） | 对您：Isin nan eega |  |
 
 对话：
 
@@ -571,7 +571,7 @@
 | --- | --- | --- | --- |
 | A | Haloo, eenyu dubbata? | 喂，是谁？ |  |
 | B | Akkam, ani Caalaa dha. Eessa jirta? | 你好，我是查拉。你在哪儿？ |  |
-| A | Karaa irra jira. Harkifadheera, dhiifama. | 我在路上。我晚了，抱歉。 |  |
+| A | Karaa irran jira. Harkifadheera, dhiifama. | 我在路上。我晚了，抱歉。 |  |
 | B | Rakkoo hin qabu. Sa'aatii meeqatti geessa? | 没关系。你几点到？ |  |
 | A | Daqiiqaa kudhan keessatti. | 十分钟内。 |  |
 | B | Tole, si eega. Nagaatti. | 好，我等你。再见。 |  |
@@ -625,11 +625,13 @@
 | --- | --- | --- | --- | --- |
 | 1 | a e i o u | Lama | 二 |  |
 | 1 | a e i o u | Sagal | 九 |  |
+| 1 | a e i o u | Tole | 好的 / 行 |  |
 | 1 | a e i o u | Boru | 明天 |  |
 | 1 | a e i o u | Miti | 不是 |  |
 | 1 | aa ee ii oo uu | Maaloo | 请 |  |
 | 1 | aa ee ii oo uu | Muuzii | 香蕉 |  |
 | 1 | aa ee ii oo uu | Sadii | 三 |  |
+| 1 | aa ee ii oo uu | Siree | 床 |  |
 | 1 | aa ee ii oo uu | Gabaa | 市场 |  |
 | 1 | hara / haaraa | Hara | 湖 |  |
 | 1 | hara / haaraa | Haaraa | 新 |  |
@@ -642,8 +644,11 @@
 | 2 | dd kk tt … | Guddaa | 大 |  |
 | 2 | badaa / baddaa | Badaa | 坏 |  |
 | 2 | badaa / baddaa | Baddaa | 高地 |  |
+| 2 | ll mm nn rr yy | Ollaa | 邻居 |  |
+| 2 | ll mm nn rr yy | Amma | 现在 |  |
 | 2 | ll mm nn rr yy | Aannan | 牛奶 |  |
 | 2 | ll mm nn rr yy | Boqonnaa | 休息 / 假期 |  |
+| 2 | ll mm nn rr yy | Herrega | 账单 / 结账 |  |
 | 2 | ll mm nn rr yy | Eeyyee | 是 |  |
 | 2 | 双写 + 长元音 | Waajjira | 办公室 |  |
 | 2 | 双写 + 长元音 | Mallattoo | 签名 |  |
@@ -679,12 +684,17 @@
 | 5 | b d f g k t | Daabboo | 面包 |  |
 | 5 | b d f g k t | Foon | 肉 |  |
 | 5 | b d f g k t | Gaarii | 好 |  |
+| 5 | b d f g k t | Kuma | 一千 |  |
+| 5 | b d f g k t | Torba | 七 |  |
 | 5 | b d f g k t | Poolisii | 警察 |  |
 | 5 | h j | Hojii | 工作 |  |
 | 5 | h j | Jaha | 六 |  |
 | 5 | h j | Jimaata | 周五 |  |
-| 5 | l m n r s w y | Rooba | 雨 |  |
+| 5 | l m n r s w y | Lakki | 不 |  |
 | 5 | l m n r s w y | Mirga | 右 |  |
+| 5 | l m n r s w y | Nuti | 我们 |  |
+| 5 | l m n r s w y | Rooba | 雨 |  |
+| 5 | l m n r s w y | Suuqii | 商店 |  |
 | 5 | l m n r s w y | Waggaa | 年 |  |
 | 5 | l m n r s w y | Yoom? | 什么时候？ |  |
 | 5 | 整词拼读 | Konkolaachisaa | 司机 |  |

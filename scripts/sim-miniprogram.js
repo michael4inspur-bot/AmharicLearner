@@ -83,6 +83,8 @@ global.App = (cfg) => { global.__app = cfg; };
 
 // 先填云环境，再加载依赖 config 的模块
 require(path.join(root, 'config.js')).cloudEnv = 'sim-env';
+// 模拟会走奥罗莫语（试用版）流程：不受提审开关 showBetaLangs 影响
+require(path.join(root, 'config.js')).showBetaLangs = true;
 
 const progress = require(path.join(root, 'utils/progress.js'));
 const quiz = require(path.join(root, 'utils/quiz.js'));
@@ -363,10 +365,25 @@ async function main() {
   const realBack = wx.navigateBack;
   let backs = 0;
   wx.navigateBack = () => { backs += 1; };
+  const realRedirect = wx.redirectTo;
+  const redirects = [];
+  wx.redirectTo = (o) => { redirects.push(o.url); };
+  const realPages = global.getCurrentPages;
+  global.getCurrentPages = () => [{}, {}];
   const qbAm = mkQubee();
   qbAm.onLoad({ group: '1' });
   assert.equal(backs, 1, '阿姆哈拉语下打开 Qubee 页直接返回');
   assert.equal(qbAm.data.groups.length, 0, '返回前不加载数据');
+  assert.deepEqual(redirects, [], '有上一页时返回，不跳转');
+  // 从分享 / 最近使用直接打开（页面栈只有这一页）：返回不了，跳到当前语言自己的字母页
+  global.getCurrentPages = () => [{}];
+  const qbAmFirst = mkQubee();
+  qbAmFirst.onLoad({ group: '1' });
+  assert.equal(backs, 1, '栈底页不调用 navigateBack');
+  assert.deepEqual(redirects, ['/pages/fidel/fidel'], '栈底页跳到 Fidel 字母表');
+  assert.equal(qbAmFirst.data.groups.length, 0);
+  global.getCurrentPages = realPages;
+  wx.redirectTo = realRedirect;
   langs.set('om');
   const qb = mkQubee();
   qb.onLoad({ group: '2' });
@@ -433,6 +450,22 @@ async function main() {
   progress.learnUnit('om-u03');
   const omDue = progress.dueCards();
   assert.ok(omDue.length > 0 && omDue.every((c) => c.id.startsWith('om-')), '复习队列只有奥罗莫语卡片');
+  // 复习页（tabBar 常驻实例）：换语言后本次学习的计数从零开始，不接着另一种语言的「第 N 张」
+  const rv = mkPage('review/review');
+  rv.onShow();
+  assert.ok(rv.data.current && rv.data.current.id.startsWith('om-'));
+  rv.grade({ currentTarget: { dataset: { g: '4' } } });
+  rv.grade({ currentTarget: { dataset: { g: '1' } } });
+  assert.equal(rv.data.done, 2);
+  assert.equal(rv.data.sessionCorrect, 1);
+  assert.equal(rv.data.sessionWrong, 1);
+  langs.set('am');
+  rv.onShow();
+  assert.equal(rv.data.done, 0, '换语言后已答数清零');
+  assert.equal(rv.data.sessionCorrect, 0, '换语言后答对数清零');
+  assert.equal(rv.data.sessionWrong, 0, '换语言后答错数清零');
+  assert.equal(rv.data.sessionTotal, rv.data.queue.length, '总数只算当前语言的队列');
+  langs.set('om');
   const omQuiz = quiz.buildQuiz('om-u03', 10, progress.load(), false);
   assert.equal(omQuiz.filter((q) => q.listen).length, 0);
   omQuiz.forEach((q) => { assert.equal(q.promptRom, ''); q.options.forEach((o) => assert.ok(!/  /.test(o.text), '选项不拼接转写')); });
@@ -450,6 +483,23 @@ async function main() {
   qubee.finish();
   assert.equal(qubee.data.done, true);
   assert.ok(progress.load().fidelGroupsDone[3], 'Qubee 第 3 批记在奥罗莫语进度里');
+  // 徽章弹框：按钮文字 ≤ 4 个字（微信 showModal 的 confirmText 限制），不用语言包里的长夸奖语
+  const points = require(path.join(root, 'utils/points.js'));
+  global.__modal = null;
+  progress.completeMission('w1');
+  assert.ok(points.celebrate().some((b) => b.id === 'first-words'), '奥罗莫语完成第 1 周任务得徽章');
+  assert.equal(global.__modal.confirmText, '好的', '徽章弹框按钮是「好的」');
+  assert.ok(global.__modal.confirmText.length <= 4);
+  // 跟读页：没有评分 / 语音的语言打开旧链接直接返回，不加载词句，原文不会送去评分
+  const realBackSp = wx.navigateBack;
+  let spBacks = 0;
+  wx.navigateBack = () => { spBacks += 1; };
+  const omSpeak = mkPage('speak/speak');
+  omSpeak.onLoad({ id: 'om-u03-01' });
+  wx.navigateBack = realBackSp;
+  assert.equal(spBacks, 1, '奥罗莫语下打开跟读页直接返回');
+  assert.equal(omSpeak.data.item, null, '不加载奥罗莫语词句');
+  assert.ok(!omSpeak.recorder, '不初始化录音器');
 
   // 「我的」页也能切回阿姆哈拉语，阿姆哈拉语进度完好
   wx.showActionSheet = ({ itemList, success }) => success({ tapIndex: itemList.findIndex((t) => /阿姆哈拉语/.test(t)) });
@@ -654,6 +704,11 @@ async function main() {
     const re = new RegExp(HARD.source + (p === 'fidel/fidel' ? '' : '|Fidel 字母表<') + '|Fidel 字母 第');
     assert.ok(!re.test(wxml), `${p}.wxml 里还有写死的语言文案`);
   });
+
+  // 「我的」页的清空按钮与云端同步说明写明是哪种语言（进度按语言分开）
+  const profileWxml = fs.readFileSync(path.join(root, 'pages', 'profile/profile.wxml'), 'utf8');
+  assert.ok(profileWxml.includes('清空{{L.langName}}进度'), '清空按钮写明当前语言');
+  assert.ok(/当前语言：' \+ L\.langName/.test(profileWxml), '云端同步说明写明当前语言');
 
   console.log('OK: miniprogram simulation passed');
 }
