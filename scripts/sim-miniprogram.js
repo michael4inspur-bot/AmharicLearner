@@ -313,16 +313,25 @@ async function main() {
     success({ result: { ok: true, data: data.action === 'progress.get' ? { progress: null, updatedAt: null } : { updatedAt: 'x' } } });
   };
   langs.set('om');
-  // 没有语音的语言：朗读不发任何请求，只提示即将上线
-  const callsBefore = (global.__calls || []).length;
-  let toastTitle = '';
+  // 没有语音的语言：朗读 / 预取不发任何 tts 请求，只在主动点时提示即将上线
+  const ttsCalls = [];
+  const cfBefore = wx.cloud.callFunction;
+  wx.cloud.callFunction = (o) => { if (/^tts\./.test(o.data.action)) ttsCalls.push(o.data.action); return cfBefore(o); };
+  const toasts = [];
   const realToast = wx.showToast;
-  wx.showToast = (o) => { toastTitle = o.title; };
+  wx.showToast = (o) => { toasts.push(o.title); };
   await audio.speak('Akkam');
+  assert.equal(toasts.length, 1, '主动点一次提示一次');
+  assert.match(toasts[0], /发音即将上线/);
+  await audio.speak('Akkam', { silent: true });
+  assert.equal(toasts.length, 1, 'silent 不提示');
+  audio.prefetch([{ id: 'x', text: 'Akkam' }]);
+  await new Promise((r) => setTimeout(r, 20));
   wx.showToast = realToast;
-  assert.equal((global.__calls || []).length, callsBefore, '不发 tts 请求');
-  assert.match(toastTitle, /发音即将上线/);
+  wx.cloud.callFunction = cfBefore;
+  assert.deepEqual(ttsCalls, [], '没有语音的语言不发任何 tts 请求');
   assert.equal(langs.view().audio, false);
+  assert.ok(!quiz.buildQuiz('om-u01', 10, progress.load(), langs.meta().audio).some((q) => q.listen), '没有语音的语言不出听音题');
   progress.learnUnit('om-u01');
   assert.equal(await sync.syncNow(), false, '云端不支持多语言时不上传');
   assert.ok(!oldCloudActions.includes('progress.put'), '一次 progress.put 都没发');
