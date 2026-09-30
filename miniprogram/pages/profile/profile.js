@@ -5,6 +5,7 @@ const points = require('../../utils/points.js');
 const sync = require('../../utils/sync.js');
 const account = require('../../utils/account.js');
 const update = require('../../utils/update.js');
+const langs = require('../../langs/index.js');
 
 const PROFILE_KEY = 'profile_v1';
 
@@ -114,20 +115,27 @@ Page({
   onNewCards(e) { const p = progress.load(); p.newCardsPerDay = e.detail.value; progress.save(p); this.setData({ newCards: e.detail.value }); },
   onStartDate(e) { const p = progress.load(); p.startDate = e.detail.value; progress.save(p); this.setData({ startDate: e.detail.value }); },
   async upload() {
+    const code = langs.current();
     const p = progress.load();
-    try { await api.syncProgress(p, sync.buildMeta(p)); wx.showToast({ title: '已上传到云端', icon: 'success' }); }
-    catch (e) { wx.showModal({ title: '上传失败', content: e.message, showCancel: false }); }
+    try {
+      if (!(await sync.cloudSupports(code))) throw new Error('云函数版本过旧，不支持这种语言的进度。请重新部署云函数 api。');
+      await api.syncProgress(p, sync.buildMeta(p), undefined, code);
+      wx.showToast({ title: '已上传到云端', icon: 'success' });
+    } catch (e) { wx.showModal({ title: '上传失败', content: e.message, showCancel: false }); }
   },
   async download() {
+    const code = langs.current();
     try {
-      const { progress: remote, updatedAt } = await api.fetchProgress();
+      const r = await api.fetchProgress(code);
+      if (code !== 'am' && (!r || r.lang !== code)) throw new Error('云函数版本过旧，不支持这种语言的进度。请重新部署云函数 api。');
+      const { progress: remote, updatedAt } = r;
       if (!remote) { wx.showToast({ title: '云端没有数据', icon: 'none' }); return; }
       wx.showModal({
         title: '覆盖本地进度？', content: '将用云端的进度替换本机数据。',
-        success: (r) => {
-          if (!r.confirm) return;
+        success: (res) => {
+          if (!res.confirm) return;
           progress.replace(remote);
-          sync.noteRemoteVersion(updatedAt); // 记下云端版本，之后上传不会被判成旧快照
+          sync.noteRemoteVersion(updatedAt, code); // 记下云端版本，之后上传不会被判成旧快照
           this.onShow();
           wx.showToast({ title: '已恢复', icon: 'success' });
         }

@@ -272,6 +272,54 @@ async function main() {
   assert.equal(progress.isEmpty(), true, '重置后是空进度');
   assert.equal(await sync.syncNow(), false, '空进度不上传，不会覆盖云端');
   progress.replace(realProgress);
+  // 多语言：注册一个最小的测试语言包，验证进度与云端文档按语言分开
+  const amPack = langs.pack('am');
+  const omUnit = { id: 'om-u01', week: 1, title: '测试单元', items: [
+    { id: 'om-u01-01', text: 'Akkam', zh: '你好', unit: 'om-u01' },
+    { id: 'om-u01-02', text: 'Galatoomi', zh: '谢谢', unit: 'om-u01' }
+  ], dialog: [] };
+  langs.register('om', {
+    ...amPack,
+    meta: { ...amPack.meta, code: 'om', script: 'latin', hasRom: false },
+    units: [omUnit],
+    getUnit: (id) => (id === 'om-u01' ? omUnit : undefined),
+    getItem: (id) => omUnit.items.find((it) => it.id === id),
+    allItems: () => omUnit.items.slice(),
+    unitsForWeek: (w) => (w === 1 ? [omUnit] : [])
+  });
+  assert.equal(progress.keyOf('am'), 'progress_v1', '阿姆哈拉语沿用老键名');
+  assert.equal(progress.keyOf('om'), 'progress_om_v1');
+  const amUnitsBefore = JSON.stringify(progress.load().unitsLearned);
+
+  // 旧版云函数不回显 lang：不能把奥罗莫语进度传上去（会写进阿姆哈拉语文档）
+  const realCallOld = wx.cloud.callFunction;
+  const oldCloudActions = [];
+  wx.cloud.callFunction = ({ data, success }) => {
+    oldCloudActions.push(data.action);
+    success({ result: { ok: true, data: data.action === 'progress.get' ? { progress: null, updatedAt: null } : { updatedAt: 'x' } } });
+  };
+  langs.set('om');
+  progress.learnUnit('om-u01');
+  assert.equal(await sync.syncNow(), false, '云端不支持多语言时不上传');
+  assert.ok(!oldCloudActions.includes('progress.put'), '一次 progress.put 都没发');
+  wx.cloud.callFunction = realCallOld;
+
+  // 新版云函数：奥罗莫语进度写到 openid:om，阿姆哈拉语文档不受影响
+  assert.ok(progress.load().srs['om-u01-01'], '奥罗莫语进度在奥罗莫语存储里');
+  assert.equal(await sync.syncNow(), true, '云端支持后上传');
+  const omDoc = await db.getProgress(`${simOpenid}:om`);
+  assert.ok(omDoc && omDoc.progress.srs['om-u01-01'], '云端奥罗莫语文档');
+  const amDoc = await db.getProgress(simOpenid);
+  assert.ok(!amDoc.progress.srs['om-u01-01'], '阿姆哈拉语文档没混进奥罗莫语');
+  const omFetched = await api.fetchProgress('om');
+  assert.equal(omFetched.lang, 'om');
+  assert.ok(omFetched.progress.unitsLearned['om-u01']);
+
+  // 切回阿姆哈拉语，原进度完好
+  langs.set('am');
+  assert.equal(JSON.stringify(progress.load().unitsLearned), amUnitsBefore, '切回后阿姆哈拉语进度不变');
+  assert.ok(!progress.load().srs['om-u01-01']);
+  assert.ok(wx.getStorageSync('progress_om_v1').srs['om-u01-01'], '奥罗莫语进度存在自己的键下');
 
 
   // 语音：朗读走云端合成 + 本地缓存

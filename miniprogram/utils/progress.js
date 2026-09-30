@@ -2,8 +2,15 @@
 const langs = require('../langs/index.js');
 const srs = require('./srs.js');
 
-const KEY = 'progress_v1';
 const DAY = srs.DAY;
+
+/** 本地存储键：阿姆哈拉语沿用 progress_v1（老数据零迁移），其他语言 progress_<code>_v1 */
+function keyOf(code) {
+  return code === 'am' ? 'progress_v1' : `progress_${code}_v1`;
+}
+
+// 每种语言一份内存缓存
+const caches = {};
 
 function todayStr(d) {
   const t = d ? new Date(d) : new Date();
@@ -27,8 +34,6 @@ function defaultProgress() {
     fidelGroupsDone: {},// group -> date
   };
 }
-
-let cache = null;
 
 const OBJECT_FIELDS = ['unitsLearned', 'srs', 'logs', 'missions', 'reflections', 'fidelGroupsDone', 'starLog', 'badges'];
 const ARRAY_FIELDS = ['quizScores'];
@@ -80,29 +85,33 @@ function isEmpty(p) {
     && p.quizScores.length === 0;
 }
 
-function load() {
-  if (cache) return cache;
+function load(code) {
+  code = code || langs.current();
+  if (caches[code]) return caches[code];
   try {
-    cache = sanitize(wx.getStorageSync(KEY));
+    caches[code] = sanitize(wx.getStorageSync(keyOf(code)));
   } catch (e) {
-    cache = defaultProgress();
+    caches[code] = defaultProgress();
   }
-  return cache;
+  return caches[code];
 }
 
 let onSaved = null;
+/** fn(p, code)：每次保存后回调，code 是这份进度所属的语言 */
 function setOnSaved(fn) { onSaved = fn; }
 
 function save(p) {
-  cache = p;
-  try { wx.setStorageSync(KEY, p); } catch (e) { /* ignore */ }
-  if (onSaved) onSaved(p);
+  const code = langs.current();
+  caches[code] = p;
+  try { wx.setStorageSync(keyOf(code), p); } catch (e) { /* ignore */ }
+  if (onSaved) onSaved(p, code);
   return p;
 }
 
 function reset() {
-  cache = null;
-  try { wx.removeStorageSync(KEY); } catch (e) { /* ignore */ }
+  const code = langs.current();
+  delete caches[code];
+  try { wx.removeStorageSync(keyOf(code)); } catch (e) { /* ignore */ }
   return load();
 }
 
@@ -114,7 +123,7 @@ function replace(p) {
   if (!p || typeof p !== 'object' || p.stars == null) next.stars = local.stars || 0;
   if (!p || !p.starLog) next.starLog = local.starLog || {};
   if (!p || !p.badges) next.badges = local.badges || {};
-  cache = null;
+  delete caches[langs.current()];
   return save(next);
 }
 
@@ -313,7 +322,6 @@ function summary(p) {
 }
 
 module.exports = {
-  todayStr, load, save, reset, replace, sanitize, isEmpty, setOnSaved, currentPosition, todayLog, addMinutes, streak,
-  learnUnit, dueCards, gradeCard, srsStats, recordQuiz, completeMission, completeReflection, completeFidelGroup,
-  completeReflection, summary
+  todayStr, keyOf, load, save, reset, replace, sanitize, isEmpty, setOnSaved, currentPosition, todayLog, addMinutes, streak,
+  learnUnit, dueCards, gradeCard, srsStats, recordQuiz, completeMission, completeReflection, completeFidelGroup, summary
 };
