@@ -4,6 +4,7 @@ const crypto = require('node:crypto');
 const { similarity, wordMatches } = require('./scoring.js');
 const { getLimits, DEFAULT_LIMITS } = require('./limits.js');
 const { dayStartIso, monthStartIso } = require('./time.js');
+const { omKey, defaultOmAudio } = require('./om-audio.js');
 
 const TTS_DAILY_LIMIT = DEFAULT_LIMITS.tts; // 默认值常量；实际上限每次调用 getLimits() 读取
 const STT_DAILY_LIMIT = DEFAULT_LIMITS.stt;
@@ -13,6 +14,7 @@ const MAX_TEXT_CHARS = 300;
 const MAX_BATCH_ITEMS = 40;
 const BATCH_CONCURRENCY = 5;
 const UPSTREAM_CODES = ['NO_API_KEY', 'TIMEOUT', 'UPSTREAM'];
+const TTS_LANGS = ['am', 'om'];
 
 function ok(data) { return { ok: true, data }; }
 function fail(code, error) { return { ok: false, code, error }; }
@@ -84,6 +86,35 @@ async function ensureTts(ctx, now, text, voice, rate, budget) {
   return { url, key, fileID: cached.fileID };
 }
 
+/** 语音语言：缺省 am；不认识的返回 '' */
+function ttsLang(v) {
+  if (v == null || v === '') return 'am';
+  return TTS_LANGS.includes(v) ? v : '';
+}
+
+/**
+ * 奥罗莫语：从代码包取预生成音频，首次用到上传云存储并写缓存。
+ * 不调 Azure、不计额度、不写日志（没有成本，也不涉及用户数据）。
+ * @returns {Promise<{url, key, fileID} | {missing: true}>}
+ */
+async function ensureOmTts(ctx, now, text, rate) {
+  const { db, storage } = ctx;
+  const omAudio = ctx.omAudio || defaultOmAudio;
+  const key = omKey(rate, text);
+  let cached = await db.getTtsCache(key);
+  if (!cached) {
+    const file = omAudio.lookup(text, rate);
+    if (!file) return { missing: true };
+    const fileID = await storage.upload(`tts/om/${key}.mp3`, omAudio.read(file));
+    cached = { _id: key, fileID, text, voice: 'mms', rate, lang: 'om', chars: 0, createdAt: now.toISOString() };
+    await db.putTtsCache(cached);
+  }
+  const urls = await storage.tempUrls([cached.fileID]);
+  const url = urls[cached.fileID];
+  if (!url) throw Object.assign(new Error('获取音频临时链接失败'), { code: 'UPSTREAM' });
+  return { url, key, fileID: cached.fileID };
+}
+
 /** 简单 worker 池：并发最多 limit 个执行 fn(item)。 */
 async function runPool(items, limit, fn) {
   let next = 0;
@@ -99,6 +130,17 @@ async function runPool(items, limit, fn) {
 }
 
 async function ttsGet(data, ctx, now) {
+  const lang = ttsLang(data.lang);
+  if (!lang) return fail('BAD_REQUEST', `lang 非法: ${data.lang}`);
+  if (lang === 'om') {
+    if (!validRate(data.rate)) return fail('BAD_REQUEST', `rate 非法: ${data.rate}`);
+    const t = cleanText(data.text);
+    if (!t) return fail('BAD_REQUEST', `text 必须是 1–${MAX_TEXT_CHARS} 字符的非空字符串`);
+    let r;
+    try { r = await ensureOmTts(ctx, now, t, data.rate); } catch (err) { return mapError(err); }
+    if (r.missing) return fail('BAD_REQUEST', '这句还没有生成语音');
+    return ok({ url: r.url, key: r.key, fileID: r.fileID });
+  }
   const { voice, rate } = data;
   if (!validVoice(voice)) return fail('BAD_REQUEST', `voice 非法: ${voice}`);
   if (!validRate(rate)) return fail('BAD_REQUEST', `rate 非法: ${rate}`);
@@ -116,6 +158,30 @@ async function ttsGet(data, ctx, now) {
 }
 
 async function ttsBatch(data, ctx, now) {
+  const lang = ttsLang(data.lang);
+  if (!lang) return fail('BAD_REQUEST', `lang 非法: ${data.lang}`);
+  if (lang === 'om') {
+    if (!validRate(data.rate)) return fail('BAD_REQUEST', `rate 非法: ${data.rate}`);
+    if (!Array.isArray(data.items)) return fail('BAD_REQUEST', 'items 必须是数组');
+    if (data.items.length > MAX_BATCH_ITEMS) return fail('BAD_REQUEST', `items 最多 ${MAX_BATCH_ITEMS} 条`);
+    const urls = {};
+    const files = {};
+    const list = data.items
+      .filter((it) => it && (typeof it.id === 'string' || typeof it.id === 'number'))
+      .map((it) => ({ id: String(it.id), text: cleanText(it.text) }))
+      .filter((it) => it.text);
+    await runPool(list, BATCH_CONCURRENCY, async (it) => {
+      try {
+        const r = await ensureOmTts(ctx, now, it.text, data.rate);
+        if (r.missing) return;
+        Object.defineProperty(urls, it.id, { value: r.url, enumerable: true, writable: true, configurable: true });
+        Object.defineProperty(files, it.id, { value: r.fileID, enumerable: true, writable: true, configurable: true });
+      } catch (err) {
+        if (!(err && UPSTREAM_CODES.includes(err.code))) throw err;
+      }
+    });
+    return ok({ urls, files });
+  }
   const { voice, rate, items } = data;
   if (!validVoice(voice)) return fail('BAD_REQUEST', `voice 非法: ${voice}`);
   if (!validRate(rate)) return fail('BAD_REQUEST', `rate 非法: ${rate}`);
@@ -173,6 +239,7 @@ function isOwnRecording(fileID, openid) {
 }
 
 async function sttScore(data, ctx, now) {
+  if (data.lang && data.lang !== 'am') return fail('BAD_REQUEST', '该语言暂不支持发音评分');
   const { openid, db, azure, storage } = ctx;
   const { fileID } = data;
   if (typeof fileID !== 'string' || !fileID) return fail('BAD_REQUEST', '缺少 fileID');
@@ -218,6 +285,7 @@ async function handleSpeech(action, data, ctx) {
   switch (action) {
     case 'tts.get': return ttsGet(data, ctx, now);
     case 'tts.batch': return ttsBatch(data, ctx, now);
+    case 'tts.caps': return ok({ langs: TTS_LANGS.slice() });
     case 'stt.score': return sttScore(data, ctx, now);
     default: return fail('BAD_REQUEST', `未知 action: ${action}`);
   }
