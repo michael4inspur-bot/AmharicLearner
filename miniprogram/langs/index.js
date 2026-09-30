@@ -35,6 +35,11 @@ function set(code) {
 
 function pack(code) { return packs[code] || packs[current()]; }
 function meta(code) { return pack(code).meta; }
+/** 页面模板用的语言视图：界面文案 L、原文字体类 tc（埃塞文字 'am'，拉丁文字 'latin'）、是否有转写 hasRom */
+function view(code) {
+  const m = meta(code);
+  return { L: m.strings, tc: m.script === 'ethiopic' ? 'am' : 'latin', hasRom: m.hasRom };
+}
 function list() { return order.map((c) => packs[c].meta); }
 
 /** 订阅语言切换，返回取消订阅函数 */
@@ -49,4 +54,4 @@ function register(code, p) {
   if (!order.includes(code)) order.push(code);
 }
 
-module.exports = { current, set, pack, meta, list, onChange, register, DEFAULT };
+module.exports = { current, set, pack, meta, view, list, onChange, register, DEFAULT };

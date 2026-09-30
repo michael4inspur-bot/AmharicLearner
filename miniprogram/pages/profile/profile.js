@@ -21,15 +21,10 @@ function saveNickname(nickname) {
   try { wx.setStorageSync(PROFILE_KEY, { ...(wx.getStorageSync(PROFILE_KEY) || {}), nickname }); } catch (e) { /* 忽略 */ }
 }
 
-function langView() {
-  const m = langs.meta();
-  return { L: m.strings, tc: m.script === 'ethiopic' ? 'am' : 'latin', hasRom: m.hasRom };
-}
-
 Page({
   data: { version: '0.3.0', buildTag: require('../../config.js').buildTag, updateText: '', cloudReady: false, goal: 20, newCards: 10, startDate: '', voice: 'female', rate: 'normal', stats: {}, streak: 0, totalMinutes: 0, days: 0, quizzes: 0, stars: 0, badges: [], earnedCount: 0, usage: null, isAdmin: false, nickname: '', openid: '', registered: false, status: 'active' },
   onShow() {
-    this.setData(langView());
+    this.setData(langs.view());
     if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().select('/pages/profile/profile');
     const p = progress.load();
     const totalMinutes = Object.values(p.logs).reduce((a, l) => a + (l.minutes || 0), 0);

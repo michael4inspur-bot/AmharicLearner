@@ -26,11 +26,6 @@ function withUnit(c) {
   return { ...c, unitTitle: u ? u.title : '闪卡复习' };
 }
 
-function langView() {
-  const m = langs.meta();
-  return { L: m.strings, tc: m.script === 'ethiopic' ? 'am' : 'latin', hasRom: m.hasRom };
-}
-
 Page({
   data: {
     queue: [], current: null, flipped: false,
@@ -39,7 +34,7 @@ Page({
     mode: 'text', segs: buildSegs(0, 0), todayStars: 0
   },
   onShow() {
-    this.setData(langView());
+    this.setData(langs.view());
     if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().select('/pages/review/review');
     this.loadQueue();
     this.enterAt = Date.now();

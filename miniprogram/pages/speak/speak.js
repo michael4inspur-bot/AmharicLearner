@@ -34,11 +34,6 @@ function scoreTip(score, transcript, words) {
   return '词都对上了，注意重音和尾音的长度，再录一次会更好。';
 }
 
-function langView() {
-  const m = langs.meta();
-  return { L: m.strings, tc: m.script === 'ethiopic' ? 'am' : 'latin', hasRom: m.hasRom };
-}
-
 Page({
   data: {
     item: null,
@@ -66,7 +61,7 @@ Page({
   goLogin() { if (!account.isRegistered()) account.goLogin(); },
 
   onLoad(q) {
-    this.setData(langView());
+    this.setData(langs.view());
     const item = langs.pack().getItem(q && q.id);
     if (!item) { if (has('navigateBack')) wx.navigateBack(); return; }
     if (has('setNavigationBarTitle')) wx.setNavigationBarTitle({ title: '跟读练习' });

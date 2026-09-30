@@ -28,15 +28,10 @@ function requirePrivacy() {
   });
 }
 
-function langView() {
-  const m = langs.meta();
-  return { L: m.strings, tc: m.script === 'ethiopic' ? 'am' : 'latin', hasRom: m.hasRom };
-}
-
 Page({
   data: { nickname: '', loading: false, configured: false, error: '', agreed: false },
   onLoad() {
-    this.setData(langView());
+    this.setData(langs.view());
     const p = readProfile();
     this.setData({ nickname: p.nickname || '', configured: api.configured() });
   },

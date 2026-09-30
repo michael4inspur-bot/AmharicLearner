@@ -11,15 +11,10 @@ function buildIndex() {
   }));
 }
 
-function langView() {
-  const m = langs.meta();
-  return { L: m.strings, tc: m.script === 'ethiopic' ? 'am' : 'latin', hasRom: m.hasRom };
-}
-
 Page({
   data: { q: '', results: [], recent: [] },
   onLoad() {
-    this.setData(langView());
+    this.setData(langs.view());
     this.all = buildIndex();
     let recent = [];
     try { recent = wx.getStorageSync('search_recent') || []; } catch (e) { /* ignore */ }

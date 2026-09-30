@@ -6,15 +6,10 @@ const audio = require('../../utils/audio.js');
 const account = require('../../utils/account.js');
 const api = require('../../utils/api.js');
 
-function langView() {
-  const m = langs.meta();
-  return { L: m.strings, tc: m.script === 'ethiopic' ? 'am' : 'latin', hasRom: m.hasRom };
-}
-
 Page({
   data: { questions: [], idx: 0, picked: null, score: 0, finished: false, scope: 'all', title: '', pct: 0, earned: 0 },
   onLoad(q) {
-    this.setData(langView());
+    this.setData(langs.view());
     const scope = q.scope || 'all';
     const p = progress.load();
     // 未登记用户用不了朗读，出听力题等于给一道无法作答的空白题，

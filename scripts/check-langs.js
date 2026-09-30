@@ -57,6 +57,7 @@ metas.forEach((meta) => {
 });
 
 // 注册表行为
+assert.deepEqual(langs.view('am'), { L: langs.meta('am').strings, tc: 'am', hasRom: true });
 assert.equal(langs.current(), langs.DEFAULT, '没有存储时是缺省语言');
 assert.equal(langs.set('xx'), false, '未注册的语言不能切换');
 assert.equal(langs.current(), langs.DEFAULT);
