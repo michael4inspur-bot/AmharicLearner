@@ -29,7 +29,7 @@ Page({
 
   onShow() {
     this.setData(langs.view());
-    this.setData({ langLabel: langSwitch.label() });
+    this.setData({ langLabel: langSwitch.label(), langSwitchable: langSwitch.available() });
     if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().select('/pages/index/index');
     this.refresh();
     this.loadNotices();
@@ -132,7 +132,7 @@ Page({
       case 'learn': d.done = !!p.unitsLearned[t.unit]; break;
       case 'quiz': d.done = p.quizScores.some((q) => q.date === today && (q.unit === t.unit || t.unit === 'week' || t.unit === 'all')); break;
       case 'mission': d.done = !!p.missions[t.missionKey]; break;
-      case 'alphabet': d.done = !!p.fidelGroupsDone[t.group]; break;
+      case 'alphabet': d.done = t.group === 0 ? [1, 2, 3, 4, 5].every((g) => p.fidelGroupsDone[g]) : !!p.fidelGroupsDone[t.group]; break;
       case 'dialog': d.done = !!p.unitsLearned[t.unit]; break;
       case 'reflect': d.done = !!p.reflections[t.reflectKey]; break;
       default: d.done = false;

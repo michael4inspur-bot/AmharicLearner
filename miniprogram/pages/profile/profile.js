@@ -32,7 +32,7 @@ Page({
     const { voice, rate } = audio.getSettings();
     const badges = points.allBadges(p);
     this.setData({
-      langLabel: langSwitch.label(),
+      langLabel: langSwitch.label(), langSwitchable: langSwitch.available(),
       cloudReady: api.configured(), goal: p.dailyMinutesGoal, newCards: p.newCardsPerDay, startDate: p.startDate, voice, rate,
       stats: progress.srsStats(p), streak: progress.streak(p), totalMinutes,
       days: Object.keys(p.logs).filter((k) => p.logs[k].minutes > 0).length,

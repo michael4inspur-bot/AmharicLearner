@@ -362,6 +362,50 @@ async function main() {
   assert.ok(!progress.load().srs['om-u01-01']);
   assert.ok(wx.getStorageSync('progress_om_v1').srs['om-u01-01'], '奥罗莫语进度存在自己的键下');
 
+  // 进行中的上传结束后，期间新增的改动还要再传一次
+  langs.set('am');
+  progress.addMinutes(1);
+  // 第一次 progress.put 发出（内容按发出时的快照）之后，上传还没结束时进度又改了
+  const cfResync = wx.cloud.callFunction;
+  let changedMidFlight = false;
+  wx.cloud.callFunction = (o) => {
+    if (o.data.action === 'progress.put' && !changedMidFlight) {
+      changedMidFlight = true;
+      const snapshot = { ...o, data: JSON.parse(JSON.stringify(o.data)) };
+      progress.addMinutes(1);
+      return cfResync(snapshot);
+    }
+    return cfResync(o);
+  };
+  assert.equal(await sync.syncNow(), true);
+  await new Promise((r) => setTimeout(r, 20)); // 不依赖 3 秒的延迟同步：靠结束后的再同步
+  wx.cloud.callFunction = cfResync;
+  assert.ok(changedMidFlight, '上传期间改过进度');
+  const amCloud = await db.getProgress(simOpenid);
+  assert.equal(JSON.stringify(amCloud.progress.logs), JSON.stringify(progress.load().logs), '上传期间的改动也传上去了');
+  // 探测只有拿到答复才进入退避：网络失败后立刻再探测要重新发 progress.get
+  langs.register('zz', { ...langs.pack('om'), meta: { ...langs.meta('om'), code: 'zz' } });
+  const cfProbe = wx.cloud.callFunction;
+  let probeGets = 0;
+  wx.cloud.callFunction = (o) => {
+    if (o.data.action === 'progress.get') { probeGets += 1; o.fail({ errMsg: 'request:fail timeout' }); return; }
+    cfProbe(o);
+  };
+  assert.equal(await sync.cloudSupports('zz'), false, '网络失败按不支持处理');
+  assert.equal(await sync.cloudSupports('zz'), false);
+  assert.equal(probeGets, 2, '网络失败不进入退避：立刻再探测会再发一次 progress.get');
+  wx.cloud.callFunction = cfProbe;
+  langs.unregister('zz');
+  // 只有一种语言可选时隐藏切换入口
+  const langSwitch2 = require(path.join(root, 'utils/lang-switch.js'));
+  assert.equal(langSwitch2.available(), true);
+  const cfg = require(path.join(root, 'config.js'));
+  cfg.showBetaLangs = false;
+  assert.equal(langSwitch2.available(), false, '奥罗莫语隐藏后不显示切换入口');
+  cfg.showBetaLangs = true;
+  // 第 8 周全表自测打开全部批次
+  assert.equal(langs.pack('am').plan.getDayTasks(8, 6).find((t) => t.type === 'alphabet').group, 0);
+
   // Qubee 字母页：只从奥罗莫语进入；通过小测只写奥罗莫语进度
   const qubeePage = pageOf('qubee/qubee');
   const mkQubee = () => Object.assign(Object.create(qubeePage), { data: { ...qubeePage.data }, setData(d) { this.data = { ...this.data, ...d }; } });

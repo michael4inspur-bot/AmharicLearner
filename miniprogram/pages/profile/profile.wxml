@@ -85,7 +85,7 @@
 
   <view class="card">
     <view class="card-title">学习设置</view>
-    <view class="row between list-item" bindtap="switchLang">
+    <view class="row between list-item" wx:if="{{langSwitchable}}" bindtap="switchLang">
       <text class="set-label">学习语言</text>
       <text class="set-val">{{langLabel}} ▾</text>
     </view>

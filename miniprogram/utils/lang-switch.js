@@ -23,4 +23,7 @@ function choose(onChanged) {
   });
 }
 
-module.exports = { label, choose };
+/** 可选语言多于一种时才显示切换入口（试用版语言被隐藏后只剩一种） */
+function available() { return langs.list().length > 1; }
+
+module.exports = { label, choose, available };

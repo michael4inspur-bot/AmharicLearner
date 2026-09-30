@@ -36,9 +36,9 @@ function cloudSupports(code, opts) {
   const s = state(code);
   if (s.supported) return Promise.resolve(true);
   if (!(opts && opts.force) && s.checkedAt && Date.now() - s.checkedAt < PROBE_INTERVAL_MS) return Promise.resolve(false);
-  s.checkedAt = Date.now();
   return api.fetchProgress(code)
-    .then((r) => { s.supported = !!r && r.lang === code; return s.supported; })
+    // 只有拿到答复才进入退避；网络失败不算，下次还要再探测
+    .then((r) => { s.checkedAt = Date.now(); s.supported = !!r && r.lang === code; return s.supported; })
     .catch(() => false);
 }
 
@@ -63,7 +63,12 @@ function syncNow(code) {
         .then((r) => { s.lastPayload = payload; if (r && r.updatedAt) s.baseUpdatedAt = r.updatedAt; return true; });
     })
     .catch(() => false)
-    .then((r) => { s.inFlight = null; return r; });
+    .then((r) => {
+      s.inFlight = null;
+      // 上传期间又有改动：再传一次，否则切后台时最后的改动会漏掉
+      if (r && JSON.stringify(progress.load(code)) !== s.lastPayload) return syncNow(code);
+      return r;
+    });
   return s.inFlight;
 }
 

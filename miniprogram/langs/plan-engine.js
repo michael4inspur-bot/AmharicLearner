@@ -46,7 +46,7 @@ function createPlan(cfg) {
         tasks.push({ type: 'mission', title: `实战任务 ${day}/5：${week8Missions[day - 1]}`, desc: '完成后在"今日"页打钩', minutes: 10, missionKey: `w8m${day}` });
       } else if (day === 6) {
         tasks.push({ type: 'quiz', title: '综合小测', desc: '10 题混合所有单元', minutes: 5, unit: 'all' });
-        tasks.push({ type: 'alphabet', title: `${alphabet.name} 全表自测`, desc: alphabet.finalDesc, minutes: 8, group: 5 });
+        tasks.push({ type: 'alphabet', title: `${alphabet.name} 全表自测`, desc: alphabet.finalDesc, minutes: 8, group: 0 });
       } else {
         tasks.push({ type: 'reflect', title: '结业复盘', reflectKey: 'final', desc: '回顾 8 周：哪些场景已经能开口，哪些还要练，写下下一阶段想攻的 3 个场景', minutes: 10 });
       }
