@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
-"""生成奥罗莫语朗读音频：Meta MMS 开源模型 facebook/mms-tts-orm（CC BY-NC 4.0）。
+"""生成奥罗莫语朗读音频：Meta MMS 公开模型 facebook/mms-tts-orm（CC BY-NC 4.0，
+https://creativecommons.org/licenses/by-nc/4.0/）。
 
 用法（开发机）：
   python3 -m venv .venv-tts && . .venv-tts/bin/activate
   pip install -r scripts/requirements-tts.txt
   python scripts/gen-oromo-audio.py           # 只生成新增/改动的句子
   python scripts/gen-oromo-audio.py --prune   # 同时删除已不在词库里的旧文件
-同一句话每次生成的结果相同（固定随机种子）。想换成真人录音：用同名 mp3 覆盖即可。
+  python scripts/gen-oromo-audio.py --force   # 全部重新生成（会覆盖已换成真人录音的文件！）
+同一句话每次生成的结果相同（固定随机种子）。每个文件先写临时文件再改名，中途中断不会留下半截 mp3。
+
+换成真人录音（文件名见 audio-om/manifest.json，「语速|文本 → 文件名」）：
+  1. 用真人录音的 mp3 覆盖 cloudfunctions/api/audio-om/ 里的同名文件（清单不用改）；
+  2. 重新上传并部署云函数 api —— 云端缓存键带文件内容版本，部署后自动换用新文件；
+  3. 把 miniprogram/langs/om/index.js 里 meta.audioVersion 加 1 —— 手机上已缓存的旧音频随之失效；
+  4. 上传小程序新版本并提审。
+之后不要再用 --force 运行本脚本，否则真人录音会被模型音频覆盖。
 """
 import hashlib
 import json
@@ -33,6 +42,7 @@ def collect_texts():
 
 def main():
     prune = '--prune' in sys.argv
+    force = '--force' in sys.argv
     import numpy as np
     import torch
     import lameenc
@@ -49,7 +59,7 @@ def main():
             name = key(rate, text) + '.mp3'
             manifest[f'{rate}|{text}'] = name
             path = os.path.join(OUT, name)
-            if os.path.exists(path):
+            if os.path.exists(path) and not force:
                 continue
             model.speaking_rate = speed
             torch.manual_seed(SEED)
@@ -61,12 +71,16 @@ def main():
             enc.set_in_sample_rate(sr)
             enc.set_channels(1)
             enc.set_quality(2)
-            with open(path, 'wb') as f:
+            tmp = path + '.tmp'
+            with open(tmp, 'wb') as f:
                 f.write(enc.encode(pcm.tobytes()) + enc.flush())
+            os.replace(tmp, path)  # 原子替换：中断时只会留下 .tmp，不会有半截 mp3
             made += 1
-    with open(os.path.join(OUT, 'manifest.json'), 'w', encoding='utf-8') as f:
+    manifest_path = os.path.join(OUT, 'manifest.json')
+    with open(manifest_path + '.tmp', 'w', encoding='utf-8') as f:
         json.dump(dict(sorted(manifest.items())), f, ensure_ascii=False, indent=0)
         f.write('\n')
+    os.replace(manifest_path + '.tmp', manifest_path)
     keep = set(manifest.values())
     orphans = [n for n in os.listdir(OUT) if n.endswith('.mp3') and n not in keep]
     if prune:

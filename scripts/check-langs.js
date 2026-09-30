@@ -31,6 +31,9 @@ metas.forEach((meta) => {
   ['hasRom', 'scoring', 'beta', 'audio', 'ttsLogin'].forEach((k) => assert.equal(typeof meta[k], 'boolean', at(`meta.${k}`)));
   assert.ok(Array.isArray(meta.voices) && meta.voices.length >= 1, at('meta.voices'));
   assert.equal(typeof meta.voiceNote, 'string', at('meta.voiceNote'));
+  // 预生成音频的语言（阿姆哈拉语走实时合成，缓存键不带版本）：audioVersion 进本地缓存键，必须是正整数
+  if (meta.audio && code !== 'am') assert.ok(Number.isInteger(meta.audioVersion) && meta.audioVersion >= 1, at('meta.audioVersion 必须是正整数（换真人录音后加 1）'));
+  if (meta.audioVersion !== undefined) assert.ok(Number.isInteger(meta.audioVersion) && meta.audioVersion >= 1, at('meta.audioVersion'));
   if (code === 'om') assert.equal(meta.voiceNote, '合成音', at('奥罗莫语朗读是模型预生成的，必须标「合成音」'));
   if (code === 'am') assert.equal(meta.voiceNote, '', at('阿姆哈拉语不显示「合成音」标注'));
   STRING_KEYS.forEach((k) => assert.ok(typeof meta.strings[k] === 'string' && meta.strings[k], at(`meta.strings.${k}`)));

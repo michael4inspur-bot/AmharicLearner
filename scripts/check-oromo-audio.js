@@ -27,4 +27,7 @@ const orphans = files.filter((f) => !expected.has(f));
 assert.deepEqual(orphans, [], '有多余的音频文件，请运行 gen-oromo-audio.py --prune');
 const total = files.reduce((s, f) => s + fs.statSync(path.join(DIR, f)).size, 0);
 assert.ok(total <= MAX_TOTAL, `音频包 ${(total / 1048576).toFixed(1)}MB 超过 15MB，请把码率降到 24kbps`);
+// 署名与许可说明随音频一起部署（非 mp3 文件，上面的文件检查只看 .mp3，云函数只按 manifest 取文件）
+const notice = fs.readFileSync(path.join(DIR, 'NOTICE.txt'), 'utf8');
+assert.ok(/mms-tts-orm/.test(notice) && /CC BY-NC 4\.0/.test(notice) && notice.includes('https://creativecommons.org/licenses/by-nc/4.0/'), 'audio-om/NOTICE.txt 缺少模型、许可或许可链接');
 console.log(`OK: 奥罗莫语音频 ${texts.length} 条 × 2 种语速，共 ${(total / 1048576).toFixed(1)}MB`);

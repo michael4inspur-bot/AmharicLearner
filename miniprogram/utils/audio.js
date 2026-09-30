@@ -14,6 +14,7 @@ const RATES = ['normal', 'slow'];
 const BATCH_MAX = 40;
 const DOWNLOAD_CONCURRENCY = 3;
 const TOAST_TEXT = '语音暂时不可用';
+const OLD_CLOUD_TEXT = '云函数版本过旧，暂不支持这种语言的发音。请管理员重新部署云函数 api。';
 
 function w() {
   return typeof wx !== 'undefined' && wx ? wx : null;
@@ -48,9 +49,14 @@ function setSettings(partial) {
   return next;
 }
 
-/** 本地映射键，与云端 key 的原文一致（云端再做 sha1） */
+/**
+ * 本地映射键。阿姆哈拉语与云端 key 的原文一致（云端再做 sha1），保持不变；
+ * 其他语言带上语言包的 audioVersion：预生成音频换成真人录音后版本加 1，手机上的旧文件不再命中。
+ */
 function cacheKey(text, voice, rate, lang) {
-  return !lang || lang === 'am' ? `${voice}|${rate}|${text}` : `${lang}|${rate}|${text}`;
+  if (!lang || lang === 'am') return `${voice}|${rate}|${text}`;
+  const v = (langs.meta(lang) && langs.meta(lang).audioVersion) || 1;
+  return `${lang}|v${v}|${rate}|${text}`;
 }
 
 const ttsSupported = { am: true };
@@ -68,6 +74,14 @@ function cloudTtsSupports(lang) {
       if (err && err.code === 'BAD_REQUEST') return false;
       throw err;
     });
+}
+
+/**
+ * 非阿姆哈拉语的回包必须带同样的 lang。灰度 / 多实例部署时 tts.caps 可能由新实例回答、
+ * tts.get 却落到旧实例：旧实例不认识 lang，会用阿姆哈拉语声音合成并计费，这种音频不能播也不能缓存。
+ */
+function answeredFor(res, lang) {
+  return !lang || lang === 'am' || !!(res && res.lang === lang);
 }
 
 /**
@@ -344,11 +358,15 @@ function forget(key) {
 function fetchAndPlay(text, s, key, opts, prevErrors, lang) {
   return cloudTtsSupports(lang).then((ok) => {
     if (!ok) {
-      if (!opts.silent) fail('云函数版本过旧，暂不支持这种语言的发音。请管理员重新部署云函数 api。');
+      if (!opts.silent) fail(OLD_CLOUD_TEXT);
       return undefined;
     }
     return api.ttsGet(text, s.voice, s.rate, lang)
       .then((res) => {
+        if (!answeredFor(res, lang)) {
+          if (!opts.silent) fail(OLD_CLOUD_TEXT, res);
+          return undefined;
+        }
         const url = res && res.url;
         const fileID = res && res.fileID;
         if (!url && !fileID) {
@@ -446,7 +464,7 @@ function prefetch(items) {
         .then(() => cloudTtsSupports(lang))
         .then((ok) => (ok ? api.ttsBatch(batch.map(({ id, text }) => ({ id, text })), s.voice, s.rate, lang) : null))
         .then((res) => {
-          if (!res) return undefined;
+          if (!res || !answeredFor(res, lang)) return undefined; // 旧实例的回包：不缓存
           const urls = (res && res.urls) || {};
           const files = (res && res.files) || {};
           const jobs = batch

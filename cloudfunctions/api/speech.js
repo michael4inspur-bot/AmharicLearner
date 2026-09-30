@@ -94,19 +94,20 @@ function ttsLang(v) {
 
 /**
  * 奥罗莫语：从代码包取预生成音频，首次用到上传云存储并写缓存。
+ * 缓存键带文件内容版本（om-audio.js），mp3 换成真人录音并重新部署后自动换新文件。
  * 不调 Azure、不计额度、不写日志（没有成本，也不涉及用户数据）。
  * @returns {Promise<{url, key, fileID} | {missing: true}>}
  */
 async function ensureOmTts(ctx, now, text, rate) {
   const { db, storage } = ctx;
   const omAudio = ctx.omAudio || defaultOmAudio;
-  const key = omKey(rate, text);
+  const hit = omAudio.lookup(text, rate);
+  if (!hit) return { missing: true };
+  const key = omKey(rate, text, hit.ver);
   let cached = await db.getTtsCache(key);
   if (!cached) {
-    const file = omAudio.lookup(text, rate);
-    if (!file) return { missing: true };
-    const fileID = await storage.upload(`tts/om/${key}.mp3`, omAudio.read(file));
-    cached = { _id: key, fileID, text, voice: 'mms', rate, lang: 'om', chars: 0, createdAt: now.toISOString() };
+    const fileID = await storage.upload(`tts/om/${key}.mp3`, omAudio.read(hit.file));
+    cached = { _id: key, fileID, text, voice: 'mms', rate, lang: 'om', ver: hit.ver, chars: 0, createdAt: now.toISOString() };
     await db.putTtsCache(cached);
   }
   const urls = await storage.tempUrls([cached.fileID]);
@@ -139,7 +140,8 @@ async function ttsGet(data, ctx, now) {
     let r;
     try { r = await ensureOmTts(ctx, now, t, data.rate); } catch (err) { return mapError(err); }
     if (r.missing) return fail('BAD_REQUEST', '这句还没有生成语音');
-    return ok({ url: r.url, key: r.key, fileID: r.fileID });
+    // 带上 lang：客户端据此确认这是认识奥罗莫语的云函数给的音频（旧版会忽略 lang、用阿姆哈拉语声音合成）
+    return ok({ url: r.url, key: r.key, fileID: r.fileID, lang: 'om' });
   }
   const { voice, rate } = data;
   if (!validVoice(voice)) return fail('BAD_REQUEST', `voice 非法: ${voice}`);
@@ -180,7 +182,7 @@ async function ttsBatch(data, ctx, now) {
         if (!(err && UPSTREAM_CODES.includes(err.code))) throw err;
       }
     });
-    return ok({ urls, files });
+    return ok({ urls, files, lang: 'om' });
   }
   const { voice, rate, items } = data;
   if (!validVoice(voice)) return fail('BAD_REQUEST', `voice 非法: ${voice}`);
@@ -239,11 +241,15 @@ function isOwnRecording(fileID, openid) {
 }
 
 async function sttScore(data, ctx, now) {
-  if (data.lang && data.lang !== 'am') return fail('BAD_REQUEST', '该语言暂不支持发音评分');
   const { openid, db, azure, storage } = ctx;
   const { fileID } = data;
   if (typeof fileID !== 'string' || !fileID) return fail('BAD_REQUEST', '缺少 fileID');
   if (!isOwnRecording(fileID, openid)) return fail('BAD_REQUEST', '录音文件不合法');
+  // 语言检查放在文件校验之后：确认是本人录音才删，删完再拒（隐私声明承诺录音不留存）
+  if (data.lang && data.lang !== 'am') {
+    await storage.remove([fileID]).catch(() => {});
+    return fail('BAD_REQUEST', '该语言暂不支持发音评分');
+  }
   const target = typeof data.target === 'string' ? data.target.trim() : '';
   if (!target) return fail('BAD_REQUEST', '缺少 target');
   const sttLimit = getLimits().stt;

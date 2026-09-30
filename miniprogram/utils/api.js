@@ -95,7 +95,8 @@ module.exports = {
   ttsGet: (text, voice, rate, lang) => call('tts.get', { text, voice, rate, lang: lang || 'am' }),
   ttsBatch: (items, voice, rate, lang) => call('tts.batch', { items, voice, rate, lang: lang || 'am' }),
   ttsCaps: () => call('tts.caps'),
-  sttScore: (fileID, target) => call('stt.score', { fileID, target }),
+  // 带上当前语言：云端对不评分的语言直接拒绝并删除录音。langs 在调用时才加载，避免模块互相引用
+  sttScore: (fileID, target) => call('stt.score', { fileID, target, lang: require('../langs/index.js').current() }),
   usageGet: () => call('usage.get'),
   adminUsage: () => call('admin.usage'),
   register: (nickname) => call('user.register', nickname ? { nickname } : {}),

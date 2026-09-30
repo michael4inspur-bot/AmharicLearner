@@ -211,8 +211,11 @@ Page({
     if (!tempFilePath) { wx.showToast({ title: '请先录音', icon: 'none' }); return; }
     this.compare();
     const first = progress.markCompared(item.id);
-    if (first) { try { points.award('compare'); } catch (e) { /* ignore */ } }
-    try { progress.addMinutes(1); } catch (e) { /* ignore */ }
+    // 星与学习时长都只在当天第一次对比这个词时记，反复点「对比」不会刷时长
+    if (first) {
+      try { points.award('compare'); } catch (e) { /* ignore */ }
+      try { progress.addMinutes(1); } catch (e) { /* ignore */ }
+    }
     this.setData({ practice: { first } });
   },
 

@@ -54,6 +54,8 @@ global.wx = {
     init() {},
     callFunction({ data, success, fail }) {
       global.__calls = (global.__calls || []).concat(data.action);
+      // 阿姆哈拉语绝不探测 tts.caps（旧云函数照常可用）；整个模拟过程累计，结尾断言为 0
+      if (data.action === 'tts.caps' && langs.current() === 'am') global.__amCaps = (global.__amCaps || 0) + 1;
       handle(data.action, data.data, { openid: simOpenid, db, azure, storage })
         .then((result) => success({ result }))
         .catch((e) => fail({ errMsg: e.message }));
@@ -647,10 +649,50 @@ async function main() {
   assert.equal(omCall.data.lang, 'om');
   assert.ok(sent.some((d) => d.action === 'tts.caps'), '先确认云函数支持奥罗莫语');
   assert.match(global.__audioCtx.src, /\/tmp\/sim\//, '播放下载到本地的文件');
-  assert.ok(wx.getStorageSync('audio_cache_v1')[`om|normal|${omText}`], '奥罗莫语本地缓存键带语言前缀');
+  assert.equal(langs.meta('om').audioVersion, 1, '奥罗莫语音频版本');
+  assert.ok(wx.getStorageSync('audio_cache_v1')[`om|v1|normal|${omText}`], '奥罗莫语本地缓存键带语言前缀与音频版本');
+  assert.equal(audio.cacheKey('ሰላም', 'female', 'normal', 'am'), 'female|normal|ሰላም', '阿姆哈拉语缓存键不变');
+  assert.equal(audio.cacheKey('ሰላም', 'female', 'normal'), 'female|normal|ሰላም', '不带语言时按阿姆哈拉语');
+  // 换成真人录音后把 audioVersion 加 1：旧的本地文件不再命中，重新下载
+  const omMeta = langs.meta('om');
+  omMeta.audioVersion = 2;
+  assert.equal(audio.cacheKey(omText, 'female', 'normal', 'om'), `om|v2|normal|${omText}`, 'audioVersion 变了缓存键跟着变');
+  sent.length = 0;
+  await audio.speak(omText);
+  assert.equal(sent.filter((d) => d.action === 'tts.get').length, 1, 'audioVersion 加 1 后重新取音频');
+  assert.ok(wx.getStorageSync('audio_cache_v1')[`om|v2|normal|${omText}`]);
+  omMeta.audioVersion = 1;
   sent.length = 0;
   await audio.speak(omText);
   assert.equal(sent.filter((d) => d.action === 'tts.get').length, 0, '第二次走本地缓存');
+  // 混合部署：tts.caps 被新实例回答，tts.get / tts.batch 却落到旧实例（回包不带 lang，用阿姆哈拉语声音合成）→ 不播、不缓存
+  const omOld = langs.pack('om').getUnit('om-u01').items[5].text;
+  const stripLang = (o) => {
+    sent.push(o.data);
+    if (!/^tts\.(get|batch)$/.test(o.data.action)) return cf0(o);
+    return cf0({ ...o, success: (res) => { const r = res.result; if (r && r.ok) delete r.data.lang; o.success(res); } });
+  };
+  wx.cloud.callFunction = stripLang;
+  sent.length = 0;
+  global.__modal = null;
+  const playsOld = global.__audioPlays || 0;
+  await audio.speak(omOld);
+  assert.ok(sent.some((d) => d.action === 'tts.get'), '混合部署：发了 tts.get');
+  assert.ok(!wx.getStorageSync('audio_cache_v1')[audio.cacheKey(omOld, 'female', 'normal', 'om')], '回包没有 lang：不缓存');
+  assert.equal(global.__audioPlays || 0, playsOld, '回包没有 lang：不播放');
+  assert.ok(global.__modal && /云函数版本过旧/.test(global.__modal.content), '回包没有 lang：提示云函数版本过旧');
+  global.__modal = null;
+  await audio.speak(omOld, { silent: true });
+  assert.equal(global.__modal, null, '静默朗读不弹框');
+  audio.prefetch([{ id: 'x', text: omOld }]);
+  await new Promise((r) => setTimeout(r, 20));
+  assert.ok(sent.some((d) => d.action === 'tts.batch'), '混合部署：发了 tts.batch');
+  assert.ok(!wx.getStorageSync('audio_cache_v1')[audio.cacheKey(omOld, 'female', 'normal', 'om')], '预取回包没有 lang：不缓存');
+  wx.cloud.callFunction = (o) => { sent.push(o.data); return cf0(o); };
+  audio.prefetch([{ id: 'x', text: omOld }]);
+  await new Promise((r) => setTimeout(r, 20));
+  assert.ok(wx.getStorageSync('audio_cache_v1')[audio.cacheKey(omOld, 'female', 'normal', 'om')], '新云函数：预取正常缓存');
+  wx.setStorageSync('profile_v1', { ...(savedProfile || {}), registered: false });
   const omQuiz2 = quiz.buildQuiz('om-u01', 9, progress.load(), langs.meta().audio);
   assert.ok(omQuiz2.some((q) => q.listen), '奥罗莫语有语音后出听力题');
   // 未登录：奥罗莫语小测页出听力题（免登录）；阿姆哈拉语仍然不出
@@ -692,12 +734,16 @@ async function main() {
   const cf1 = wx.cloud.callFunction;
   wx.cloud.callFunction = (o) => { if (o.data.action === 'stt.score') sttCalls.push(o); return cf1(o); };
   const starsBefore = progress.load().stars || 0;
+  const todayMin = () => (progress.load().logs[progress.todayStr()] || {}).minutes || 0;
+  const minBefore = todayMin();
   omCmpPage.data.tempFilePath = '/tmp/sim/rec.wav';
   omCmpPage.practiceCompare();
+  assert.equal(todayMin() - minBefore, 1, '第一次对比记 1 分钟');
   assert.equal((progress.load().stars || 0) - starsBefore, 1, '第一次对比 +1 星');
   assert.equal(omCmpPage.data.practice.first, true);
   omCmpPage.practiceCompare();
   assert.equal((progress.load().stars || 0) - starsBefore, 1, '同一个词当天不重复给星');
+  assert.equal(todayMin() - minBefore, 1, '同一个词反复点对比不重复记学习时长');
   assert.equal(omCmpPage.data.practice.first, false);
   omCmpPage.score();
   assert.equal(sttCalls.length, 0, '奥罗莫语绝不调用 stt.score');
@@ -711,7 +757,13 @@ async function main() {
   // 语音：朗读走云端合成 + 本地缓存
   global.__modal = null;
   audio.stop(); // 页面 onHide 时会在还没播过任何音频的情况下调用
+  const amSent = [];
+  const cfAm = wx.cloud.callFunction;
+  wx.cloud.callFunction = (o) => { amSent.push(o.data.action); return cfAm(o); };
   await audio.speak('ሰላም');
+  wx.cloud.callFunction = cfAm;
+  assert.ok(amSent.includes('tts.get'), '阿姆哈拉语朗读发 tts.get');
+  assert.ok(!amSent.includes('tts.caps'), '阿姆哈拉语朗读从不探测 tts.caps（旧云函数照常可用）');
   assert.ok(global.__audioCtx, 'InnerAudioContext created');
   assert.equal(global.__modal, null, '第一次朗读不能误报 audioInstance is not set');
   assert.equal(global.__audioCtx.stops, 0, '新播放器设置 src 之前不调用 stop');
@@ -739,12 +791,27 @@ async function main() {
     cloudPath: `stt/${simOpenid}/sim.wav`, filePath: '/tmp/sim/rec.wav', success: (r) => resolve(r.fileID), fail: reject
   }));
   assert.ok(storage._files.has(fileID), '录音已上传');
+  const sttSent = [];
+  const cfStt = wx.cloud.callFunction;
+  wx.cloud.callFunction = (o) => { if (o.data.action === 'stt.score') sttSent.push(o.data.data); return cfStt(o); };
   const scored = await api.sttScore(fileID, 'ሰላም');
+  assert.equal(sttSent[0].lang, 'am', 'stt.score 带当前语言');
   assert.equal(scored.score, 100, '识别一致得 100 分');
   assert.equal(scored.transcript, 'ሰላም');
   assert.deepEqual(scored.words, [{ w: 'ሰላም', ok: true }]);
   assert.equal(azure.recogCalls.length, 1, '调用一次 Azure 识别');
   assert.equal(storage._files.has(fileID), false, '评分后录音文件已删除');
+  // 当前语言是奥罗莫语时（例如旧页面直接调了评分），云端按 lang 拒绝，且已上传的录音当场删除
+  langs.set('om');
+  const omFile = await new Promise((resolve, reject) => wx.cloud.uploadFile({
+    cloudPath: `stt/${simOpenid}/om.wav`, filePath: '/tmp/sim/rec.wav', success: (r) => resolve(r.fileID), fail: reject
+  }));
+  await assert.rejects(api.sttScore(omFile, 'Akkam'), (e) => /暂不支持发音评分/.test(e.message), '奥罗莫语 stt.score 被云端拒绝');
+  assert.equal(sttSent[1].lang, 'om');
+  assert.equal(storage._files.has(omFile), false, '被拒的奥罗莫语录音也已删除');
+  assert.equal(azure.recogCalls.length, 1, '奥罗莫语不调 Azure 识别');
+  langs.set('am');
+  wx.cloud.callFunction = cfStt;
 
   // 语音：跟读页可加载并展示词句
   const speakPage = pageOf('speak/speak');
@@ -906,6 +973,7 @@ async function main() {
   assert.ok(profileWxml.includes('清空{{L.langName}}进度'), '清空按钮写明当前语言');
   assert.ok(/当前语言：' \+ L\.langName/.test(profileWxml), '云端同步说明写明当前语言');
 
+  assert.equal(global.__amCaps || 0, 0, '阿姆哈拉语在整个模拟过程中从未发过 tts.caps');
   console.log('OK: miniprogram simulation passed');
 }
 

@@ -1,0 +1,16 @@
+Afaan Oromoo audio in this directory / 本目录的奥罗莫语音频
+
+Model / 模型:        Meta MMS text-to-speech, facebook/mms-tts-orm
+                     https://huggingface.co/facebook/mms-tts-orm
+Licence / 许可:      Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
+                     https://creativecommons.org/licenses/by-nc/4.0/
+Attribution / 署名:  Pratap, V. et al., "Scaling Speech Technology to 1,000+ Languages", Meta, 2023 (arXiv:2305.13516).
+                     Audio generated with the model above by scripts/gen-oromo-audio.py (fixed seed, 32 kbps mp3).
+
+These files are machine-generated speech, not human recordings. They are labelled
+"合成音" (synthetic voice) in the app and may differ from native pronunciation.
+The CC BY-NC 4.0 licence does not allow commercial use: replace them with human
+recordings before any commercial use (see README, 「换成真人录音」).
+
+以上文件为模型生成的机器语音，不是真人录音，应用内标注「合成音」，可能与母语发音有差异。
+CC BY-NC 4.0 不允许商业使用：商用前请逐条换成真人录音（步骤见 README「换成真人录音」）。
