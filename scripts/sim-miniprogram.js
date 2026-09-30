@@ -413,6 +413,7 @@ async function main() {
   // 用 Object.create 包一层：setData 合并进各自的 data，不污染共享的页面配置
   const mkPage = (name, data) => Object.assign(Object.create(pageOf(name)), { data: { ...(data || pageOf(name).data) }, setData(d) { this.data = { ...this.data, ...d }; } });
   assert.equal(langs.current(), 'am');
+  const amGroupsSnap = JSON.stringify(progress.load('am').fidelGroupsDone);
   const homeSw = mkPage('index/index', {});
   homeSw.onShow();
   assert.match(homeSw.data.langLabel, /阿姆哈拉语/);
@@ -441,13 +442,15 @@ async function main() {
   omSearch.search('你好');
   assert.ok(omSearch.data.results.length > 0 && omSearch.data.results.every((r) => r.id.startsWith('om-')), '搜索只搜当前语言');
   const qubee = mkPage('qubee/qubee');
-  qubee.onLoad({ group: '1' });
+  qubee.onLoad({ group: '3' });
+  assert.ok(!progress.load().fidelGroupsDone[3], '第 3 批起初未通过');
+  assert.notEqual(qubee.data.done, true);
   qubee.startQuiz();
   qubee.questions.forEach((qq) => { qubee.data.q = qq; qubee.data.qScore += 1; });
   qubee.data.qIdx = qubee.data.qTotal;
   qubee.finish();
   assert.equal(qubee.data.done, true);
-  assert.ok(progress.load().fidelGroupsDone[1], 'Qubee 第 1 批记在奥罗莫语进度里');
+  assert.ok(progress.load().fidelGroupsDone[3], 'Qubee 第 3 批记在奥罗莫语进度里');
 
   // 「我的」页也能切回阿姆哈拉语，阿姆哈拉语进度完好
   wx.showActionSheet = ({ itemList, success }) => success({ tapIndex: itemList.findIndex((t) => /阿姆哈拉语/.test(t)) });
@@ -456,6 +459,7 @@ async function main() {
   assert.equal(langs.current(), 'am');
   assert.match(meSw.data.langLabel, /阿姆哈拉语/);
   assert.ok(!progress.load().unitsLearned['om-u03'], '阿姆哈拉语进度没有混入奥罗莫语');
+  assert.equal(JSON.stringify(progress.load('am').fidelGroupsDone), amGroupsSnap, '阿姆哈拉语字母进度没被 Qubee 小测改动');
   wx.showActionSheet = realSheet;
 
 
