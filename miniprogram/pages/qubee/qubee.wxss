@@ -1,0 +1,45 @@
+/* Qubee 字母：批次标签、选项、结果样式与 pages/fidel 一致（类名相同） */
+.qb-head { margin-bottom: 20rpx; }
+.qb-title { font-size: 44rpx; font-weight: 800; line-height: 1.2; margin-bottom: 6rpx; }
+
+/* 批次胶囊 */
+.groups { white-space: nowrap; margin-bottom: 24rpx; }
+.gbtn {
+  display: inline-block; padding: 16rpx 30rpx; border-radius: 999rpx;
+  background: var(--card); margin-right: 14rpx; font-size: 26rpx; font-weight: 700;
+  color: var(--muted-2); box-shadow: var(--shadow-sm);
+}
+.gbtn.on { background: var(--accent); color: #FFFFFF; box-shadow: 0 14rpx 36rpx rgba(194, 65, 12, 0.26); }
+
+/* 规则卡片 */
+.qb-done { margin-bottom: 16rpx; }
+.qb-section { margin-bottom: 12rpx; }
+.qb-sec-title { font-size: 32rpx; font-weight: 800; margin-bottom: 6rpx; }
+.qb-intro { margin-bottom: 16rpx; line-height: 1.5; }
+.qb-rule { padding: 28rpx 32rpx; }
+.qb-pattern { font-size: 40rpx; line-height: 1.3; margin-bottom: 8rpx; }
+.qb-zh { font-size: 28rpx; line-height: 1.5; margin-bottom: 12rpx; }
+.qb-ex { padding: 12rpx 0; border-top: 2rpx solid #F5EADF; }
+.qb-ex-text { font-size: 32rpx; margin-right: 16rpx; }
+.qb-ex-zh { text-align: right; }
+
+/* 小测 */
+.qz-head { margin-bottom: 20rpx; }
+.qz-count { font-size: 32rpx; font-weight: 800; }
+.qz-score { font-size: 26rpx; color: var(--muted); font-weight: 700; }
+.qbox { text-align: center; padding: 48rpx 32rpx; border-radius: 56rpx; }
+.big { font-size: 64rpx; line-height: 1.3; margin-bottom: 12rpx; word-break: break-word; }
+.opt {
+  background: var(--card); border-radius: 999rpx; padding: 28rpx;
+  margin-bottom: 18rpx; font-size: 30rpx; font-weight: 700; text-align: center;
+  box-shadow: var(--shadow-sm); transition: background 200ms ease, color 200ms ease, opacity 200ms ease;
+}
+.opt:active { transform: scale(0.98); }
+.opt.right { background: var(--mint); color: var(--mint-deep); box-shadow: none; }
+.opt.wrong { background: var(--peach); color: var(--accent); box-shadow: none; }
+.opt.dim { opacity: 0.5; }
+
+.result-card { text-align: center; padding: 60rpx 40rpx 44rpx; }
+.result-am { font-size: 56rpx; line-height: 1.3; }
+.result-score { font-size: 96rpx; font-weight: 800; color: var(--accent); line-height: 1.1; margin: 12rpx 0 8rpx; }
+.result-stars { margin: 12rpx 0 16rpx; font-size: 26rpx; }

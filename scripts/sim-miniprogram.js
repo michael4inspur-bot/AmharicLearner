@@ -93,11 +93,11 @@ const api = require(path.join(root, 'utils/api.js'));
 const sync = require(path.join(root, 'utils/sync.js'));
 const audio = require(path.join(root, 'utils/audio.js'));
 
-const PAGE_NAMES = ['index/index', 'lessons/lessons', 'lesson/lesson', 'review/review', 'quiz/quiz', 'plan/plan', 'fidel/fidel', 'profile/profile', 'search/search', 'speak/speak', 'admin/admin', 'login/login', 'privacy/privacy'];
+const PAGE_NAMES = ['index/index', 'lessons/lessons', 'lesson/lesson', 'review/review', 'quiz/quiz', 'plan/plan', 'fidel/fidel', 'qubee/qubee', 'profile/profile', 'search/search', 'speak/speak', 'admin/admin', 'login/login', 'privacy/privacy'];
 PAGE_NAMES.forEach((p) => require(path.join(root, 'pages', p + '.js')));
 /** 按页面名取 Page 配置，避免下标随页面增删错位 */
 const pageOf = (name) => pages[PAGE_NAMES.indexOf(name)];
-assert.equal(pages.length, 13, 'pages loaded');
+assert.equal(pages.length, 14, 'pages loaded');
 // 自定义 tabBar：AI 教练下线后不应出现在底部导航
 require(path.join(root, 'custom-tab-bar/index.js'));
 const tabBar = global.__components[global.__components.length - 1];
@@ -357,6 +357,53 @@ async function main() {
   assert.equal(JSON.stringify(progress.load().unitsLearned), amUnitsBefore, '切回后阿姆哈拉语进度不变');
   assert.ok(!progress.load().srs['om-u01-01']);
   assert.ok(wx.getStorageSync('progress_om_v1').srs['om-u01-01'], '奥罗莫语进度存在自己的键下');
+
+  // Qubee 字母页：只从奥罗莫语进入；通过小测只写奥罗莫语进度
+  const qubeePage = pageOf('qubee/qubee');
+  const mkQubee = () => Object.assign(Object.create(qubeePage), { data: { ...qubeePage.data }, setData(d) { this.data = { ...this.data, ...d }; } });
+  const realBack = wx.navigateBack;
+  let backs = 0;
+  wx.navigateBack = () => { backs += 1; };
+  const qbAm = mkQubee();
+  qbAm.onLoad({ group: '1' });
+  assert.equal(backs, 1, '阿姆哈拉语下打开 Qubee 页直接返回');
+  assert.equal(qbAm.data.groups.length, 0, '返回前不加载数据');
+  langs.set('om');
+  const qb = mkQubee();
+  qb.onLoad({ group: '2' });
+  assert.equal(backs, 1, '奥罗莫语下正常打开');
+  assert.equal(qb.data.groups.length, 5);
+  assert.equal(qb.data.group, 2);
+  assert.equal(qb.data.sections.length, 1, '单批只显示本批规则');
+  assert.equal(qb.data.sections[0].group, 2);
+  assert.equal(qb.data.tc, 'latin');
+  qb.pickGroup({ currentTarget: { dataset: { g: '0' } } });
+  assert.equal(qb.data.sections.length, 5, '「全部」显示 5 批');
+  qb.pickGroup({ currentTarget: { dataset: { g: '1' } } });
+  qb.startQuiz();
+  assert.equal(qb.data.mode, 'quiz');
+  assert.equal(qb.data.qTotal, 10);
+  assert.ok(qb.data.q.options.includes(qb.data.q.answer));
+  const omStarsBefore = progress.load('om').stars || 0;
+  const amGroupsBefore = JSON.stringify(progress.load('am').fidelGroupsDone);
+  qb.setData({ qScore: 10, qIdx: 10 });
+  qb.showQ();
+  assert.equal(qb.data.mode, 'result');
+  assert.equal(qb.data.pct, 100);
+  assert.ok(qb.data.earned > 0, '首次通过加星');
+  assert.ok(progress.load('om').fidelGroupsDone[1], '奥罗莫语第 1 批已通过');
+  assert.equal(JSON.stringify(progress.load('am').fidelGroupsDone), amGroupsBefore, '阿姆哈拉语字母进度不变');
+  assert.equal(progress.load('om').stars, omStarsBefore + qb.data.earned);
+  qb.startQuiz();
+  qb.setData({ qScore: 10, qIdx: 10 });
+  qb.showQ();
+  assert.equal(qb.data.earned, 0, '再次通过不重复加星');
+  qb.backRules();
+  assert.equal(qb.data.mode, 'rules');
+  qb.enterAt = Date.now();
+  qb.onUnload();
+  wx.navigateBack = realBack;
+  langs.set('am');
 
 
   // 语音：朗读走云端合成 + 本地缓存

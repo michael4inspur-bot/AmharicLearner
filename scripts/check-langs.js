@@ -62,6 +62,28 @@ metas.forEach((meta) => {
   ['phone', 'site', 'formal'].forEach((k) => assert.ok(p.getUnit(p.badgeUnits[k]), at(`badgeUnits.${k}`)));
   assert.ok(Array.isArray(p.greetings) && p.greetings.length >= 3, at('greetings 至少 3 条：首页按下标 1、2 取早上好 / 下午好'));
   p.greetings.forEach((g, i) => checkText(g, `greetings[${i}]`));
+  if (meta.script === 'latin') {
+    assert.equal(p.alphabet.groups.length, 5, at('Qubee 规则恰好 5 批'));
+    p.alphabet.groups.forEach((g, i) => {
+      assert.equal(g.group, i + 1, at(`第 ${i + 1} 批 group 编号`));
+      assert.ok(g.rules.length >= 3, at(`第 ${g.group} 批至少 3 条规则`));
+      g.rules.forEach((r) => {
+        assert.ok(r.pattern && r.zh && r.examples.length >= 2, at(`第 ${g.group} 批规则 ${r.pattern} 不完整`));
+        r.examples.forEach((ex) => checkText(ex, `Qubee 例词 ${ex.text}`));
+      });
+    });
+    [0, 1, 5].forEach((g) => {
+      const qs = p.alphabet.buildQuiz(g, 10);
+      assert.ok(qs.length >= 5, at(`第 ${g} 批小测题数`));
+      qs.forEach((q) => {
+        assert.equal(q.options.length, 4, at('每题 4 个选项'));
+        assert.equal(new Set(q.options).size, 4, at('选项不重复'));
+        assert.ok(q.options.includes(q.answer), at('选项含答案'));
+      });
+    });
+    assert.ok(p.plan.principles.length >= 8, at('学习原则'));
+    assert.ok(p.plan.weeks.every((w) => w.mission && w.milestone && w.theme), at('每周有主题、任务、里程碑'));
+  }
 });
 
 // 注册表行为
