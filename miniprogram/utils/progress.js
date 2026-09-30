@@ -1,6 +1,5 @@
 // 学习进度：本地存储（wx.storage）为主，后台同步为辅。
-const vocab = require('../data/vocab.js');
-const plan = require('../data/plan.js');
+const langs = require('../langs/index.js');
 const srs = require('./srs.js');
 
 const KEY = 'progress_v1';
@@ -124,8 +123,8 @@ function currentPosition(p) {
   p = p || load();
   const start = new Date(p.startDate + 'T00:00:00');
   const diff = Math.max(0, Math.floor((Date.now() - start.getTime()) / DAY));
-  const week = Math.min(plan.weeks.length, Math.floor(diff / 7) + 1);
-  const day = diff >= plan.weeks.length * 7 ? 7 : (diff % 7) + 1;
+  const week = Math.min(langs.pack().plan.weeks.length, Math.floor(diff / 7) + 1);
+  const day = diff >= langs.pack().plan.weeks.length * 7 ? 7 : (diff % 7) + 1;
   return { week, day, dayIndex: diff };
 }
 
@@ -170,7 +169,7 @@ function streak(p) {
 // ---------- 单元与 SRS ----------
 function learnUnit(unitId) {
   const p = load();
-  const u = vocab.getUnit(unitId);
+  const u = langs.pack().getUnit(unitId);
   if (!u) return p;
   const now = Date.now();
   let added = 0;
@@ -200,8 +199,8 @@ function dueCards(p, limit) {
       if (newBudget > 0) { newBudget -= 1; return true; }
       return false;
     })
-    .map((id) => ({ ...vocab.getItem(id), card: p.srs[id] }))
-    .filter((x) => x.am);
+    .map((id) => ({ ...langs.pack().getItem(id), card: p.srs[id] }))
+    .filter((x) => x.text);
   return limit ? due.slice(0, limit) : due;
 }
 
@@ -259,9 +258,9 @@ function completeFidelGroup(group) {
 function summary(p) {
   p = p || load();
   const pos = currentPosition(p);
-  const plannedUnits = plan.weeks.slice(0, pos.week).flatMap((w) => w.units);
+  const plannedUnits = langs.pack().plan.weeks.slice(0, pos.week).flatMap((w) => w.units);
   const learned = Object.keys(p.unitsLearned);
-  const titles = (ids) => ids.map((id) => { const u = vocab.getUnit(id); return u ? `${id} ${u.title}` : id; });
+  const titles = (ids) => ids.map((id) => { const u = langs.pack().getUnit(id); return u ? `${id} ${u.title}` : id; });
 
   const quizByUnit = {};
   p.quizScores.forEach((q) => {
@@ -289,7 +288,7 @@ function summary(p) {
     .filter((x) => x.lapses > 0)
     .sort((a, b) => b.lapses - a.lapses)
     .slice(0, 10)
-    .map((x) => { const it = vocab.getItem(x.id); return it ? { am: it.am, zh: it.zh, lapses: x.lapses } : null; })
+    .map((x) => { const it = langs.pack().getItem(x.id); return it ? { text: it.text, zh: it.zh, lapses: x.lapses } : null; })
     .filter(Boolean);
 
   const stats = srsStats(p);

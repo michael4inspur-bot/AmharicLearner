@@ -389,7 +389,7 @@ function downloadQueue(jobs) {
 }
 
 /**
- * 预取一组词句的语音到本地。items: [{id, text}]（也接受课程 item 的 am 字段）。
+ * 预取一组词句的语音到本地。items: [{id, text}]（课程 item 的 text 字段）。
  * 已缓存的跳过；每批最多 40 条调 api.ttsBatch；不返回 Promise，不抛错。
  */
 function prefetch(items) {
@@ -400,7 +400,7 @@ function prefetch(items) {
     const pending = [];
     items.forEach((it, idx) => {
       if (!it) return;
-      const text = String(it.text || it.am || '').trim();
+      const text = String(it.text || '').trim();
       if (!text) return;
       const key = cacheKey(text, s.voice, s.rate);
       if (seen[key] || cachedPath(key)) return;

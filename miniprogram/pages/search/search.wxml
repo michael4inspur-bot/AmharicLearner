@@ -17,9 +17,9 @@
   </view>
 
   <view class="word-row" wx:for="{{results}}" wx:key="id">
-    <view class="grow" data-text="{{item.am}}" bindlongpress="copy">
-      <view class="am word-am">{{item.am}}</view>
-      <view class="rom">{{item.rom}}</view>
+    <view class="grow" data-text="{{item.text}}" bindlongpress="copy">
+      <view class="am word-am">{{item.text}}</view>
+      <view class="rom" wx:if="{{item.rom}}">{{item.rom}}</view>
       <view class="zh">{{item.zh}}</view>
       <view class="note" wx:if="{{item.note}}">{{item.note}}</view>
       <view class="unit-link" data-unit="{{item.unit}}" catchtap="openUnit">
@@ -27,7 +27,7 @@
         <x-icon name="chevron-right" size="22" color="#B08A78" />
       </view>
     </view>
-    <view class="square mint" data-text="{{item.am}}" catchtap="play">
+    <view class="square mint" data-text="{{item.text}}" catchtap="play">
       <x-icon name="speaker" size="36" color="#2F7A5E" />
     </view>
     <view class="square lav" data-id="{{item.id}}" catchtap="addCard">

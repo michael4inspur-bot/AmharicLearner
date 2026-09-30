@@ -10,8 +10,8 @@
   </view>
 
   <view class="card word-card" wx:if="{{item}}">
-    <view class="am big">{{item.am}}</view>
-    <view class="rom">{{item.rom}}</view>
+    <view class="am big">{{item.text}}</view>
+    <view class="rom" wx:if="{{item.rom}}">{{item.rom}}</view>
     <view class="zh big-zh">{{item.zh}}</view>
     <view class="note" wx:if="{{item.note}}">{{item.note}}</view>
     <view class="chips">

@@ -1,16 +1,20 @@
-const vocab = require('../../data/vocab.js');
+const langs = require('../../langs/index.js');
 const progress = require('../../utils/progress.js');
 const audio = require('../../utils/audio.js');
 
-const ALL = vocab.allItems().map((it) => ({
-  ...it,
-  unitTitle: (vocab.getUnit(it.unit) || {}).title || '',
-  hay: `${it.am} ${it.rom.toLowerCase()} ${it.zh} ${it.note || ''}`.toLowerCase()
-}));
+function buildIndex() {
+  const pk = langs.pack();
+  return pk.allItems().map((it) => ({
+    ...it,
+    unitTitle: (pk.getUnit(it.unit) || {}).title || '',
+    hay: `${it.text} ${(it.rom || '').toLowerCase()} ${it.zh} ${it.note || ''}`.toLowerCase()
+  }));
+}
 
 Page({
   data: { q: '', results: [], recent: [] },
   onLoad() {
+    this.all = buildIndex();
     let recent = [];
     try { recent = wx.getStorageSync('search_recent') || []; } catch (e) { /* ignore */ }
     this.setData({ recent });
@@ -28,14 +32,15 @@ Page({
   search(q) {
     q = (q || '').trim().toLowerCase();
     if (!q) { this.setData({ q, results: [] }); return; }
+    const all = this.all || (this.all = buildIndex());
     const terms = q.split(/\s+/);
-    const results = ALL
+    const results = all
       .map((it) => {
         let score = 0;
         terms.forEach((t) => {
-          if (it.zh.toLowerCase() === t || it.am === t) score += 10;
+          if (it.zh.toLowerCase() === t || it.text.toLowerCase() === t) score += 10;
           else if (it.zh.toLowerCase().includes(t)) score += 5;
-          else if (it.rom.toLowerCase().startsWith(t)) score += 4;
+          else if ((it.rom || it.text).toLowerCase().startsWith(t)) score += 4;
           else if (it.hay.includes(t)) score += 2;
         });
         return { it, score };

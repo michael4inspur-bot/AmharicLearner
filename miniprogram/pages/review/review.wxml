@@ -31,7 +31,7 @@
             <view class="fc-hint">在心里说出阿姆哈拉语</view>
           </block>
           <block wx:else>
-            <view class="am fc-am">{{current.am}}</view>
+            <view class="am fc-am">{{current.text}}</view>
             <view class="fc-rom">{{current.rom}}</view>
             <view class="fc-hint">在心里说出意思</view>
           </block>
@@ -44,7 +44,7 @@
         <view class="deco deco-lav"></view>
         <view class="fc-unit">{{current.unitTitle}}</view>
         <view class="fc-body">
-          <view class="am fc-am">{{current.am}}</view>
+          <view class="am fc-am">{{current.text}}</view>
           <view class="fc-rom">{{current.rom}}</view>
           <view class="fc-zh">{{current.zh}}</view>
           <view class="fc-note" wx:if="{{current.note}}">{{current.note}}</view>

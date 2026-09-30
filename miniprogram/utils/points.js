@@ -1,5 +1,6 @@
 // 星星积分与徽章。只依赖 progress.js，不被它依赖。
 const progress = require('./progress.js');
+const langs = require('../langs/index.js');
 
 const STAR_RULES = {
   review_clear: 10, // 清空当日到期卡
@@ -42,11 +43,11 @@ const BADGES = [
   { id: 'streak-14', name: '两周不断', desc: '连续学习 14 天',
     progress: (p) => { const s = progress.streak(p); return { done: s >= 14, text: `再坚持 ${Math.max(0, 14 - s)} 天` }; } },
   { id: 'phone-pro', name: '电话达人', desc: '学完「电话与沟通」且小测 ≥ 80%',
-    progress: (p) => { const b = bestQuiz(p, 'u15'); return { done: !!p.unitsLearned.u15 && b >= 80, text: p.unitsLearned.u15 ? `小测最好 ${b}%，目标 80%` : '学完「电话与沟通」' }; } },
+    progress: (p) => { const u = langs.pack().badgeUnits.phone; const b = bestQuiz(p, u); return { done: !!p.unitsLearned[u] && b >= 80, text: p.unitsLearned[u] ? `小测最好 ${b}%，目标 80%` : '学完「电话与沟通」' }; } },
   { id: 'site-lead', name: '现场指挥', desc: '学完「现场与班组」并完成第 4 周实战',
-    progress: (p) => ({ done: !!p.unitsLearned.u14 && !!p.missions.w4, text: p.unitsLearned.u14 ? '完成第 4 周实战任务' : '学完「现场与班组」' }) },
+    progress: (p) => { const u = langs.pack().badgeUnits.site; return { done: !!p.unitsLearned[u] && !!p.missions.w4, text: p.unitsLearned[u] ? '完成第 4 周实战任务' : '学完「现场与班组」' }; } },
   { id: 'formal-master', name: '敬语大师', desc: '学完「正式场合与敬语」且小测 ≥ 80%',
-    progress: (p) => { const b = bestQuiz(p, 'u16'); return { done: !!p.unitsLearned.u16 && b >= 80, text: p.unitsLearned.u16 ? `小测最好 ${b}%，目标 80%` : '学完「正式场合与敬语」' }; } },
+    progress: (p) => { const u = langs.pack().badgeUnits.formal; const b = bestQuiz(p, u); return { done: !!p.unitsLearned[u] && b >= 80, text: p.unitsLearned[u] ? `小测最好 ${b}%，目标 80%` : '学完「正式场合与敬语」' }; } },
   { id: 'hundred-words', name: '百词斩', desc: '闪卡累计 100 张',
     progress: (p) => { const n = Object.keys(p.srs).length; return { done: n >= 100, text: `已 ${n} / 100 张` }; } },
   { id: 'star-collector', name: '星星收藏家', desc: '累计 500 颗星',
@@ -87,7 +88,7 @@ function allBadges(p) {
 function celebrate() {
   const fresh = checkBadges();
   if (fresh.length && typeof wx !== 'undefined' && wx.showModal) {
-    wx.showModal({ title: `获得徽章「${fresh[0].name}」`, content: fresh[0].desc, showCancel: false, confirmText: 'ጥሩ ስራ!' });
+    wx.showModal({ title: `获得徽章「${fresh[0].name}」`, content: fresh[0].desc, showCancel: false, confirmText: langs.meta().strings.praise });
   }
   return fresh;
 }

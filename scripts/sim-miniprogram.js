@@ -86,8 +86,9 @@ require(path.join(root, 'config.js')).cloudEnv = 'sim-env';
 
 const progress = require(path.join(root, 'utils/progress.js'));
 const quiz = require(path.join(root, 'utils/quiz.js'));
-const plan = require(path.join(root, 'data/plan.js'));
-const vocab = require(path.join(root, 'data/vocab.js'));
+const langs = require(path.join(root, 'langs/index.js'));
+const vocab = langs.pack('am');
+const plan = vocab.plan;
 const api = require(path.join(root, 'utils/api.js'));
 const sync = require(path.join(root, 'utils/sync.js'));
 const audio = require(path.join(root, 'utils/audio.js'));
@@ -159,7 +160,7 @@ async function main() {
   searchPage.setData = function (d) { this.data = { ...this.data, ...d }; };
   searchPage.data = { q: '', results: [], recent: [] };
   searchPage.search('多少钱');
-  assert.equal(searchPage.data.results[0].am, 'ስንት ነው?');
+  assert.equal(searchPage.data.results[0].text, 'ስንት ነው?');
 
   // 同步：未登记不上传（用户还没勾选隐私同意）
   assert.equal(api.configured(), true);
@@ -295,7 +296,7 @@ async function main() {
   assert.equal(q9.length, 9);
   assert.equal(q9[2].listen, true, '第 3 题为听力题');
   assert.ok(q9[2].audioText, '听力题带朗读文本');
-  assert.equal(q9[2].promptAm, '', '听力题题面不显示阿姆哈拉语');
+  assert.equal(q9[2].promptText, '', '听力题题面不显示阿姆哈拉语');
   assert.ok(!q9[0].listen && !q9[1].listen, '前两题非听力题');
   [5, 8].forEach((i) => assert.equal(q9[i].listen, true, `第 ${i + 1} 题为听力题`));
 

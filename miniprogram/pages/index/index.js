@@ -1,17 +1,8 @@
 const progress = require('../../utils/progress.js');
 const points = require('../../utils/points.js');
 const api = require('../../utils/api.js');
-const plan = require('../../data/plan.js');
-const vocab = require('../../data/vocab.js');
+const langs = require('../../langs/index.js');
 const update = require('../../utils/update.js');
-
-const GREETINGS = [
-  { am: 'ሰላም', rom: 'selam', zh: '你好' },
-  { am: 'እንደምን አደርክ?', rom: 'indemin aderk?', zh: '早上好（对男）' },
-  { am: 'እንደምን ዋልሽ?', rom: 'indemin walsh?', zh: '下午好（对女）' },
-  { am: 'ጥሩ ስራ!', rom: 'tiru sira!', zh: '干得好！' },
-  { am: 'አማርኛ እማራለሁ', rom: 'Amarigna imaralehu', zh: '我在学阿姆哈拉语' }
-];
 
 const ANNOUNCE_KEY = 'announcement_seen';
 const PROFILE_KEY = 'profile_v1';
@@ -85,18 +76,19 @@ Page({
   },
 
   refresh() {
+    const pk = langs.pack();
     const p = progress.load();
     const pos = progress.currentPosition(p);
-    const week = plan.weeks[pos.week - 1];
+    const week = pk.plan.weeks[pos.week - 1];
     const log = progress.todayLog(p);
     const stats = progress.srsStats(p);
-    const tasks = plan.getDayTasks(pos.week, pos.day).map((t) => this.decorate(t, p, stats));
+    const tasks = pk.plan.getDayTasks(pos.week, pos.day).map((t) => this.decorate(t, p, stats));
     const required = tasks.filter((t) => !t.optional);
     const doneCount = required.filter((t) => t.done).length;
     const requiredCount = required.length;
     const weekUnitsDone = week.units.filter((id) => p.unitsLearned[id]).length;
     const hour = new Date().getHours();
-    const greet = GREETINGS[hour < 12 ? 1 : hour < 18 ? 2 : 0];
+    const greet = pk.greetings[hour < 12 ? 1 : hour < 18 ? 2 : 0];
     const minutePct = Math.min(100, Math.round((log.minutes / p.dailyMinutesGoal) * 100));
     const nb = points.nextBadge(p);
 
@@ -104,7 +96,7 @@ Page({
       pos,
       week,
       greet,
-      tip: GREETINGS[(pos.dayIndex + 3) % GREETINGS.length],
+      tip: pk.greetings[(pos.dayIndex + 3) % pk.greetings.length],
       streak: progress.streak(p),
       minutes: log.minutes,
       goal: p.dailyMinutesGoal,
@@ -125,7 +117,7 @@ Page({
     const today = progress.todayStr();
     const d = { ...t };
     if (t.unit && t.unit !== 'all' && t.unit !== 'week') {
-      const u = vocab.getUnit(t.unit);
+      const u = langs.pack().getUnit(t.unit);
       d.unitTitle = u ? u.title : t.unit;
       d.title = d.title.replace(t.unit, d.unitTitle);
     }

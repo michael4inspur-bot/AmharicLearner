@@ -1,4 +1,5 @@
-const fidel = require('../../data/fidel.js');
+const langs = require('../../langs/index.js');
+const fidel = langs.pack('am').alphabet;
 const progress = require('../../utils/progress.js');
 const quiz = require('../../utils/quiz.js');
 const points = require('../../utils/points.js');

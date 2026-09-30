@@ -2,7 +2,7 @@
   <view class="hero">
     <view class="blob a"></view>
     <view class="blob b"></view>
-    <view class="hero-am am">{{greet.am}}</view>
+    <view class="hero-am am">{{greet.text}}</view>
     <view class="hero-sub">{{greet.zh}} · 第 {{pos.week}} 周 第 {{pos.day}} 天</view>
     <view class="hero-meta">
       <view class="streak-pill" bindtap="goProfile">
@@ -101,7 +101,7 @@
 
   <view class="card">
     <view class="muted">每日一句</view>
-    <view class="am am-lg">{{tip.am}}</view>
+    <view class="am am-lg">{{tip.text}}</view>
     <view class="rom">{{tip.rom}} · {{tip.zh}}</view>
   </view>
 </view>
