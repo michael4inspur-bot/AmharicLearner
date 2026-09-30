@@ -1030,3 +1030,9 @@ git commit -m "docs: Oromo review sheet, README and checklist for the Oromo beta
 
 - PR 3（语音）：`scripts/gen-oromo-audio.py`、音频包与 manifest、云函数 `tts.*` 的 `om` 分支（免登录、不计额度）、前端 `lang` 透传与缓存 key、`meta.audio` 改为 true、校对表加音频文件名列、设置页只有一种声音时隐藏男声/女声。
 - PR 4（跟读与合规）：奥罗莫语跟读对比模式、「合成音」标注、关于页 MMS 署名、合规检查、提审清单更新。
+
+## PR 2 执行后带入后续 PR 的事项
+
+- 待母语者校对（`docs/oromo-review.md`）：`Hara`/`haroo`、`Buddeena`/`biddeena`、`Zayita`/`zayitii`、`Doktora`/`doktara`、`Akkam galgalte`/`Galgala gaarii`、`Si nan eega`、`Gara bitaatti gori`、u14「梯子」缺条目、u12「我迷路了」缺条目、「重读」一词对中文用户可能误解为重音。
+- PR 3：`sync.flushPending` 遇到进行中的上传会漏掉之后的改动；网络失败的探测也会触发 10 分钟退避。
+- PR 4：`showBetaLangs=false` 时语言标签仍弹出只有一项的列表（只有一种语言时隐藏标签）；奥罗莫语对话任务标题仍叫「对话跟读」（跟读对比上线后再定）；README 第 4 周「周末 AI 诊断」残留；复习页「第 N / M 张」等小项；Fidel/Qubee「全表自测」只打开第 5 批。
