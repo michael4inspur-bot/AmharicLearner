@@ -35,7 +35,7 @@ function defaultProgress() {
   };
 }
 
-const OBJECT_FIELDS = ['unitsLearned', 'srs', 'logs', 'missions', 'reflections', 'fidelGroupsDone', 'starLog', 'badges'];
+const OBJECT_FIELDS = ['unitsLearned', 'srs', 'logs', 'missions', 'reflections', 'fidelGroupsDone', 'starLog', 'badges', 'compared'];
 const ARRAY_FIELDS = ['quizScores'];
 
 /**
@@ -125,6 +125,7 @@ function replace(p, code) {
   if (!p || typeof p !== 'object' || p.stars == null) next.stars = local.stars || 0;
   if (!p || !p.starLog) next.starLog = local.starLog || {};
   if (!p || !p.badges) next.badges = local.badges || {};
+  if (!p || !p.compared) next.compared = local.compared || {};
   delete caches[code];
   return save(next, code);
 }
@@ -153,6 +154,17 @@ function todayLog(p) {
   const k = todayStr();
   if (!p.logs[k]) p.logs[k] = { ...ZERO_LOG };
   return p.logs[k];
+}
+
+/** 今天第一次对比练习这个词返回 true（用于每词每天只给一次星） */
+function markCompared(itemId) {
+  const p = load();
+  const today = todayStr();
+  if (!p.compared || p.compared.date !== today || !p.compared.ids || typeof p.compared.ids !== 'object') p.compared = { date: today, ids: {} };
+  if (p.compared.ids[itemId]) return false;
+  p.compared.ids[itemId] = true;
+  save(p);
+  return true;
 }
 
 function addMinutes(min) {
@@ -267,6 +279,6 @@ function completeAlphabetGroup(group) {
 }
 
 module.exports = {
-  todayStr, keyOf, load, save, reset, replace, sanitize, isEmpty, setOnSaved, currentPosition, todayLog, addMinutes, streak,
+  todayStr, keyOf, load, save, reset, replace, sanitize, isEmpty, setOnSaved, currentPosition, todayLog, addMinutes, markCompared, streak,
   learnUnit, dueCards, gradeCard, srsStats, recordQuiz, completeMission, completeReflection, completeAlphabetGroup
 };

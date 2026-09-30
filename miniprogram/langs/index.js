@@ -49,10 +49,10 @@ function pack(code) {
   return packs[code];
 }
 function meta(code) { return pack(code).meta; }
-/** 页面模板用的语言视图：界面文案 L、原文字体类 tc（埃塞文字 'am'，拉丁文字 'latin'）、是否有转写 hasRom、是否有语音 audio、是否显示男声/女声选项 voiceChoice */
+/** 页面模板用的语言视图：界面文案 L、原文字体类 tc（埃塞文字 'am'，拉丁文字 'latin'）、是否有转写 hasRom、是否有语音 audio、是否显示男声/女声选项 voiceChoice、是否有发音评分 scoring */
 function view(code) {
   const m = meta(code);
-  return { L: m.strings, tc: m.script === 'ethiopic' ? 'am' : 'latin', hasRom: m.hasRom, audio: m.audio, voiceChoice: m.voices.length > 1 };
+  return { L: m.strings, tc: m.script === 'ethiopic' ? 'am' : 'latin', hasRom: m.hasRom, audio: m.audio, voiceChoice: m.voices.length > 1, scoring: m.scoring };
 }
 /** 语言入口列表（按 order），不含已隐藏的试用版语言 */
 function list() { return order.filter(visible).map((c) => packs[c].meta); }

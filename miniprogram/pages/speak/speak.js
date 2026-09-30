@@ -44,7 +44,9 @@ Page({
     result: null,
     scoreClass: '',
     needLogin: false,
-    needLoginText: ''
+    needLoginText: '',
+    practice: null,
+    scoring: true
   },
 
   onShow() {
@@ -55,15 +57,15 @@ Page({
       ? '跟读评分需要先用微信登录。登录后可以录音打分，学习进度也会同步到云端。'
       : st === 'pending' ? '账号等待管理员批准，批准后即可使用跟读评分。'
         : '账号已被管理员暂停，请联系管理员恢复。';
-    this.setData({ needLogin: api.configured() && !account.canUseSpeech(), needLoginText: text });
+    this.setData({ needLogin: !!langs.meta().scoring && api.configured() && !account.canUseSpeech(), needLoginText: text });
   },
 
   goLogin() { if (!account.isRegistered()) account.goLogin(); },
 
   onLoad(q) {
-    // 只有支持评分且有标准音的语言能进跟读页：旧链接在别的语言下打开时直接返回，原文绝不送去评分
+    // 只有有标准音的语言能进跟读页（不评分的语言走对比模式）：旧链接在别的语言下打开时直接返回
     const m = langs.meta();
-    if (!m.scoring || !m.audio) { if (has('navigateBack')) wx.navigateBack(); return; }
+    if (!m.audio) { if (has('navigateBack')) wx.navigateBack(); return; }
     this.setData(langs.view());
     const item = langs.pack().getItem(q && q.id);
     if (!item) { if (has('navigateBack')) wx.navigateBack(); return; }
@@ -96,7 +98,7 @@ Page({
       if (typeof rec.onStop === 'function') {
         rec.onStop((res) => {
           const path = (res && res.tempFilePath) || '';
-          this.setData({ recording: false, tempFilePath: path, result: null, scoreClass: '' });
+          this.setData({ recording: false, tempFilePath: path, result: null, scoreClass: '', practice: null });
           if (!path) wx.showToast({ title: '录音失败，请重试', icon: 'none' });
         });
       }
@@ -202,6 +204,18 @@ Page({
     this.compareTimer = setTimeout(() => { this.compareTimer = null; this.playMine(); }, wait);
   },
 
+  /** 不评分的语言：录音后与标准音交替播放，每词每天第一次完成给 1 颗星 */
+  practiceCompare() {
+    const { item, tempFilePath } = this.data;
+    if (!item) return;
+    if (!tempFilePath) { wx.showToast({ title: '请先录音', icon: 'none' }); return; }
+    this.compare();
+    const first = progress.markCompared(item.id);
+    if (first) { try { points.award('compare'); } catch (e) { /* ignore */ } }
+    try { progress.addMinutes(1); } catch (e) { /* ignore */ }
+    this.setData({ practice: { first } });
+  },
+
   // ---------- 评分 ----------
   uploadRecording(filePath) {
     return new Promise((resolve, reject) => {
@@ -224,6 +238,8 @@ Page({
   },
 
   score() {
+    // 不评分的语言（奥罗莫语）绝不上传录音、不调 stt.score
+    if (!langs.meta().scoring) return;
     // 不可用时直接给提示，绝不上传录音（上传后云端在门禁阶段就拒了，文件会留在云存储）
     if (this.data.needLogin) {
       if (!account.isRegistered()) account.prompt(new Error('请先在「我的」页完成微信登录'), '跟读评分');

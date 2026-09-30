@@ -493,16 +493,20 @@ async function main() {
   assert.ok(points.celebrate().some((b) => b.id === 'first-words'), '奥罗莫语完成第 1 周任务得徽章');
   assert.equal(global.__modal.confirmText, '好的', '徽章弹框按钮是「好的」');
   assert.ok(global.__modal.confirmText.length <= 4);
-  // 跟读页：没有评分 / 语音的语言打开旧链接直接返回，不加载词句，原文不会送去评分
+  // 跟读页：没有语音的语言打开旧链接直接返回，不加载词句（奥罗莫语有语音，能进入对比模式，见后面）
+  langs.register('xx', { ...langs.pack('om'), meta: { ...langs.meta('om'), code: 'xx', audio: false } });
+  langs.set('xx');
   const realBackSp = wx.navigateBack;
   let spBacks = 0;
   wx.navigateBack = () => { spBacks += 1; };
   const omSpeak = mkPage('speak/speak');
   omSpeak.onLoad({ id: 'om-u03-01' });
   wx.navigateBack = realBackSp;
-  assert.equal(spBacks, 1, '奥罗莫语下打开跟读页直接返回');
-  assert.equal(omSpeak.data.item, null, '不加载奥罗莫语词句');
+  assert.equal(spBacks, 1, '没有语音的语言打开跟读页直接返回');
+  assert.equal(omSpeak.data.item, null, '不加载词句');
   assert.ok(!omSpeak.recorder, '不初始化录音器');
+  langs.set('om');
+  langs.unregister('xx');
 
   // 「我的」页也能切回阿姆哈拉语，阿姆哈拉语进度完好
   wx.showActionSheet = ({ itemList, success }) => success({ tapIndex: itemList.findIndex((t) => /阿姆哈拉语/.test(t)) });
@@ -594,6 +598,33 @@ async function main() {
   assert.equal(langs.view().voiceChoice, false, '奥罗莫语只有一种声音，不显示男声/女声');
   langs.set('am');
   assert.equal(langs.view().voiceChoice, true);
+
+  // 跟读对比：奥罗莫语不评分，对比完成每词每天 1 颗星，不调 stt.score
+  langs.set('om');
+  const omCmpPage = Object.create(pageOf('speak/speak'));
+  omCmpPage.data = { ...pageOf('speak/speak').data };
+  omCmpPage.setData = function (d) { this.data = { ...this.data, ...d }; };
+  omCmpPage.onLoad({ id: 'om-u01-01' });
+  omCmpPage.onShow();
+  assert.equal(omCmpPage.data.item.id, 'om-u01-01', '奥罗莫语能进跟读页');
+  assert.equal(omCmpPage.data.scoring, false);
+  assert.equal(omCmpPage.data.needLogin, false, '不评分就不需要登录提示');
+  const sttCalls = [];
+  const cf1 = wx.cloud.callFunction;
+  wx.cloud.callFunction = (o) => { if (o.data.action === 'stt.score') sttCalls.push(o); return cf1(o); };
+  const starsBefore = progress.load().stars || 0;
+  omCmpPage.data.tempFilePath = '/tmp/sim/rec.wav';
+  omCmpPage.practiceCompare();
+  assert.equal((progress.load().stars || 0) - starsBefore, 1, '第一次对比 +1 星');
+  assert.equal(omCmpPage.data.practice.first, true);
+  omCmpPage.practiceCompare();
+  assert.equal((progress.load().stars || 0) - starsBefore, 1, '同一个词当天不重复给星');
+  assert.equal(omCmpPage.data.practice.first, false);
+  omCmpPage.score();
+  assert.equal(sttCalls.length, 0, '奥罗莫语绝不调用 stt.score');
+  if (omCmpPage.compareTimer) clearTimeout(omCmpPage.compareTimer);
+  wx.cloud.callFunction = cf1;
+  langs.set('am');
   global.__audioPlays = 0; // 下面的语音测试从零计数
   storage._files.clear();
   global.__modal = null;

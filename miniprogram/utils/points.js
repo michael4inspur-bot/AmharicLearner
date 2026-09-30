@@ -9,7 +9,8 @@ const STAR_RULES = {
   quiz_bonus: 10,   // 小测 ≥ 80%
   mission: 40,      // 实战任务
   score: 8,         // 跟读评分一次
-  alphabet: 15      // 字母批次通过
+  alphabet: 15,     // 字母批次通过
+  compare: 1        // 跟读对比（不评分的语言），每词每天一次
 };
 
 function ensure(p) {

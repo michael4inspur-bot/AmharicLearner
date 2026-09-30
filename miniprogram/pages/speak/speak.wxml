@@ -48,7 +48,7 @@
     <view class="bar o1" style="height:20rpx"></view>
   </view>
 
-  <view class="hint muted" wx:if="{{!canRecord}}">当前环境不支持录音，无法跟读评分。</view>
+  <view class="hint muted" wx:if="{{!canRecord}}">当前环境不支持录音。</view>
   <block wx:else>
     <view class="rec-wrap">
       <view class="rec {{recording?'on':''}}" bindtouchstart="startRecord" bindtouchend="stopRecord" bindtouchcancel="stopRecord">
@@ -57,9 +57,13 @@
       <view class="rec-hint">{{recording ? '松开结束' : '按住录音，松开结束'}}</view>
     </view>
 
-    <button class="btn accent score-btn" bindtap="score" disabled="{{loading || !tempFilePath}}" loading="{{loading}}">
+    <button class="btn accent score-btn" wx:if="{{scoring}}" bindtap="score" disabled="{{loading || !tempFilePath}}" loading="{{loading}}">
       {{loading ? '评分中…' : '评分'}}
     </button>
+    <block wx:else>
+      <button class="btn accent score-btn" bindtap="practiceCompare" disabled="{{!tempFilePath}}">对比着听</button>
+      <view class="hint muted">{{L.langName}}暂不支持自动评分：录音后和标准音交替播放，自己找出差别。</view>
+    </block>
   </block>
 
   <view class="card result" wx:if="{{result}}">
@@ -81,5 +85,11 @@
     </view>
     <view class="res-tip">{{result.tip}}</view>
     <view class="res-tip">分数由语音识别自动判定，仅供参考。</view>
+  </view>
+
+  <view class="card result" wx:if="{{practice}}">
+    <view class="res-title">{{practice.first ? '对比完成' : '今天这句已练过'}}</view>
+    <view class="stars" wx:if="{{practice.first}}"><x-icon name="star" size="26" color="#F59E0B" /><text>+1</text></view>
+    <view class="res-tip">{{practice.first ? '多听几遍标准音，再录一次对比。' : '继续多听几遍，明天再来还有星星。'}}</view>
   </view>
 </view>

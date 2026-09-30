@@ -113,7 +113,7 @@ assert.deepEqual(langs.pack('am').plan.getDayTasks(1, 5).filter((t) => t.type ==
   ['本周单元的对话，读到不看转写，再用跟读页评分', '第二个单元的对话，同样读到不看转写']);
 
 // 注册表行为
-assert.deepEqual(langs.view('am'), { L: langs.meta('am').strings, tc: 'am', hasRom: true, audio: true, voiceChoice: true });
+assert.deepEqual(langs.view('am'), { L: langs.meta('am').strings, tc: 'am', hasRom: true, audio: true, voiceChoice: true, scoring: true });
 assert.equal(langs.current(), langs.DEFAULT, '没有存储时是缺省语言');
 assert.equal(langs.set('xx'), false, '未注册的语言不能切换');
 assert.equal(langs.current(), langs.DEFAULT);
