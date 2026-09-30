@@ -27,7 +27,7 @@
         <x-icon name="chevron-right" size="22" color="#B08A78" />
       </view>
     </view>
-    <view class="square mint" data-text="{{item.text}}" catchtap="play">
+    <view class="square mint" wx:if="{{audio}}" data-text="{{item.text}}" catchtap="play">
       <x-icon name="speaker" size="36" color="#2F7A5E" />
     </view>
     <view class="square lav" data-id="{{item.id}}" catchtap="addCard">

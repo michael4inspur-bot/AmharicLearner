@@ -40,10 +40,10 @@
         <view class="zh" wx:if="{{showZh}}">{{item.zh}}</view>
         <view class="note" wx:if="{{item.note && showZh}}">{{item.note}}</view>
       </view>
-      <view class="square mint" data-text="{{item.text}}" catchtap="play">
+      <view class="square mint" wx:if="{{audio}}" data-text="{{item.text}}" catchtap="play">
         <x-icon name="speaker" size="36" color="#2F7A5E" />
       </view>
-      <view class="square lav" data-id="{{item.id}}" catchtap="speakPage">
+      <view class="square lav" wx:if="{{audio}}" data-id="{{item.id}}" catchtap="speakPage">
         <x-icon name="mic" size="36" color="#4C3D8F" />
       </view>
     </view>
@@ -57,7 +57,7 @@
       <view class="bubble">
         <view class="row">
           <view class="{{tc}} grow">{{item.text}}</view>
-          <view class="mini" data-text="{{item.text}}" catchtap="play">
+          <view class="mini" wx:if="{{audio}}" data-text="{{item.text}}" catchtap="play">
             <x-icon name="speaker" size="28" color="{{item.who==='A'?'#1E5C45':'#4C3D8F'}}" />
           </view>
         </view>

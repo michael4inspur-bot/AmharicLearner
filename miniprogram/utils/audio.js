@@ -4,6 +4,7 @@
 // 所以每个 wx.* 调用都做存在性判断或 try/catch，模块加载本身不能抛错。
 const api = require('./api.js');
 const account = require('./account.js');
+const langs = require('../langs/index.js');
 
 const SETTINGS_KEY = 'audio_settings_v1';
 const CACHE_KEY = 'audio_cache_v1';
@@ -360,6 +361,12 @@ function fetchAndPlay(text, s, key, opts, prevErrors) {
 function speak(text, opts) {
   text = String(text == null ? '' : text).trim();
   if (!text) return Promise.resolve();
+  const m = langs.meta();
+  // 这门语言还没有语音（奥罗莫语在语音上线前）：不发请求，主动点的才提示
+  if (!m.audio) {
+    if (!(opts && opts.silent)) toast(`${m.name}发音即将上线`);
+    return Promise.resolve();
+  }
   opts = opts || {};
   const s = normalizeSettings(Object.assign(getSettings(), opts));
   const key = cacheKey(text, s.voice, s.rate);
@@ -394,6 +401,7 @@ function downloadQueue(jobs) {
  */
 function prefetch(items) {
   try {
+    if (!langs.meta().audio) return;
     if (!Array.isArray(items) || !items.length || !api.configured()) return;
     const s = getSettings();
     const seen = {};

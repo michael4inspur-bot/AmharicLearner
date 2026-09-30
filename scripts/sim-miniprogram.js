@@ -294,7 +294,7 @@ async function main() {
   ], dialog: [] };
   langs.register('om', {
     ...amPack,
-    meta: { ...amPack.meta, code: 'om', script: 'latin', hasRom: false },
+    meta: { ...amPack.meta, code: 'om', script: 'latin', hasRom: false, audio: false },
     units: [omUnit],
     getUnit: (id) => (id === 'om-u01' ? omUnit : undefined),
     getItem: (id) => omUnit.items.find((it) => it.id === id),
@@ -313,6 +313,16 @@ async function main() {
     success({ result: { ok: true, data: data.action === 'progress.get' ? { progress: null, updatedAt: null } : { updatedAt: 'x' } } });
   };
   langs.set('om');
+  // 没有语音的语言：朗读不发任何请求，只提示即将上线
+  const callsBefore = (global.__calls || []).length;
+  let toastTitle = '';
+  const realToast = wx.showToast;
+  wx.showToast = (o) => { toastTitle = o.title; };
+  await audio.speak('Akkam');
+  wx.showToast = realToast;
+  assert.equal((global.__calls || []).length, callsBefore, '不发 tts 请求');
+  assert.match(toastTitle, /发音即将上线/);
+  assert.equal(langs.view().audio, false);
   progress.learnUnit('om-u01');
   assert.equal(await sync.syncNow(), false, '云端不支持多语言时不上传');
   assert.ok(!oldCloudActions.includes('progress.put'), '一次 progress.put 都没发');

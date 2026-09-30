@@ -7,7 +7,7 @@
     <view class="modes">
       <view class="mode {{mode==='text' ? 'on' : ''}}" data-m="text" bindtap="setMode">{{L.modeShort}}</view>
       <view class="mode {{mode==='zh' ? 'on' : ''}}" data-m="zh" bindtap="setMode">看中</view>
-      <view class="mode {{mode==='listen' ? 'on' : ''}}" data-m="listen" bindtap="setMode">先听</view>
+      <view class="mode {{mode==='listen' ? 'on' : ''}}" wx:if="{{audio}}" data-m="listen" bindtap="setMode">先听</view>
     </view>
   </view>
 
@@ -23,7 +23,7 @@
         <view class="fc-unit">{{current.again ? '刚才忘了，再来一次' : current.unitTitle}}</view>
         <view class="fc-body">
           <block wx:if="{{mode==='listen'}}">
-            <view class="fc-play" catchtap="play"><x-icon name="speaker" size="80" color="#FFFFFF" /></view>
+            <view class="fc-play" wx:if="{{audio}}" catchtap="play"><x-icon name="speaker" size="80" color="#FFFFFF" /></view>
             <view class="fc-hint">听一遍，在心里说出意思</view>
           </block>
           <block wx:elif="{{mode==='zh'}}">
@@ -49,8 +49,8 @@
           <view class="fc-zh">{{current.zh}}</view>
           <view class="fc-note" wx:if="{{current.note}}">{{current.note}}</view>
           <view class="fc-tools">
-            <view class="square mint" catchtap="play"><x-icon name="speaker" size="36" color="#2F7A5E" /></view>
-            <view class="square lav" catchtap="goSpeak"><x-icon name="mic" size="36" color="#4C3D8F" /></view>
+            <view class="square mint" wx:if="{{audio}}" catchtap="play"><x-icon name="speaker" size="36" color="#2F7A5E" /></view>
+            <view class="square lav" wx:if="{{audio}}" catchtap="goSpeak"><x-icon name="mic" size="36" color="#4C3D8F" /></view>
           </view>
         </view>
       </view>

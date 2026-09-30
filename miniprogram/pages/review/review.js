@@ -35,6 +35,7 @@ Page({
   },
   onShow() {
     this.setData(langs.view());
+    if (!this.data.audio && this.data.mode === 'listen') this.setData({ mode: 'text' });
     if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().select('/pages/review/review');
     this.loadQueue();
     this.enterAt = Date.now();
@@ -87,6 +88,7 @@ Page({
   flip() { if (!this.data.flipped) this.setData({ flipped: true }); },
   setMode(e) {
     const mode = e.currentTarget.dataset.m;
+    if (mode === 'listen' && !this.data.audio) return;
     if (mode === this.data.mode) return;
     this.setData({ mode, flipped: false });
     this.autoPlay();

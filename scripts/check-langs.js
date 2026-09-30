@@ -24,7 +24,7 @@ metas.forEach((meta) => {
   const at = (s) => `${code}: ${s}`;
   ['name', 'native'].forEach((k) => assert.ok(typeof meta[k] === 'string' && meta[k], at(`meta.${k}`)));
   assert.ok(['ethiopic', 'latin'].includes(meta.script), at('meta.script'));
-  ['hasRom', 'scoring', 'beta'].forEach((k) => assert.equal(typeof meta[k], 'boolean', at(`meta.${k}`)));
+  ['hasRom', 'scoring', 'beta', 'audio'].forEach((k) => assert.equal(typeof meta[k], 'boolean', at(`meta.${k}`)));
   assert.ok(Array.isArray(meta.voices) && meta.voices.length >= 1, at('meta.voices'));
   STRING_KEYS.forEach((k) => assert.ok(typeof meta.strings[k] === 'string' && meta.strings[k], at(`meta.strings.${k}`)));
 
@@ -65,7 +65,7 @@ metas.forEach((meta) => {
 });
 
 // 注册表行为
-assert.deepEqual(langs.view('am'), { L: langs.meta('am').strings, tc: 'am', hasRom: true });
+assert.deepEqual(langs.view('am'), { L: langs.meta('am').strings, tc: 'am', hasRom: true, audio: true });
 assert.equal(langs.current(), langs.DEFAULT, '没有存储时是缺省语言');
 assert.equal(langs.set('xx'), false, '未注册的语言不能切换');
 assert.equal(langs.current(), langs.DEFAULT);

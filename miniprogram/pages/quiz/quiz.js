@@ -14,7 +14,7 @@ Page({
     const p = progress.load();
     // 未登记用户用不了朗读，出听力题等于给一道无法作答的空白题，
     // 而且自动播放会连弹登录框（审核驳回过的形态）
-    const withAudio = api.configured() && account.isRegistered();
+    const withAudio = api.configured() && account.isRegistered() && langs.meta().audio;
     const questions = quiz.buildQuiz(scope, 10, p, withAudio);
     const u = langs.pack().getUnit(scope);
     const title = u ? u.title : scope.startsWith('week:') ? `第 ${scope.slice(5)} 周综合` : '综合';
