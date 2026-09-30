@@ -300,8 +300,9 @@ async function main() {
     oldCloudActions.push(data.action);
     success({ result: { ok: true, data: data.action === 'progress.get' ? { progress: null, updatedAt: null } : { updatedAt: 'x' } } });
   };
-  langs.set('om');
-  // 没有语音的语言：朗读 / 预取不发任何 tts 请求，只在主动点时提示即将上线
+  // 没有语音的语言（用测试语言 xx 代替：奥罗莫语已有语音）：朗读 / 预取不发任何 tts 请求，只在主动点时提示即将上线
+  langs.register('xx', { ...langs.pack('om'), meta: { ...langs.meta('om'), code: 'xx', audio: false } });
+  langs.set('xx');
   const ttsCalls = [];
   const cfBefore = wx.cloud.callFunction;
   wx.cloud.callFunction = (o) => { if (/^tts\./.test(o.data.action)) ttsCalls.push(o.data.action); return cfBefore(o); };
@@ -320,6 +321,8 @@ async function main() {
   assert.deepEqual(ttsCalls, [], '没有语音的语言不发任何 tts 请求');
   assert.equal(langs.view().audio, false);
   assert.ok(!quiz.buildQuiz('om-u01', 10, progress.load(), langs.meta().audio).some((q) => q.listen), '没有语音的语言不出听音题');
+  langs.set('om');
+  langs.unregister('xx');
   progress.learnUnit('om-u01');
   assert.equal(await sync.syncNow(), false, '云端不支持多语言时不上传');
   assert.ok(!oldCloudActions.includes('progress.put'), '一次 progress.put 都没发');
@@ -446,7 +449,7 @@ async function main() {
   lessonPage.onLoad({ id: 'om-u03' });
   assert.equal(lessonPage.data.unit.id, 'om-u03');
   assert.equal(lessonPage.data.hasRom, false);
-  assert.equal(lessonPage.data.audio, false, '奥罗莫语课文页不显示喇叭');
+  assert.equal(lessonPage.data.audio, true, '奥罗莫语有语音后课文页显示喇叭');
   progress.learnUnit('om-u03');
   const omDue = progress.dueCards();
   assert.ok(omDue.length > 0 && omDue.every((c) => c.id.startsWith('om-')), '复习队列只有奥罗莫语卡片');
@@ -511,6 +514,55 @@ async function main() {
   assert.equal(JSON.stringify(progress.load('am').fidelGroupsDone), amGroupsSnap, '阿姆哈拉语字母进度没被 Qubee 小测改动');
   wx.showActionSheet = realSheet;
 
+  // 奥罗莫语朗读：免登录、带 lang、缓存键独立；旧云函数（不认识 tts.caps）时不发 tts 请求
+  langs.set('om');
+  const omText = langs.pack('om').getUnit('om-u01').items[0].text;
+  const omText2 = langs.pack('om').getUnit('om-u01').items[1].text;
+  assert.notEqual(omText, omText2);
+  const savedProfile = wx.getStorageSync('profile_v1');
+  wx.setStorageSync('profile_v1', { ...(savedProfile || {}), registered: false });
+  const sent = [];
+  const cf0 = wx.cloud.callFunction;
+  wx.cloud.downloadFile = ({ fileID, success }) => { const p = `/tmp/sim/${fileID.split('/').pop()}`; localFiles.add(p); success({ statusCode: 200, tempFilePath: p }); };
+  // 旧云函数：tts.caps 报「未知 action」→ 不发 tts.get，提示云函数版本过旧（只缓存「支持」，所以放在新云函数之前）
+  wx.cloud.callFunction = (o) => {
+    sent.push(o.data);
+    if (o.data.action === 'tts.caps') { o.success({ result: { ok: false, code: 'BAD_REQUEST', error: '未知 action: tts.caps' } }); return; }
+    return cf0(o);
+  };
+  global.__modal = null;
+  await audio.speak(omText2);
+  assert.ok(sent.some((d) => d.action === 'tts.caps'), '旧云函数：先探测 tts.caps');
+  assert.equal(sent.filter((d) => /^tts\.(get|batch)$/.test(d.action)).length, 0, '旧云函数不认识 lang：不发 tts.get');
+  assert.ok(global.__modal && /云函数版本过旧/.test(global.__modal.content), '提示云函数版本过旧');
+  audio.prefetch([{ id: 'p', text: omText2 }]);
+  await new Promise((r) => setTimeout(r, 20));
+  assert.equal(sent.filter((d) => /^tts\.(get|batch)$/.test(d.action)).length, 0, '旧云函数：预取也不发 tts.batch');
+  sent.length = 0;
+  global.__modal = null;
+  // 新云函数
+  wx.cloud.callFunction = (o) => { sent.push(o.data); return cf0(o); };
+  await audio.speak(omText);
+  const omCall = sent.find((d) => d.action === 'tts.get');
+  assert.ok(omCall, '未登录也能朗读奥罗莫语');
+  assert.equal(omCall.data.lang, 'om');
+  assert.ok(sent.some((d) => d.action === 'tts.caps'), '先确认云函数支持奥罗莫语');
+  assert.match(global.__audioCtx.src, /\/tmp\/sim\//, '播放下载到本地的文件');
+  assert.ok(wx.getStorageSync('audio_cache_v1')[`om|normal|${omText}`], '奥罗莫语本地缓存键带语言前缀');
+  sent.length = 0;
+  await audio.speak(omText);
+  assert.equal(sent.filter((d) => d.action === 'tts.get').length, 0, '第二次走本地缓存');
+  const omQuiz2 = quiz.buildQuiz('om-u01', 9, progress.load(), langs.meta().audio);
+  assert.ok(omQuiz2.some((q) => q.listen), '奥罗莫语有语音后出听力题');
+  wx.cloud.callFunction = cf0;
+  delete wx.cloud.downloadFile;
+  wx.setStorageSync('profile_v1', savedProfile);
+  assert.equal(langs.view().voiceChoice, false, '奥罗莫语只有一种声音，不显示男声/女声');
+  langs.set('am');
+  assert.equal(langs.view().voiceChoice, true);
+  global.__audioPlays = 0; // 下面的语音测试从零计数
+  storage._files.clear();
+  global.__modal = null;
 
   // 语音：朗读走云端合成 + 本地缓存
   global.__modal = null;

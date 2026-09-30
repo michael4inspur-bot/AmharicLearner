@@ -49,10 +49,10 @@ function pack(code) {
   return packs[code];
 }
 function meta(code) { return pack(code).meta; }
-/** 页面模板用的语言视图：界面文案 L、原文字体类 tc（埃塞文字 'am'，拉丁文字 'latin'）、是否有转写 hasRom、是否有语音 audio */
+/** 页面模板用的语言视图：界面文案 L、原文字体类 tc（埃塞文字 'am'，拉丁文字 'latin'）、是否有转写 hasRom、是否有语音 audio、是否显示男声/女声选项 voiceChoice */
 function view(code) {
   const m = meta(code);
-  return { L: m.strings, tc: m.script === 'ethiopic' ? 'am' : 'latin', hasRom: m.hasRom, audio: m.audio };
+  return { L: m.strings, tc: m.script === 'ethiopic' ? 'am' : 'latin', hasRom: m.hasRom, audio: m.audio, voiceChoice: m.voices.length > 1 };
 }
 /** 语言入口列表（按 order），不含已隐藏的试用版语言 */
 function list() { return order.filter(visible).map((c) => packs[c].meta); }
@@ -69,4 +69,13 @@ function register(code, p) {
   if (!order.includes(code)) order.push(code);
 }
 
-module.exports = { current, set, pack, meta, view, list, onChange, register, DEFAULT };
+/** 只给测试使用：注销 register 注册的语言（内置语言不可注销） */
+function unregister(code) {
+  if (code === DEFAULT || code === 'om') return;
+  delete packs[code];
+  const i = order.indexOf(code);
+  if (i >= 0) order.splice(i, 1);
+  if (cur === code) cur = '';
+}
+
+module.exports = { current, set, pack, meta, view, list, onChange, register, unregister, DEFAULT };

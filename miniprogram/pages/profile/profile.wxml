@@ -111,7 +111,7 @@
       </view>
     </view>
     <view class="row between list-item"><text class="set-label">计划开始日期</text><picker mode="date" value="{{startDate}}" bindchange="onStartDate"><view class="link row gap"><text>{{startDate}}</text><x-icon name="chevron-right" size="26" color="#C2410C" /></view></picker></view>
-    <view class="row between list-item"><text class="set-label">标准音</text>
+    <view class="row between list-item" wx:if="{{voiceChoice}}"><text class="set-label">标准音</text>
       <radio-group class="set-ctrl radios" bindchange="onVoice">
         <label class="radio-label"><radio value="female" color="#C2410C" checked="{{voice === 'female'}}" /><text>女声</text></label>
         <label class="radio-label"><radio value="male" color="#C2410C" checked="{{voice === 'male'}}" /><text>男声</text></label>

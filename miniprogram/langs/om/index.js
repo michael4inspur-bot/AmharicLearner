@@ -1,5 +1,5 @@
 // 奥罗莫语（Afaan Oromoo）语言包：词库、8 周计划、Qubee 字母规则与界面文案。
-// 内容为初稿，母语者校对完成前 meta.beta = true（入口显示「试用版」）；语音在 PR 3 上线前 meta.audio = false。
+// 内容为初稿，母语者校对完成前 meta.beta = true（入口显示「试用版」）；语音为 Meta MMS 预生成（见 scripts/gen-oromo-audio.py）。
 const vocab = require('./vocab.js');
 const plan = require('./plan.js');
 const alphabet = require('./alphabet.js');
@@ -13,7 +13,8 @@ const meta = {
   voices: ['female'],
   scoring: false,
   beta: true,
-  audio: false,
+  audio: true,
+  ttsLogin: false,
   strings: {
     langName: '奥罗莫语',
     askSay: '奥罗莫语怎么说？',

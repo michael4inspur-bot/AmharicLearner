@@ -49,8 +49,20 @@ function setSettings(partial) {
 }
 
 /** 本地映射键，与云端 key 的原文一致（云端再做 sha1） */
-function cacheKey(text, voice, rate) {
-  return `${voice}|${rate}|${text}`;
+function cacheKey(text, voice, rate, lang) {
+  return !lang || lang === 'am' ? `${voice}|${rate}|${text}` : `${lang}|${rate}|${text}`;
+}
+
+const ttsSupported = { am: true };
+/**
+ * 云函数是否支持这种语言的语音。旧版云函数不认识 lang，会用阿姆哈拉语声音去合成奥罗莫语并计费，
+ * 所以非阿姆哈拉语先用 tts.caps 确认；只缓存「支持」，负责人重新部署后自动恢复。
+ */
+function cloudTtsSupports(lang) {
+  if (ttsSupported[lang]) return Promise.resolve(true);
+  return api.ttsCaps()
+    .then((r) => { ttsSupported[lang] = !!(r && Array.isArray(r.langs) && r.langs.includes(lang)); return !!ttsSupported[lang]; })
+    .catch(() => false);
 }
 
 /**
@@ -324,32 +336,38 @@ function forget(key) {
  * 于是出现「只有自己手机能播、同事手机都不能播」。云存储下载不受合法域名限制。
  * 本地文件播不了再换在线链接；每一步失败的原因都会列在弹框里。
  */
-function fetchAndPlay(text, s, key, opts, prevErrors) {
-  return api.ttsGet(text, s.voice, s.rate)
-    .then((res) => {
-      const url = res && res.url;
-      const fileID = res && res.fileID;
-      if (!url && !fileID) {
-        if (!opts.silent) fail(prevErrors.concat('云端没有返回音频地址，请查看云函数 api 的日志').join('\n'), res);
-        return;
-      }
-      lastDownloadErr = '';
-      return downloadViaCloud(fileID, key).then((p) => {
-        const errors = prevErrors.slice();
-        if (!p && lastDownloadErr) errors.push(lastDownloadErr);
-        const sources = [];
-        if (p) sources.push({ kind: '本地文件', src: p, onFail: () => forget(key) });
-        if (url) sources.push({ kind: '在线链接', src: url });
-        playSources(sources, { errors, silent: opts.silent });
-        if (!p && url) downloadViaUrl(url, key);
+function fetchAndPlay(text, s, key, opts, prevErrors, lang) {
+  return cloudTtsSupports(lang).then((ok) => {
+    if (!ok) {
+      if (!opts.silent) fail('云函数版本过旧，暂不支持这种语言的发音。请管理员重新部署云函数 api。');
+      return undefined;
+    }
+    return api.ttsGet(text, s.voice, s.rate, lang)
+      .then((res) => {
+        const url = res && res.url;
+        const fileID = res && res.fileID;
+        if (!url && !fileID) {
+          if (!opts.silent) fail(prevErrors.concat('云端没有返回音频地址，请查看云函数 api 的日志').join('\n'), res);
+          return;
+        }
+        lastDownloadErr = '';
+        return downloadViaCloud(fileID, key).then((p) => {
+          const errors = prevErrors.slice();
+          if (!p && lastDownloadErr) errors.push(lastDownloadErr);
+          const sources = [];
+          if (p) sources.push({ kind: '本地文件', src: p, onFail: () => forget(key) });
+          if (url) sources.push({ kind: '在线链接', src: url });
+          playSources(sources, { errors, silent: opts.silent });
+          if (!p && url) downloadViaUrl(url, key);
+        });
+      })
+      .catch((err) => {
+        if (opts.silent) return;
+        if (account.prompt(err, '朗读')) return;
+        // api.js 已经把断网 / 超时 / 未部署 / 云端具体原因归一成中文，原样给用户看
+        fail(prevErrors.concat((err && err.message) || TOAST_TEXT).join('\n'), err);
       });
-    })
-    .catch((err) => {
-      if (opts.silent) return;
-      if (account.prompt(err, '朗读')) return;
-      // api.js 已经把断网 / 超时 / 未部署 / 云端具体原因归一成中文，原样给用户看
-      fail(prevErrors.concat((err && err.message) || TOAST_TEXT).join('\n'), err);
-    });
+  });
 }
 
 /**
@@ -369,16 +387,16 @@ function speak(text, opts) {
   }
   opts = opts || {};
   const s = normalizeSettings(Object.assign(getSettings(), opts));
-  const key = cacheKey(text, s.voice, s.rate);
+  const key = cacheKey(text, s.voice, s.rate, m.code);
   const local = cachedPath(key);
   if (local) {
     playSources([{ kind: '本地缓存', src: local }], {
-      onAllFail: (errors) => { forget(key); fetchAndPlay(text, s, key, opts, errors); }
+      onAllFail: (errors) => { forget(key); fetchAndPlay(text, s, key, opts, errors, m.code); }
     });
     return Promise.resolve();
   }
-  if (opts.silent && !account.isRegistered()) return Promise.resolve();
-  return fetchAndPlay(text, s, key, opts, []);
+  if (opts.silent && m.ttsLogin && !account.isRegistered()) return Promise.resolve();
+  return fetchAndPlay(text, s, key, opts, [], m.code);
 }
 
 // ---------- 预取 ----------
@@ -401,6 +419,7 @@ function downloadQueue(jobs) {
  */
 function prefetch(items) {
   try {
+    const lang = langs.meta().code;
     if (!langs.meta().audio) return;
     if (!Array.isArray(items) || !items.length || !api.configured()) return;
     const s = getSettings();
@@ -410,7 +429,7 @@ function prefetch(items) {
       if (!it) return;
       const text = String(it.text || '').trim();
       if (!text) return;
-      const key = cacheKey(text, s.voice, s.rate);
+      const key = cacheKey(text, s.voice, s.rate, lang);
       if (seen[key] || cachedPath(key)) return;
       seen[key] = true;
       pending.push({ id: String(it.id != null ? it.id : idx), text, key });
@@ -420,8 +439,10 @@ function prefetch(items) {
     for (let i = 0; i < pending.length; i += BATCH_MAX) {
       const batch = pending.slice(i, i + BATCH_MAX);
       chain = chain
-        .then(() => api.ttsBatch(batch.map(({ id, text }) => ({ id, text })), s.voice, s.rate))
+        .then(() => cloudTtsSupports(lang))
+        .then((ok) => (ok ? api.ttsBatch(batch.map(({ id, text }) => ({ id, text })), s.voice, s.rate, lang) : null))
         .then((res) => {
+          if (!res) return undefined;
           const urls = (res && res.urls) || {};
           const files = (res && res.files) || {};
           const jobs = batch
@@ -434,4 +455,4 @@ function prefetch(items) {
   } catch (e) { /* 静默 */ }
 }
 
-module.exports = { getSettings, setSettings, speak, prefetch, stop, cacheKey, isBenignError };
+module.exports = { getSettings, setSettings, speak, prefetch, stop, cacheKey, cloudTtsSupports, isBenignError };
