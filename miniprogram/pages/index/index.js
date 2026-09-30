@@ -23,10 +23,16 @@ const TASK_STARS = {
   reflect: 0
 };
 
+function langView() {
+  const m = langs.meta();
+  return { L: m.strings, tc: m.script === 'ethiopic' ? 'am' : 'latin', hasRom: m.hasRom };
+}
+
 Page({
   data: { days7: [1, 2, 3, 4, 5, 6, 7], announce: null, needNickname: false },
 
   onShow() {
+    this.setData(langView());
     if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().select('/pages/index/index');
     this.refresh();
     this.loadNotices();

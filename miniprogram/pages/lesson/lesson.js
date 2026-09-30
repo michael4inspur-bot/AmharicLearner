@@ -3,9 +3,15 @@ const points = require('../../utils/points.js');
 const langs = require('../../langs/index.js');
 const audio = require('../../utils/audio.js');
 
+function langView() {
+  const m = langs.meta();
+  return { L: m.strings, tc: m.script === 'ethiopic' ? 'am' : 'latin', hasRom: m.hasRom };
+}
+
 Page({
   data: { unit: null, tab: 'words', learned: false, showRom: true, showZh: true },
   onLoad(q) {
+    this.setData(langView());
     const unit = langs.pack().getUnit(q.id);
     if (!unit) { wx.navigateBack(); return; }
     wx.setNavigationBarTitle({ title: unit.title });

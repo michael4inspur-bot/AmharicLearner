@@ -30,13 +30,13 @@
 
   <block wx:if="{{tab==='words'}}">
     <view class="row gap toggles">
-      <view class="tag white" bindtap="toggleRom">{{showRom?'隐藏':'显示'}}转写</view>
+      <view class="tag white" wx:if="{{hasRom}}" bindtap="toggleRom">{{showRom?'隐藏':'显示'}}转写</view>
       <view class="tag white" bindtap="toggleZh">{{showZh?'隐藏':'显示'}}中文</view>
     </view>
     <view class="word-row" wx:for="{{unit.items}}" wx:key="id" data-text="{{item.text}}" bindlongpress="copy">
       <view class="grow">
-        <view class="am word-am">{{item.text}}</view>
-        <view class="rom" wx:if="{{showRom}}">{{item.rom}}</view>
+        <view class="{{tc}} word-am">{{item.text}}</view>
+        <view class="rom" wx:if="{{hasRom && showRom}}">{{item.rom}}</view>
         <view class="zh" wx:if="{{showZh}}">{{item.zh}}</view>
         <view class="note" wx:if="{{item.note && showZh}}">{{item.note}}</view>
       </view>
@@ -55,17 +55,17 @@
       <view class="who">{{item.who}}</view>
       <view class="bubble">
         <view class="row">
-          <view class="am grow">{{item.text}}</view>
+          <view class="{{tc}} grow">{{item.text}}</view>
           <view class="mini" data-text="{{item.text}}" catchtap="play">
             <x-icon name="speaker" size="28" color="{{item.who==='A'?'#1E5C45':'#4C3D8F'}}" />
           </view>
         </view>
-        <view class="rom" wx:if="{{showRom}}">{{item.rom}}</view>
+        <view class="rom" wx:if="{{hasRom && showRom}}">{{item.rom}}</view>
         <view class="zh">{{item.zh}}</view>
       </view>
     </view>
     <view class="toggles">
-      <view class="tag white" bindtap="toggleRom">{{showRom?'遮住':'显示'}}转写</view>
+      <view class="tag white" wx:if="{{hasRom}}" bindtap="toggleRom">{{showRom?'遮住':'显示'}}转写</view>
     </view>
   </block>
 

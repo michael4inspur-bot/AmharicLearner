@@ -26,14 +26,20 @@ function withUnit(c) {
   return { ...c, unitTitle: u ? u.title : '闪卡复习' };
 }
 
+function langView() {
+  const m = langs.meta();
+  return { L: m.strings, tc: m.script === 'ethiopic' ? 'am' : 'latin', hasRom: m.hasRom };
+}
+
 Page({
   data: {
     queue: [], current: null, flipped: false,
     stats: { total: 0, due: 0, mature: 0, newWaiting: 0 },
     done: 0, sessionTotal: 0, pos: 0, sessionCorrect: 0, sessionWrong: 0,
-    mode: 'am', segs: buildSegs(0, 0), todayStars: 0
+    mode: 'text', segs: buildSegs(0, 0), todayStars: 0
   },
   onShow() {
+    this.setData(langView());
     if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().select('/pages/review/review');
     this.loadQueue();
     this.enterAt = Date.now();

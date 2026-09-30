@@ -1,5 +1,6 @@
 // 微信登录 = 在云端登记本人 openid。登记后才能用朗读与跟读评分；本地学习不受影响。
 const api = require('../../utils/api.js');
+const langs = require('../../langs/index.js');
 
 const PROFILE_KEY = 'profile_v1';
 
@@ -27,9 +28,15 @@ function requirePrivacy() {
   });
 }
 
+function langView() {
+  const m = langs.meta();
+  return { L: m.strings, tc: m.script === 'ethiopic' ? 'am' : 'latin', hasRom: m.hasRom };
+}
+
 Page({
   data: { nickname: '', loading: false, configured: false, error: '', agreed: false },
   onLoad() {
+    this.setData(langView());
     const p = readProfile();
     this.setData({ nickname: p.nickname || '', configured: api.configured() });
   },

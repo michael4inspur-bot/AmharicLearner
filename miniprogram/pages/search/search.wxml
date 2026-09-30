@@ -1,9 +1,9 @@
 <view class="page no-tab">
   <view class="searchbox">
     <view class="search-icon"><x-icon name="search" size="34" color="#B08A78" /></view>
-    <input class="input search-input" value="{{q}}" placeholder="输入中文 / 转写 / 阿姆哈拉语，例如：多少钱、sint、ውሃ" placeholder-class="ph" bindinput="onInput" bindconfirm="onConfirm" confirm-type="search" focus />
+    <input class="input search-input" value="{{q}}" placeholder="{{L.searchPlaceholder}}" placeholder-class="ph" bindinput="onInput" bindconfirm="onConfirm" confirm-type="search" focus />
   </view>
-  <view class="hint">长按阿姆哈拉语原文可复制，直接给对方看。</view>
+  <view class="hint">{{L.searchHint}}</view>
 
   <block wx:if="{{!q && recent.length}}">
     <view class="section-title">最近搜索</view>
@@ -18,7 +18,7 @@
 
   <view class="word-row" wx:for="{{results}}" wx:key="id">
     <view class="grow" data-text="{{item.text}}" bindlongpress="copy">
-      <view class="am word-am">{{item.text}}</view>
+      <view class="{{tc}} word-am">{{item.text}}</view>
       <view class="rom" wx:if="{{item.rom}}">{{item.rom}}</view>
       <view class="zh">{{item.zh}}</view>
       <view class="note" wx:if="{{item.note}}">{{item.note}}</view>

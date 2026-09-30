@@ -4,9 +4,14 @@ const progress = require('../../utils/progress.js');
 const quiz = require('../../utils/quiz.js');
 const points = require('../../utils/points.js');
 
+function langView() {
+  const m = langs.meta('am');
+  return { L: m.strings, tc: m.script === 'ethiopic' ? 'am' : 'latin', hasRom: m.hasRom };
+}
+
 Page({
   data: { group: 1, rows: [], orderLabels: fidel.ORDER_LABELS, mode: 'table', q: null, qScore: 0, qIdx: 0, qTotal: 10, qPicked: null, done: false, pct: 0, earned: 0 },
-  onLoad(q) { this.setGroup(Number(q.group) || 1); this.enterAt = Date.now(); },
+  onLoad(q) { this.setData(langView()); this.setGroup(Number(q.group) || 1); this.enterAt = Date.now(); },
   onUnload() {
     const min = Math.round((Date.now() - this.enterAt) / 60000);
     if (min > 0) progress.addMinutes(Math.min(min, 20));

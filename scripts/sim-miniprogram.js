@@ -162,6 +162,18 @@ async function main() {
   searchPage.search('多少钱');
   assert.equal(searchPage.data.results[0].text, 'ስንት ነው?');
 
+  // 界面文案来自语言包，不写死在模板里
+  const L = langs.meta('am').strings;
+  searchPage.onLoad();
+  assert.equal(searchPage.data.L.searchPlaceholder, L.searchPlaceholder, '搜索页文案来自语言包');
+  assert.equal(searchPage.data.tc, 'am', '埃塞文字用 .am 字体类');
+  const reviewPage = pageOf('review/review');
+  reviewPage.setData = function (d) { this.data = { ...this.data, ...d }; };
+  reviewPage.data = { ...reviewPage.data };
+  reviewPage.onShow();
+  assert.equal(reviewPage.data.L.modeShort, '看阿');
+  assert.equal(reviewPage.data.mode, 'text', '复习默认模式改名为 text');
+
   // 同步：未登记不上传（用户还没勾选隐私同意）
   assert.equal(api.configured(), true);
   assert.equal(await sync.syncNow(), false, '未登记不上传学习数据');
@@ -505,6 +517,13 @@ async function main() {
   // 未配置云环境时的失败路径
   require(path.join(root, 'config.js')).cloudEnv = '';
   await assert.rejects(api.ttsGet("ሰላም", "female", "normal"), (e) => e.code === 'NO_ENV');
+
+  const fs = require('fs');
+  const HARD = /阿姆哈拉语怎么说|在心里说出阿姆哈拉语|看阿<|ጥሩ ስራ|በጣም ጥሩ|ችግር የለም|ሰላም!/;
+  ['quiz/quiz', 'review/review', 'search/search', 'login/login', 'fidel/fidel'].forEach((p) => {
+    const wxml = fs.readFileSync(path.join(root, 'pages', p + '.wxml'), 'utf8');
+    assert.ok(!HARD.test(wxml), `${p}.wxml 里还有写死的语言文案`);
+  });
 
   console.log('OK: miniprogram simulation passed');
 }
