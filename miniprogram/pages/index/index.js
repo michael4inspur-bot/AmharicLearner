@@ -3,6 +3,7 @@ const points = require('../../utils/points.js');
 const api = require('../../utils/api.js');
 const langs = require('../../langs/index.js');
 const update = require('../../utils/update.js');
+const langSwitch = require('../../utils/lang-switch.js');
 
 const ANNOUNCE_KEY = 'announcement_seen';
 const PROFILE_KEY = 'profile_v1';
@@ -28,10 +29,13 @@ Page({
 
   onShow() {
     this.setData(langs.view());
+    this.setData({ langLabel: langSwitch.label() });
     if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().select('/pages/index/index');
     this.refresh();
     this.loadNotices();
   },
+
+  switchLang() { langSwitch.choose(() => this.onShow()); },
 
   /** 公告与昵称提示：云端没准备好时静默跳过，不打扰用户 */
   loadNotices() {

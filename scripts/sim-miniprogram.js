@@ -405,6 +405,59 @@ async function main() {
   wx.navigateBack = realBack;
   langs.set('am');
 
+  // 语言切换入口：首页标签 → 选奥罗莫语 → 各页按奥罗莫语显示
+  const langSwitch = require(path.join(root, 'utils/lang-switch.js'));
+  assert.equal(langSwitch.label(langs.meta('om')), 'Afaan Oromoo 奥罗莫语（试用版）');
+  const realSheet = wx.showActionSheet;
+  wx.showActionSheet = ({ itemList, success }) => { global.__sheet = itemList; success({ tapIndex: itemList.findIndex((t) => /Oromoo/.test(t)) }); };
+  // 用 Object.create 包一层：setData 合并进各自的 data，不污染共享的页面配置
+  const mkPage = (name, data) => Object.assign(Object.create(pageOf(name)), { data: { ...(data || pageOf(name).data) }, setData(d) { this.data = { ...this.data, ...d }; } });
+  assert.equal(langs.current(), 'am');
+  const homeSw = mkPage('index/index', {});
+  homeSw.onShow();
+  assert.match(homeSw.data.langLabel, /阿姆哈拉语/);
+  homeSw.switchLang();
+  assert.equal(langs.current(), 'om', '首页切到奥罗莫语');
+  assert.equal(global.__sheet.length, 2);
+  assert.match(homeSw.data.langLabel, /奥罗莫语（试用版）/, '切换后首页立即刷新');
+  assert.equal(homeSw.data.tc, 'latin');
+  assert.ok(homeSw.data.tasks.some((t) => t.type === 'alphabet'), '今日任务来自奥罗莫语计划');
+  assert.equal(homeSw.data.alphabetName, 'Qubee 字母');
+
+  // 课程 → 学单元 → 复习 → 小测（无听力题、选项没有转写）→ 搜索 → Qubee
+  const lessonPage = mkPage('lesson/lesson', {});
+  lessonPage.onLoad({ id: 'om-u03' });
+  assert.equal(lessonPage.data.unit.id, 'om-u03');
+  assert.equal(lessonPage.data.hasRom, false);
+  assert.equal(lessonPage.data.audio, false, '奥罗莫语课文页不显示喇叭');
+  progress.learnUnit('om-u03');
+  const omDue = progress.dueCards();
+  assert.ok(omDue.length > 0 && omDue.every((c) => c.id.startsWith('om-')), '复习队列只有奥罗莫语卡片');
+  const omQuiz = quiz.buildQuiz('om-u03', 10, progress.load(), false);
+  assert.equal(omQuiz.filter((q) => q.listen).length, 0);
+  omQuiz.forEach((q) => { assert.equal(q.promptRom, ''); q.options.forEach((o) => assert.ok(!/  /.test(o.text), '选项不拼接转写')); });
+  const omSearch = mkPage('search/search', { q: '', results: [], recent: [] });
+  omSearch.onLoad();
+  omSearch.search('你好');
+  assert.ok(omSearch.data.results.length > 0 && omSearch.data.results.every((r) => r.id.startsWith('om-')), '搜索只搜当前语言');
+  const qubee = mkPage('qubee/qubee');
+  qubee.onLoad({ group: '1' });
+  qubee.startQuiz();
+  qubee.questions.forEach((qq) => { qubee.data.q = qq; qubee.data.qScore += 1; });
+  qubee.data.qIdx = qubee.data.qTotal;
+  qubee.finish();
+  assert.equal(qubee.data.done, true);
+  assert.ok(progress.load().fidelGroupsDone[1], 'Qubee 第 1 批记在奥罗莫语进度里');
+
+  // 「我的」页也能切回阿姆哈拉语，阿姆哈拉语进度完好
+  wx.showActionSheet = ({ itemList, success }) => success({ tapIndex: itemList.findIndex((t) => /阿姆哈拉语/.test(t)) });
+  const meSw = mkPage('profile/profile');
+  meSw.switchLang();
+  assert.equal(langs.current(), 'am');
+  assert.match(meSw.data.langLabel, /阿姆哈拉语/);
+  assert.ok(!progress.load().unitsLearned['om-u03'], '阿姆哈拉语进度没有混入奥罗莫语');
+  wx.showActionSheet = realSheet;
+
 
   // 语音：朗读走云端合成 + 本地缓存
   global.__modal = null;
@@ -592,9 +645,11 @@ async function main() {
 
   const fs = require('fs');
   const HARD = /阿姆哈拉语怎么说|在心里说出阿姆哈拉语|看阿<|ጥሩ ስራ|በጣም ጥሩ|ችግር የለም|ሰላም!/;
-  ['quiz/quiz', 'review/review', 'search/search', 'login/login', 'fidel/fidel'].forEach((p) => {
+  ['quiz/quiz', 'review/review', 'search/search', 'login/login', 'fidel/fidel', 'index/index', 'lesson/lesson', 'speak/speak', 'profile/profile', 'lessons/lessons', 'plan/plan', 'qubee/qubee'].forEach((p) => {
     const wxml = fs.readFileSync(path.join(root, 'pages', p + '.wxml'), 'utf8');
-    assert.ok(!HARD.test(wxml), `${p}.wxml 里还有写死的语言文案`);
+    // fidel 页自己的标题「Fidel 字母表」是阿姆哈拉语专属页的名字，对它单独跳过这一项
+    const re = new RegExp(HARD.source + (p === 'fidel/fidel' ? '' : '|Fidel 字母表<') + '|Fidel 字母 第');
+    assert.ok(!re.test(wxml), `${p}.wxml 里还有写死的语言文案`);
   });
 
   console.log('OK: miniprogram simulation passed');

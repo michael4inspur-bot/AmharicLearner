@@ -6,6 +6,7 @@ const sync = require('../../utils/sync.js');
 const account = require('../../utils/account.js');
 const update = require('../../utils/update.js');
 const langs = require('../../langs/index.js');
+const langSwitch = require('../../utils/lang-switch.js');
 
 const PROFILE_KEY = 'profile_v1';
 
@@ -31,6 +32,7 @@ Page({
     const { voice, rate } = audio.getSettings();
     const badges = points.allBadges(p);
     this.setData({
+      langLabel: langSwitch.label(),
       cloudReady: api.configured(), goal: p.dailyMinutesGoal, newCards: p.newCardsPerDay, startDate: p.startDate, voice, rate,
       stats: progress.srsStats(p), streak: progress.streak(p), totalMinutes,
       days: Object.keys(p.logs).filter((k) => p.logs[k].minutes > 0).length,
@@ -46,6 +48,7 @@ Page({
     this.setData({ updateText: update.describe() });
     if (api.configured()) { this.loadUsage(); this.loadMe(); }
   },
+  switchLang() { langSwitch.choose(() => this.onShow()); },
   /** 微信只在冷启动时检查新版本，这里汇报本次检查结果；新版已就绪则直接问要不要重启 */
   checkUpdate() {
     const text = update.checkNow();

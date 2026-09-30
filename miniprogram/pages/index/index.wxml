@@ -1,5 +1,6 @@
 <view class="page">
   <view class="hero">
+    <view class="lang-chip" bindtap="switchLang">{{langLabel}} ▾</view>
     <view class="blob a"></view>
     <view class="blob b"></view>
     <view class="hero-am {{tc}}">{{greet.text}}</view>
