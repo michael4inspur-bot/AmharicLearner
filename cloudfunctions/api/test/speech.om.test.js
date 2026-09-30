@@ -130,10 +130,11 @@ test('登录门槛边界：只有 tts.* 的 om / tts.caps 放行', async () => {
 
 test('登录门槛边界：user.* / admin.* 带 lang=om 不会被放行，行为与不带时一致', async () => {
   for (const action of ['user.setProfile', 'admin.users', 'admin.setStatus']) {
-    const base = { nickName: 'x', openid: 'u2', status: 'blocked' };
+    const base = { nickname: 'x', openid: 'u2', status: 'blocked' };
     const without = await handle(action, { ...base }, ctx());
     const withOm = await handle(action, { ...base, lang: 'om' }, ctx());
     assert.deepEqual(withOm, without, `${action} 带 lang 结果相同`);
     assert.equal(withOm.ok, false, `${action} 对未注册用户失败`);
+    assert.match(withOm.error, action === 'user.setProfile' ? /登录/ : /无权限/);
   }
 });
