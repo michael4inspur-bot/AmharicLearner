@@ -119,7 +119,7 @@ Page({
     const code = langs.current();
     const p = progress.load();
     try {
-      if (!(await sync.cloudSupports(code))) throw new Error('云函数版本过旧，不支持这种语言的进度。请重新部署云函数 api。');
+      if (!(await sync.cloudSupports(code, { force: true }))) throw new Error('云函数版本过旧，不支持这种语言的进度。请重新部署云函数 api。');
       await api.syncProgress(p, sync.buildMeta(p), undefined, code);
       wx.showToast({ title: '已上传到云端', icon: 'success' });
     } catch (e) { wx.showModal({ title: '上传失败', content: e.message, showCancel: false }); }
@@ -135,7 +135,7 @@ Page({
         title: '覆盖本地进度？', content: '将用云端的进度替换本机数据。',
         success: (res) => {
           if (!res.confirm) return;
-          progress.replace(remote);
+          progress.replace(remote, code);
           sync.noteRemoteVersion(updatedAt, code); // 记下云端版本，之后上传不会被判成旧快照
           this.onShow();
           wx.showToast({ title: '已恢复', icon: 'success' });

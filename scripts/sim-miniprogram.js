@@ -317,6 +317,8 @@ async function main() {
   wx.cloud.callFunction = realCallOld;
 
   // 新版云函数：奥罗莫语进度写到 openid:om，阿姆哈拉语文档不受影响
+  assert.equal(await sync.syncNow(), false, '刚探测过不支持，10 分钟内不再探测');
+  assert.equal(await sync.cloudSupports('om', { force: true }), true, 'force 立即重新探测');
   assert.ok(progress.load().srs['om-u01-01'], '奥罗莫语进度在奥罗莫语存储里');
   assert.equal(await sync.syncNow(), true, '云端支持后上传');
   const omDoc = await db.getProgress(`${simOpenid}:om`);
@@ -326,6 +328,21 @@ async function main() {
   const omFetched = await api.fetchProgress('om');
   assert.equal(omFetched.lang, 'om');
   assert.ok(omFetched.progress.unitsLearned['om-u01']);
+
+  // 进度对象绑定到它所属的语言：切换语言后再保存，也不会写进另一种语言
+  const omHeld = progress.load();
+  langs.set('am');
+  omHeld.stars = 7;
+  progress.save(omHeld, 'om');
+  assert.notEqual(progress.load().stars, 7, '阿姆哈拉语进度没被写入');
+  assert.equal(progress.load('om').stars, 7, '奥罗莫语进度按指定语言保存');
+  langs.set('om');
+  // 切后台时两种语言都同步
+  progress.addMinutes(1);
+  langs.set('am');
+  progress.addMinutes(1);
+  const flushed = await sync.flushPending();
+  assert.ok(flushed.length >= 2 && flushed.every((r) => r === true), '切后台时所有有改动的语言都上传');
 
   // 切回阿姆哈拉语，原进度完好
   langs.set('am');

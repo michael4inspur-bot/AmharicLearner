@@ -52,7 +52,7 @@ metas.forEach((meta) => {
     if (w.extra) assert.ok(p.getUnit(w.extra), at(`第 ${w.week} 周自选单元 ${w.extra} 不存在`));
   });
   ['phone', 'site', 'formal'].forEach((k) => assert.ok(p.getUnit(p.badgeUnits[k]), at(`badgeUnits.${k}`)));
-  assert.ok(Array.isArray(p.greetings) && p.greetings.length >= 1, at('greetings'));
+  assert.ok(Array.isArray(p.greetings) && p.greetings.length >= 3, at('greetings 至少 3 条：首页按下标 1、2 取早上好 / 下午好'));
   p.greetings.forEach((g, i) => checkText(g, `greetings[${i}]`));
 });
 
@@ -61,5 +61,23 @@ assert.deepEqual(langs.view('am'), { L: langs.meta('am').strings, tc: 'am', hasR
 assert.equal(langs.current(), langs.DEFAULT, '没有存储时是缺省语言');
 assert.equal(langs.set('xx'), false, '未注册的语言不能切换');
 assert.equal(langs.current(), langs.DEFAULT);
+
+// 注册表：持久化、订阅、未注册语言
+const store = {};
+global.wx = { getStorageSync: (k) => store[k], setStorageSync: (k, v) => { store[k] = v; } };
+assert.equal(langs.set(langs.DEFAULT), true);
+assert.equal(store.lang_v1, langs.DEFAULT, '切到当前语言也写入 lang_v1');
+assert.throws(() => langs.pack('nope'), /未注册的语言：nope/, '未注册的语言码报错，不静默回退');
+const seenCodes = [];
+const off = langs.onChange((c) => seenCodes.push(c));
+langs.register('zz', langs.pack(langs.DEFAULT));
+langs.set('zz');
+langs.set('zz');
+assert.deepEqual(seenCodes, ['zz'], '语言真的变化才通知，且只通知一次');
+assert.equal(store.lang_v1, 'zz');
+off();
+langs.set(langs.DEFAULT);
+assert.deepEqual(seenCodes, ['zz'], '取消订阅后不再通知');
+delete global.wx;
 
 console.log(`OK: 语言包校验通过（${metas.map((m) => m.code).join(', ')}）`);

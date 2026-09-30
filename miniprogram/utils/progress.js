@@ -100,8 +100,9 @@ let onSaved = null;
 /** fn(p, code)：每次保存后回调，code 是这份进度所属的语言 */
 function setOnSaved(fn) { onSaved = fn; }
 
-function save(p) {
-  const code = langs.current();
+/** 保存进度。code 是这份进度所属的语言；页面拿着进度对象跨过语言切换时必须传 */
+function save(p, code) {
+  code = code || langs.current();
   caches[code] = p;
   try { wx.setStorageSync(keyOf(code), p); } catch (e) { /* ignore */ }
   if (onSaved) onSaved(p, code);
@@ -115,16 +116,17 @@ function reset() {
   return load();
 }
 
-function replace(p) {
-  const local = load();
+function replace(p, code) {
+  code = code || langs.current();
+  const local = load(code);
   const next = sanitize(p);
   // 云端快照可能早于积分功能，缺这三个字段。浅合并会把本机已得的星星和徽章清零且不可逆，
   // 所以云端没有时保留本机的。
   if (!p || typeof p !== 'object' || p.stars == null) next.stars = local.stars || 0;
   if (!p || !p.starLog) next.starLog = local.starLog || {};
   if (!p || !p.badges) next.badges = local.badges || {};
-  delete caches[langs.current()];
-  return save(next);
+  delete caches[code];
+  return save(next, code);
 }
 
 // ---------- 当前周 / 天 ----------

@@ -23,17 +23,22 @@ function current() {
   return cur;
 }
 
-/** 切换语言并持久化；未注册的语言返回 false */
+/** 切换语言并持久化；未注册的语言返回 false。语言真的变化才通知订阅者 */
 function set(code) {
   if (!packs[code]) return false;
-  if (code === current()) return true;
+  const changed = code !== current();
   cur = code;
   try { if (typeof wx !== 'undefined' && typeof wx.setStorageSync === 'function') wx.setStorageSync(KEY, code); } catch (e) { /* ignore */ }
-  listeners.slice().forEach((fn) => { try { fn(code); } catch (e) { /* 一个订阅者出错不影响其他 */ } });
+  if (changed) listeners.slice().forEach((fn) => { try { fn(code); } catch (e) { /* 一个订阅者出错不影响其他 */ } });
   return true;
 }
 
-function pack(code) { return packs[code] || packs[current()]; }
+/** 语言包。不传参数取当前语言；传了未注册的语言码直接报错，避免静默拿到别的语言的数据 */
+function pack(code) {
+  if (code == null) return packs[current()];
+  if (!packs[code]) throw new Error(`未注册的语言：${code}`);
+  return packs[code];
+}
 function meta(code) { return pack(code).meta; }
 /** 页面模板用的语言视图：界面文案 L、原文字体类 tc（埃塞文字 'am'，拉丁文字 'latin'）、是否有转写 hasRom */
 function view(code) {
