@@ -62,7 +62,12 @@ function cloudTtsSupports(lang) {
   if (ttsSupported[lang]) return Promise.resolve(true);
   return api.ttsCaps()
     .then((r) => { ttsSupported[lang] = !!(r && Array.isArray(r.langs) && r.langs.includes(lang)); return !!ttsSupported[lang]; })
-    .catch(() => false);
+    .catch((err) => {
+      // 旧版云函数不认识 tts.caps 时报 BAD_REQUEST（未知 action）：确定是版本过旧。
+      // 断网 / 超时 / 未部署等其他错误原样抛给调用方，由它显示错误本身的文案
+      if (err && err.code === 'BAD_REQUEST') return false;
+      throw err;
+    });
 }
 
 /**
@@ -360,13 +365,12 @@ function fetchAndPlay(text, s, key, opts, prevErrors, lang) {
           playSources(sources, { errors, silent: opts.silent });
           if (!p && url) downloadViaUrl(url, key);
         });
-      })
-      .catch((err) => {
-        if (opts.silent) return;
-        if (account.prompt(err, '朗读')) return;
-        // api.js 已经把断网 / 超时 / 未部署 / 云端具体原因归一成中文，原样给用户看
-        fail(prevErrors.concat((err && err.message) || TOAST_TEXT).join('\n'), err);
       });
+  }).catch((err) => {
+    // tts.caps 与 tts.get 的失败都到这里；api.js 已把断网 / 超时 / 未部署 / 云端具体原因归一成中文，原样给用户看
+    if (opts.silent) return;
+    if (account.prompt(err, '朗读')) return;
+    fail(prevErrors.concat((err && err.message) || TOAST_TEXT).join('\n'), err);
   });
 }
 

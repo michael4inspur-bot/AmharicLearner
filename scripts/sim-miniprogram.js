@@ -538,6 +538,22 @@ async function main() {
   audio.prefetch([{ id: 'p', text: omText2 }]);
   await new Promise((r) => setTimeout(r, 20));
   assert.equal(sent.filter((d) => /^tts\.(get|batch)$/.test(d.action)).length, 0, '旧云函数：预取也不发 tts.batch');
+  // 上面的等待期间，页面上挂起的「我的」刷新会把登记状态写回去：重新置为未登录
+  wx.setStorageSync('profile_v1', { ...(savedProfile || {}), registered: false });
+  // 网络类错误（不是「版本过旧」）：不发 tts.get，也不能误报云函数版本过旧，显示错误本身的文案
+  const omText3 = langs.pack('om').getUnit('om-u01').items[2].text;
+  wx.cloud.callFunction = (o) => {
+    sent.push(o.data);
+    if (o.data.action === 'tts.caps') { o.fail({ errMsg: 'cloud.callFunction:fail request:fail' }); return; }
+    return cf0(o);
+  };
+  sent.length = 0;
+  global.__modal = null;
+  await audio.speak(omText3);
+  assert.ok(sent.some((d) => d.action === 'tts.caps'), '网络失败：探测过 tts.caps');
+  assert.equal(sent.filter((d) => /^tts\.(get|batch)$/.test(d.action)).length, 0, '网络失败：不发 tts.get');
+  assert.ok(global.__modal && global.__modal.content, '网络失败：弹出错误提示');
+  assert.ok(!/云函数版本过旧/.test(global.__modal.content), '网络失败不能误报云函数版本过旧');
   sent.length = 0;
   global.__modal = null;
   // 新云函数
@@ -554,6 +570,24 @@ async function main() {
   assert.equal(sent.filter((d) => d.action === 'tts.get').length, 0, '第二次走本地缓存');
   const omQuiz2 = quiz.buildQuiz('om-u01', 9, progress.load(), langs.meta().audio);
   assert.ok(omQuiz2.some((q) => q.listen), '奥罗莫语有语音后出听力题');
+  // 未登录：奥罗莫语小测页出听力题（免登录）；阿姆哈拉语仍然不出
+  const omQuizPage = mkPage('quiz/quiz', {});
+  omQuizPage.onLoad({ scope: 'om-u01' });
+  assert.ok(omQuizPage.data.questions.some((q) => q.listen), '未登录的奥罗莫语小测页有听力题');
+  // 静默朗读（自动播放）：奥罗莫语免登录照常请求；阿姆哈拉语未登录仍直接放弃
+  sent.length = 0;
+  await audio.speak(langs.pack('om').getUnit('om-u01').items[3].text, { silent: true });
+  const silentOm = sent.find((d) => d.action === 'tts.get');
+  assert.ok(silentOm, '未登录的奥罗莫语静默朗读也发 tts.get');
+  assert.equal(silentOm.data.lang, 'om');
+  langs.set('am');
+  const amQuizPage = mkPage('quiz/quiz', {});
+  amQuizPage.onLoad({ scope: 'u01' });
+  assert.equal(amQuizPage.data.questions.filter((q) => q.listen).length, 0, '未登录的阿姆哈拉语小测页没有听力题');
+  sent.length = 0;
+  await audio.speak('ጤና ይስጥልኝ ሰላም ነው', { silent: true });
+  assert.equal(sent.filter((d) => /^tts\./.test(d.action)).length, 0, '未登录的阿姆哈拉语静默朗读不发任何 tts 请求');
+  langs.set('om');
   wx.cloud.callFunction = cf0;
   delete wx.cloud.downloadFile;
   wx.setStorageSync('profile_v1', savedProfile);
