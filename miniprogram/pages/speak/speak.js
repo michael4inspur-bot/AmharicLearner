@@ -121,7 +121,7 @@ Page({
         fail: () => {
           wx.showModal({
             title: '需要麦克风权限',
-            content: '跟读评分需要录音。请在设置中允许使用麦克风。',
+            content: '跟读练习需要录音。请在设置中允许使用麦克风。',
             confirmText: '去设置',
             success: (r) => { if (r && r.confirm && has('openSetting')) wx.openSetting(); }
           });

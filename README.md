@@ -39,16 +39,21 @@ miniprogram/            微信小程序（原生 WXML/WXSS/JS，无第三方依�
   utils/audio.js        语音播放、本地缓存、预取
   pages/                14 个页面（含 speak 跟读评分、qubee 字母规则）
   pages/qubee/          Qubee 字母规则与小测
-cloudfunctions/api/     微信云函数：进度存储 + Azure 语音
+cloudfunctions/api/     微信云函数：进度存储 + Azure 语音 + 奥罗莫语预生成音频
   handler.js            纯逻辑（可本地测试）
-  prompts.js            提示词（含成人学习原则）
-  speech.js             tts.get / tts.batch / stt.score（云端缓存 + 每日上限）
+  speech.js             tts.get / tts.batch / tts.caps / stt.score（云端缓存 + 每日上限）
+  om-audio.js           奥罗莫语音频包读取（manifest 查文件、内容版本）
+  audio-om/             奥罗莫语预生成 mp3、manifest.json、NOTICE.txt（模型署名与许可）
   scoring.js            发音评分（归一化 + Levenshtein 相似度 + 逐词匹配）
   azure.js              Azure Speech REST（合成 / 识别）
   storage.js            云存储适配器
   db.js                 云数据库适配器
 scripts/sim-miniprogram.js  小程序端到端模拟
 scripts/gen-oromo-review.js  生成母语者校对表 docs/oromo-review.md
+scripts/gen-oromo-audio.py   生成奥罗莫语音频（Meta MMS），依赖见 scripts/requirements-tts.txt
+scripts/om-texts.js          列出奥罗莫语全部待朗读文本（生成与校验共用）
+scripts/check-oromo-audio.js 校验音频包与词库一致
+scripts/requirements-tts.txt 音频生成脚本的 Python 依赖
 docs/learning-plan.md   学习计划设计说明
 docs/superpowers/       设计 spec 与实施计划
 ```
@@ -69,7 +74,7 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 2. 用微信开发者工具打开仓库根目录，点工具栏「云开发」，创建环境，把环境 id 填进 `miniprogram/config.js` 的 `cloudEnv`。云开发为付费套餐，个人最低档约每月 20 元，以控制台为准。
 3. 云开发控制台 → 数据库 → 新建集合 `progress`、`ai_logs`、`tts_cache`、`users`、`settings`、`error_logs`，权限都选「仅创建者可读写」。
 5. 可选：Fidel 专用字体。从 [Noto Sans Ethiopic](https://fonts.google.com/noto/specimen/Noto+Sans+Ethiopic) 下载 Bold 的 `.ttf`（或转成 `.woff`），上传到云存储任意目录，把文件的 fileID（`cloud://...`）填进 `miniprogram/config.js` 的 `fidelFontFileID`。不填则用手机系统自带的埃塞文字字体。
-6. 登录与管理员：登录入口在「我的」页顶部，也会在用户主动使用朗读 / 跟读评分时提示。登录即在云端登记本人 openid，未登录的用户不能用语音，本地学习不受影响。
+6. 登录与管理员：登录入口在「我的」页顶部，也会在用户主动使用阿姆哈拉语朗读 / 跟读评分时提示。登录即在云端登记本人 openid。阿姆哈拉语朗读与评分需登录；奥罗莫语预生成朗读免登录、不计额度；本地学习不受影响。
    - **管理员请用云函数环境变量 `ADMIN_OPENIDS` 指定**（逗号分隔 openid，在「我的」页长按"我的账号"可复制）。
    - 还有一条「第一个登录的人自动成为管理员」的引导路径，但默认关闭，需要显式设置 `ALLOW_ADMIN_BOOTSTRAP=1` 才生效。**提审期间务必保持关闭**：第一个打开小程序的往往是微信审核员，开着的话他会拿到查看全部用户 openid、停用你自己账号的权限。
    - 可选 `REQUIRE_APPROVAL=1`：新登录的用户先为「待批准」，管理员在管理页点「批准」后才能用语音。
@@ -115,8 +120,8 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 
 **排查**：
 
-- **需要登录的操作**：朗读和跟读评分都要求先在「我的」页用微信登记。未登记时点这些功能会弹出带「去登录」按钮的提示（`miniprogram/utils/account.js` 统一处理），跟读页在录音前就会提示，「我的」页顶部有登录卡。提示只在用户主动使用功能时出现，不在启动或首页弹，符合审核的「先体验后授权」。未登记用户改昵称只存本地，不会在云端建账号。
-- **只有自己能播放语音，同事都不能**：朗读、跟读评分在云端要求先用微信登记。同事没在「我的」页登录过就会被拒。去云开发控制台看 `users` 集合有几条记录即可确认。现在点朗读会弹出带「去登录」按钮的提示，「我的」页顶部也有登录卡，不会再吞成一句「语音暂时不可用」。若已登记仍不可用，检查云函数环境变量 `REQUIRE_APPROVAL`，设为 `1` 时新账号要管理员在「我的 → 管理 → 用户」里批准。
+- **需要登录的操作**：阿姆哈拉语朗读与评分需登录；奥罗莫语预生成朗读免登录、不计额度（奥罗莫语跟读只在本机对比，也不需要登录）。阿姆哈拉语的这两项要求先在「我的」页用微信登记。未登记时点这些功能会弹出带「去登录」按钮的提示（`miniprogram/utils/account.js` 统一处理），跟读页在录音前就会提示，「我的」页顶部有登录卡。提示只在用户主动使用功能时出现，不在启动或首页弹，符合审核的「先体验后授权」。未登记用户改昵称只存本地，不会在云端建账号。
+- **只有自己能播放语音，同事都不能**：阿姆哈拉语朗读、跟读评分在云端要求先用微信登记（奥罗莫语朗读免登录）。同事没在「我的」页登录过就会被拒。去云开发控制台看 `users` 集合有几条记录即可确认。现在点朗读会弹出带「去登录」按钮的提示，「我的」页顶部也有登录卡，不会再吞成一句「语音暂时不可用」。若已登记仍不可用，检查云函数环境变量 `REQUIRE_APPROVAL`，设为 `1` 时新账号要管理员在「我的 → 管理 → 用户」里批准。
 - 点朗读提示「管理员还没配置 Azure 语音密钥」之外的语音报错，先看云开发控制台的云函数日志。
 - 报 `NO_API_KEY`：两个环境变量有一个没填，或者填完没重新部署。
 - 报 `UPSTREAM` 且日志里有 401：密钥错了，或者密钥和区域不是同一个资源的。
@@ -135,7 +140,7 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 
 | 配置项 | 改成 | 不改会怎样 |
 | --- | --- | --- |
-| 超时时间 | 60 秒 | 默认 3 秒，AI 诊断必定超时（报 `-504003`） |
+| 超时时间 | 60 秒 | 默认 3 秒，首次合成、批量预取与发音评分容易超时（报 `-504003`） |
 | 运行环境 | Nodejs18.15 | 默认可能是 Node 16，没有全局 `fetch`（代码已自带兼容实现，可不改） |
 
 3. 开发者工具「上传」代码，到 mp.weixin.qq.com「版本管理」把该版本设为体验版。
@@ -145,7 +150,7 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 
 | 改的是 | 生效方式 |
 | --- | --- |
-| 云函数 `cloudfunctions/api` | 上传部署后立即对所有人生效，用户什么都不用做。改 AI 提示词、调额度、发公告都属于这一类 |
+| 云函数 `cloudfunctions/api` | 上传部署后立即对所有人生效，用户什么都不用做。调额度、发公告都属于这一类（奥罗莫语换真人录音还要改前端，见「奥罗莫语」一节） |
 | 小程序前端代码 | 需要重新上传并发版；微信只在冷启动时检查新版本，检查到也要再冷启动一次才生效 |
 
 小程序端已接入 `UpdateManager`（`miniprogram/utils/update.js`，`app.js` 启动时调用）：新版下载完成后弹框询问，用户点「立即重启」就直接切到新版，省掉微信默认要求的第二次冷启动。进度存在本地存储和云端，重启不会丢。
@@ -160,7 +165,7 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 
 ### 5. 隐私指引与服务内容声明（提审前在 mp.weixin.qq.com 配置）
 
-登录前会调用 `wx.requirePrivacyAuthorize` 弹微信官方隐私授权框。正文和小程序内「我的 → 隐私指引与 AI 内容声明」页（`miniprogram/utils/privacy.js`）一致，改一处请同步另一处。
+登录前会调用 `wx.requirePrivacyAuthorize` 弹微信官方隐私授权框。正文和小程序内「我的 → 隐私政策与自动生成内容说明」页（`miniprogram/utils/privacy.js`）一致，改一处请同步另一处。
 
 两个和开发者工具直接相关的约定：
 
@@ -174,20 +179,20 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 | 用户身份信息（微信 openid） | 识别本人账号，记录学习进度并同步到云端；管理员据此开通或暂停账号 |
 | 昵称（用户自填，可选） | 方便同事在管理页认出本人 |
 | 学习行为数据（已学单元、小测成绩、复习正确率、学习时长、连续天数、常忘的词） | 学习进度记录与跨设备同步 |
-| 麦克风 / 录音 | 跟读发音评分：录音只在评分时上传识别，评分完成即删除 |
+| 麦克风 / 录音 | 跟读练习：阿姆哈拉语录音上传评分后即删除；奥罗莫语录音只在本机回放对比，不上传 |
 
-第三方共享：Microsoft Azure 语音（待朗读文本、跟读录音）、微信云开发（数据存储与云函数）。数据删除方式：用户可在「我的」清空本地进度，删除云端账号通过意见反馈或管理员处理。
+第三方共享：Microsoft Azure 语音（待朗读的阿姆哈拉语文本、阿姆哈拉语跟读录音）、微信云开发（数据存储与云函数）。奥罗莫语朗读是随云函数发布的预生成音频，不向第三方发送任何数据。数据删除方式：用户可在「我的」清空本地进度，删除云端账号通过意见反馈或管理员处理。
 
 **本项目不收集头像，也不再有任何大模型能力**，这两项都不要写进指引。
 
 **(2) 设置 → 服务内容声明**：
 
-- 服务名称：阿姆哈拉语朗读与发音评分。
-- 技术提供方：Microsoft Azure 语音（语音合成与语音识别）。**没有大模型、没有 AI 问答、没有 AI 生成的文字内容。**
+- 服务名称：阿姆哈拉语朗读与发音评分；奥罗莫语朗读与跟读对比。
+- 技术提供方：Microsoft Azure 语音（阿姆哈拉语语音合成与语音识别）；Meta MMS 公开模型预生成语音（奥罗莫语朗读，`facebook/mms-tts-orm`，离线生成后随云函数发布，运行时不调用外部服务）。**没有大模型、没有智能问答、没有自动生成的文字内容。**
 - 内容标识：朗读语音由语音合成生成；发音评分由语音识别自动判定，页面注明仅供参考，不是权威口语评价。
-- 奥罗莫语发音为 Meta MMS 开源模型（facebook/mms-tts-orm，CC BY-NC 4.0）预先合成的机器语音，界面标有「合成音」，可能与真人发音有差异；阿姆哈拉语朗读由 Azure 语音实时合成。
+- 奥罗莫语发音为 Meta MMS 公开模型（facebook/mms-tts-orm，CC BY-NC 4.0）预先合成的机器语音，界面标有「合成音」，可能与真人发音有差异；阿姆哈拉语朗读由 Azure 语音实时合成。
 - 反馈入口：「我的」页与隐私页的「意见反馈」走微信官方 `open-type="feedback"`，反馈在 mp.weixin.qq.com「用户反馈」里查看。
-- 使用范围：面向在埃塞俄比亚工作生活的中文使用者；朗读与评分需微信登录后使用；每人每天语音合成与评分次数有上限，全体每月合成字符有上限（`cloudfunctions/api` 环境变量可调）。
+- 使用范围：面向在埃塞俄比亚工作生活的中文使用者；阿姆哈拉语朗读与评分需登录；奥罗莫语预生成朗读免登录、不计额度。阿姆哈拉语每人每天语音合成与评分次数有上限，全体每月合成字符有上限（`cloudfunctions/api` 环境变量可调）。
 
 ### 合规说明（2026-09 审核驳回后的整改）
 
@@ -199,9 +204,9 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 | 一进首页未体验功能就要求授权登录 | 首页不再自动跳转登录页，昵称提示只对已登录用户显示。登录入口在「我的」页顶部，以及用户主动使用朗读 / 跟读评分时的提示里 |
 | AI 问答属深度合成技术，个人主体未开放该类目 | **AI 教练已整体删除**：coach 页、云函数 `ai.*` 接口、DeepSeek 适配器与提示词、AI 额度、全部相关文案都不在代码里了 |
 
-现在小程序的云端能力只剩两项：Azure 语音合成（朗读）与语音识别（发音评分）。没有任何大模型调用。
+现在小程序的云端能力只剩两项：Azure 语音合成（阿姆哈拉语朗读）与语音识别（阿姆哈拉语发音评分），外加分发奥罗莫语预生成音频（代码包里的 mp3，不做实时合成）。没有任何大模型调用。
 
-**仍有风险的地方**：按国内深度合成的界定，AI 语音合成也属于深度合成技术。本项目的 Azure 朗读属于语音合成，两轮审核都没有点名，但仍可能被提；奥罗莫语的 MMS 预生成语音同属这一类，界面上已标「合成音」。真被提出来时，可改企业主体，或把朗读也下线（跟读评分走的是语音识别，风险低一些）。
+**仍有风险的地方**：按国内深度合成的界定，语音合成也属于深度合成技术。本项目的 Azure 朗读属于语音合成，两轮审核都没有点名，但仍可能被提；奥罗莫语的 MMS 预生成语音同属这一类，界面上已标「合成音」。真被提出来时，可改企业主体，或把朗读也下线（跟读评分走的是语音识别，风险低一些）。
 
 `npm test` 里的 `scripts/check-privacy-scopes.js` 会拦住代码回潮，扫描全部小程序与云函数源码，覆盖：需要额外声明 scope 的组件与接口（位置、相册、剪贴板、蓝牙）、任何形式的 DeepSeek / `ai.*` / coach 页引用、`app.json` 与自定义 tabBar 的一致性。检查器早期版本被渗透测试攻破过六种写法（单引号、只扫 wxml、调用挪到 pages、改 action 名等），现在这六种都会失败。
 
@@ -213,10 +218,11 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 | --- | --- | --- |
 | `progress.get` | `{ lang? }` | 读取该语言的云端进度；返回 { progress, updatedAt, lang }。am 文档 _id = openid，其他语言 _id = openid:lang |
 | `progress.put` | `{ progress, meta?, baseUpdatedAt?, lang? }` | 上传该语言的进度；只有 am 的上传更新用户摘要 |
-| `tts.get` | `{text, voice: 'female'\|'male', rate: 'normal'\|'slow'}` | 合成朗读，返回 `{url, key}`；命中 `tts_cache` 不再调 Azure |
-| `tts.batch` | `{items: [{id, text}], voice, rate}`（最多 40 条） | 批量取 url，返回 `{urls: {id: url}}`，缺失项并行生成 |
-| `stt.score` | `{fileID, target}` | 识别云存储里的录音并评分，返回 `{transcript, score, words}`；处理完删除录音 |
-| `usage.get` | 无 | 本人今日 AI / 语音 / 评分用量与上限，本月语音字符 |
+| `tts.get` | `{text, voice: 'female'\|'male', rate: 'normal'\|'slow', lang?: 'am'\|'om'}` | 取朗读音频，返回 `{url, key, fileID}`。`lang` 缺省 `am`：Azure 合成，命中 `tts_cache` 不再调 Azure，需登录、计额度。`lang: 'om'`：取 `audio-om/` 里的预生成 mp3（不看 `voice`），首次用到上传云存储，缓存键带文件内容版本；免登录、不计额度，回包多带 `lang: 'om'` |
+| `tts.batch` | `{items: [{id, text}], voice, rate, lang?}`（最多 40 条） | 批量取 url，返回 `{urls: {id: url}, files: {id: fileID}}`；`am` 缺失项并行合成，`om` 清单里没有的 id 省略，回包多带 `lang: 'om'` |
+| `tts.caps` | 无 | 云函数支持的朗读语言，返回 `{langs: ['am', 'om']}`；免登录。前端朗读非阿姆哈拉语前先调它，识别未重新部署的旧云函数 |
+| `stt.score` | `{fileID, target, lang?}` | 识别云存储里的本人录音并评分，返回 `{transcript, score, words}`；处理完删除录音。`lang` 不是 `am` 时删除录音后拒绝（奥罗莫语不评分） |
+| `usage.get` | 无 | 本人今日语音合成 / 评分用量与上限，本月语音字符 |
 | `admin.usage` | 无 | 管理员（`ADMIN_OPENIDS`）查看最近 7 天各用户用量 |
 | `user.register` | `{nickname?}` | 微信登录：登记本人（退出过的会恢复）；`ALLOW_ADMIN_BOOTSTRAP=1` 时首个登记者成为管理员；`REQUIRE_APPROVAL=1` 时新用户为待批准 |
 | `user.setProfile` / `user.me` | `{nickname}` / 无 | 设置昵称 / 查看自己的 openid、是否已登录、是否管理员 |
@@ -245,7 +251,7 @@ npm test     # 云函数单元测试 + 小程序端到端模拟
 
 奥罗莫语（Afaan Oromoo）内容为初稿，需母语者按 [docs/oromo-review.md](docs/oromo-review.md) 逐行校对；校对前入口显示「试用版」。校对表由 `node scripts/gen-oromo-review.js` 从词库生成，`npm test` 会检查它与词库一致，改了词库记得重新生成。
 
-语音已上线：朗读为 Meta MMS 开源模型 `facebook/mms-tts-orm`（CC BY-NC 4.0）预先生成的 mp3，随云函数 `api` 的 `audio-om/` 目录一起部署。免登录、不走 Azure、不计入每日 / 每月额度。界面上凡是奥罗莫语朗读入口旁都有「合成音」标注，「我的 → 关于」与隐私页有模型署名。跟读为对比模式：录音后与标准音交替播放，自己找差别，不评分。
+语音已上线：朗读为 Meta MMS 公开模型 `facebook/mms-tts-orm`（[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)）预先生成的 mp3，随云函数 `api` 的 `audio-om/` 目录一起部署，署名与许可见 `audio-om/NOTICE.txt`。免登录、不走 Azure、不计入每日 / 每月额度。有朗读的五个页面（课程、闪卡、小测、跟读、查词句）都标了「合成音」（在页面标题、提示语或喇叭旁），「我的 → 关于」与隐私页有模型署名。跟读为对比模式：录音后与标准音交替播放，自己找差别，不评分；录音只在本机回放，不上传。
 
 重新生成音频（改了词库后）：
 
@@ -254,13 +260,19 @@ python3 -m venv .venv-tts && . .venv-tts/bin/activate
 pip install -r scripts/requirements-tts.txt
 python scripts/gen-oromo-audio.py           # 只生成新增 / 改动的句子
 python scripts/gen-oromo-audio.py --prune   # 同时删除已不在词库里的旧文件
+python scripts/gen-oromo-audio.py --force   # 全部重新生成（会覆盖已换成的真人录音）
 ```
 
 `npm test` 里的 `scripts/check-oromo-audio.js` 会检查音频与词库一致。
 
-奥罗莫语语音模型为 CC BY-NC 4.0（禁止商业使用）：小程序保持免费、不收费、不挂广告；若将来商业化，需把 `audio-om/` 换成真人录音（同名 mp3 覆盖后重新部署云函数）。
+奥罗莫语语音模型为 CC BY-NC 4.0（禁止商业使用，许可原文 https://creativecommons.org/licenses/by-nc/4.0/）：小程序保持免费、不收费、不挂广告；若将来商业化，需把 `audio-om/` 全部换成真人录音（步骤见下）。
 
-换成真人录音：把录音转成 mp3，用与原文件同名的文件覆盖 `cloudfunctions/api/audio-om/` 里对应的 mp3，然后重新「上传并部署」云函数 `api`。
+换成真人录音（可以逐条换）：
+
+1. 把录音转成 mp3，按 `audio-om/manifest.json`（「语速|文本 → 文件名」）找到对应文件名，用同名文件覆盖 `cloudfunctions/api/audio-om/` 里的 mp3，清单不用改。之后不要再用 `--force` 运行生成脚本，否则会被模型音频覆盖回去。
+2. 重新「上传并部署」云函数 `api`。云端缓存键带文件内容版本，部署后首次请求会上传并改用新文件，不用手动清缓存。
+3. 把 `miniprogram/langs/om/index.js` 里 `meta.audioVersion` 加 1。手机上已下载的旧音频按版本号缓存，不加 1 会一直播本机的旧文件。
+4. 上传小程序新版本（体验版 / 提审）。用户冷启动更新后重新下载新音频。
 
 ## 学习计划概览
 

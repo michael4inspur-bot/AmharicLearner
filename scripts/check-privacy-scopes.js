@@ -109,10 +109,23 @@ mustTag.forEach((p) => {
   const src = fs.readFileSync(f, 'utf8');
   assert.ok(/wx:if\s*=\s*['"]\{\{\s*voiceNote\s*\}\}['"]/.test(src) && /\{\{\s*voiceNote\s*\}\}/.test(src), `${rel(f)} 的朗读入口旁缺少「合成音」标注（voiceNote）`);
 });
+// 小测页每个朗读喇叭（playCurrent）旁都要有标注，不只是听力题标题
+const quizSrc = fs.readFileSync(path.join(root, 'pages', 'quiz', 'quiz.wxml'), 'utf8');
+const quizSpeakers = (quizSrc.match(/playCurrent/g) || []).length;
+const quizTags = (quizSrc.match(/class=['"]syn-tag['"]/g) || []).length;
+assert.ok(quizTags >= quizSpeakers, `pages/quiz/quiz.wxml 有 ${quizSpeakers} 个朗读入口，只有 ${quizTags} 处「合成音」标注`);
 const privacySrc = fs.readFileSync(path.join(root, 'utils', 'privacy.js'), 'utf8');
 const aboutSrc = fs.readFileSync(path.join(root, 'pages', 'profile', 'profile.wxml'), 'utf8');
 [['utils/privacy.js', privacySrc], ['pages/profile/profile.wxml', aboutSrc]].forEach(([name, src]) => {
   assert.ok(/MMS/.test(src) && /mms-tts-orm/.test(src) && /CC BY-NC 4\.0/.test(src), `${name} 缺少奥罗莫语语音模型署名（Meta MMS、facebook/mms-tts-orm、CC BY-NC 4.0）`);
 });
 
+// 麦克风用途：小程序隐私页、README 指引表、提审检查清单三处必须同一句话（奥罗莫语录音不上传也要写进去）
+const { ITEMS } = require(path.join(root, 'utils', 'privacy.js'));
+const mic = ITEMS.find((it) => /麦克风/.test(it.type));
+assert.ok(mic && /阿姆哈拉语/.test(mic.use) && /奥罗莫语录音只在本机/.test(mic.use), 'privacy.js 的麦克风用途要分别写明阿姆哈拉语与奥罗莫语');
+['README.md', '提审检查清单.md'].forEach((name) => {
+  const doc = fs.readFileSync(path.join(__dirname, '..', name), 'utf8');
+  assert.ok(doc.includes(mic.use), `${name} 的麦克风用途与 privacy.js 不一致：应为「${mic.use}」`);
+});
 console.log(`OK: 合规静态检查通过（扫描 ${srcFiles.length} 个源文件）`);

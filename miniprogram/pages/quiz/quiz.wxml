@@ -17,6 +17,7 @@
         <view class="row q-am-row" wx:if="{{current.promptText}}">
           <view class="{{tc}} q-am">{{current.promptText}}</view>
           <view class="icon-btn" wx:if="{{audio}}" catchtap="playCurrent"><x-icon name="speaker" size="34" color="#2F7A5E" /></view>
+          <text class="syn-tag" wx:if="{{audio && voiceNote}}">{{voiceNote}}</text>
         </view>
         <view class="rom" wx:if="{{current.promptRom}}">{{current.promptRom}}</view>
         <view class="q-zh" wx:if="{{current.promptZh}}">{{current.promptZh}}</view>
@@ -39,6 +40,7 @@
       <view class="row q-am-row ex-am" wx:if="{{current.listen}}">
         <view class="{{tc}}">{{current.audioText}}</view>
         <view class="icon-btn" wx:if="{{audio}}" catchtap="playCurrent"><x-icon name="speaker" size="34" color="#2F7A5E" /></view>
+        <text class="syn-tag" wx:if="{{audio && voiceNote}}">{{voiceNote}}</text>
       </view>
       <view class="btn" bindtap="next">{{idx + 1 >= questions.length ? '看结果' : '下一题'}}</view>
     </view>

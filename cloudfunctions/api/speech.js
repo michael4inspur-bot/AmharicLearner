@@ -255,7 +255,7 @@ async function sttScore(data, ctx, now) {
   const sttLimit = getLimits().stt;
   const used = await db.countAiSince(openid, dayStartIso(now), ['stt']);
   if (used >= sttLimit) {
-    // 录音已经上传了，拒绝也要删掉，隐私声明承诺「评分完成即删除」
+    // 录音已经上传了，拒绝也要删掉，隐私声明承诺「上传评分后即删除」
     await storage.remove([fileID]).catch(() => {});
     return fail('BAD_REQUEST', `今天的跟读评分次数已用完（${sttLimit} 次），明天再来`);
   }
