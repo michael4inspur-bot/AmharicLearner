@@ -3,8 +3,8 @@
 const KEY = 'lang_v1';
 const DEFAULT = 'am';
 
-const packs = { am: require('./am/index.js') };
-const order = ['am'];
+const packs = { am: require('./am/index.js'), om: require('./om/index.js') };
+const order = ['am', 'om'];
 let cur = '';
 const listeners = [];
 

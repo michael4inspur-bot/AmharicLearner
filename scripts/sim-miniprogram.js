@@ -286,21 +286,8 @@ async function main() {
   assert.equal(progress.isEmpty(), true, '重置后是空进度');
   assert.equal(await sync.syncNow(), false, '空进度不上传，不会覆盖云端');
   progress.replace(realProgress);
-  // 多语言：注册一个最小的测试语言包，验证进度与云端文档按语言分开
-  const amPack = langs.pack('am');
-  const omUnit = { id: 'om-u01', week: 1, title: '测试单元', items: [
-    { id: 'om-u01-01', text: 'Akkam', zh: '你好', unit: 'om-u01' },
-    { id: 'om-u01-02', text: 'Galatoomi', zh: '谢谢', unit: 'om-u01' }
-  ], dialog: [] };
-  langs.register('om', {
-    ...amPack,
-    meta: { ...amPack.meta, code: 'om', script: 'latin', hasRom: false, audio: false },
-    units: [omUnit],
-    getUnit: (id) => (id === 'om-u01' ? omUnit : undefined),
-    getItem: (id) => omUnit.items.find((it) => it.id === id),
-    allItems: () => omUnit.items.slice(),
-    unitsForWeek: (w) => (w === 1 ? [omUnit] : [])
-  });
+  // 多语言：用已注册的奥罗莫语包，验证进度与云端文档按语言分开
+  const omWord = langs.pack('om').getUnit('om-u01').items[0].text;
   assert.equal(progress.keyOf('am'), 'progress_v1', '阿姆哈拉语沿用老键名');
   assert.equal(progress.keyOf('om'), 'progress_om_v1');
   const amUnitsBefore = JSON.stringify(progress.load().unitsLearned);
@@ -320,12 +307,12 @@ async function main() {
   const toasts = [];
   const realToast = wx.showToast;
   wx.showToast = (o) => { toasts.push(o.title); };
-  await audio.speak('Akkam');
+  await audio.speak(omWord);
   assert.equal(toasts.length, 1, '主动点一次提示一次');
   assert.match(toasts[0], /发音即将上线/);
-  await audio.speak('Akkam', { silent: true });
+  await audio.speak(omWord, { silent: true });
   assert.equal(toasts.length, 1, 'silent 不提示');
-  audio.prefetch([{ id: 'x', text: 'Akkam' }]);
+  audio.prefetch([{ id: 'x', text: omWord }]);
   await new Promise((r) => setTimeout(r, 20));
   wx.showToast = realToast;
   wx.cloud.callFunction = cfBefore;
