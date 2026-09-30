@@ -1044,3 +1044,17 @@ https://claude.ai/code/session_012XhDr3sdrtgk4B4Lg4Z2yJ
 - `docs/superpowers/plans/…-oromo-content.md`：奥罗莫语 16 单元词库、8 周计划、`pages/fidel` → `pages/alphabet` 通用字母页（计划任务类型 `fidel` → `alphabet`）、Qubee 页、语言切换入口（首页顶部、我的）、「试用版」标签，`check-langs.js` 自动覆盖新语言包。
 - `docs/superpowers/plans/…-oromo-audio.md`：生成脚本、音频包与 manifest、`tts.*` 的 `om` 分支（免登录、不计额度）、前端 `lang` 透传与缓存 key、校对表。
 - `docs/superpowers/plans/…-oromo-speak-compliance.md`：奥罗莫语跟读对比、「合成音」标注、关于页 MMS 署名、合规检查、提审清单更新。
+
+## PR 1 执行后带入 PR 2 的事项（来自逐任务审查与终审）
+
+写 PR 2 计划时必须包含：
+- `progress.save/replace` 绑定到进度所属语言（如 `save(p, code)`），防止跨语言切换时把一种语言的进度写进另一种（例如「我的 → 从云端恢复」弹框期间切换语言）。
+- `app.onHide` 同步所有待同步的语言（新增 `sync.flushPending()`），不只当前语言；后台时计时器可能被冻结。
+- `scripts/check-langs.js`：问候语至少 3 条（首页按下标 1、2 取早上好/下午好）；覆盖 `onChange`、`register`、`lang_v1` 持久化；`langs.set(当前语言)` 也要写入 `lang_v1`。
+- `langs.pack(code)` 传入未注册的语言码时报错或告警，而不是静默回退。
+- `.latin` 样式补上与 `.am` 一致的字重和强调色，改正「字号与 .am 对齐」的注释。
+- 模拟脚本断言拉丁语言分支（`tc === 'latin'`、`hasRom === false`），静态文案检查扩展到 index、lesson、speak、profile 模板。
+- 课文页对话提示「先看着转写读，再遮住转写读」在没有转写的语言下改写。
+- 实战任务键 `missions.w1/w4` 与徽章文案改为读语言包（规格 §2.3）。
+- `cloudSupports` 在云端不支持时加时间退避，避免每次保存都完整拉一次 `progress.get`。
+- 顺手清理：`quiz.js`、`review.js` 注释里残留的「阿姆哈拉语」；无人调用的 `progress.summary()`；提审清单第二节重新部署云函数的理由。
