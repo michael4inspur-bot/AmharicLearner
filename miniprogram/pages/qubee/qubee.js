@@ -19,7 +19,9 @@ Page({
     const qb = langs.pack('om').alphabet;
     this.qb = qb;
     this.setData({ ...langs.view('om'), groups: qb.groups.map((g) => ({ group: g.group, title: g.title })) });
-    this.setGroup(Number(q && q.group) || 1);
+    const raw = q && q.group;
+    const g = raw === undefined || raw === '' ? NaN : Number(raw); // 0 = 全部批次；缺省 / 非法值才回到第 1 批
+    this.setGroup(Number.isInteger(g) && g >= 0 && g <= 5 ? g : 1);
     this.enterAt = Date.now();
   },
   onUnload() {

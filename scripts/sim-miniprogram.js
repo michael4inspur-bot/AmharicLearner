@@ -406,6 +406,31 @@ async function main() {
   // 第 8 周全表自测打开全部批次
   assert.equal(langs.pack('am').plan.getDayTasks(8, 6).find((t) => t.type === 'alphabet').group, 0);
 
+  // 全表自测（group 0）：字母页保持 0 并显示全部批次；缺省 / 非法值回到第 1 批
+  assert.equal(langs.current(), 'am');
+  const fidelPage = pageOf('fidel/fidel');
+  const mkFidel = () => Object.assign(Object.create(fidelPage), { data: { ...fidelPage.data }, setData(d) { this.data = { ...this.data, ...d }; } });
+  const fd0 = mkFidel();
+  fd0.onLoad({ group: '0' });
+  assert.equal(fd0.data.group, 0, 'Fidel 页 group=0 不被改成 1');
+  assert.deepEqual([...new Set(fd0.data.rows.map((c) => c.group))].sort(), [1, 2, 3, 4, 5], 'Fidel 全表覆盖 1..5 批');
+  const fd3 = mkFidel();
+  fd3.onLoad({ group: '3' });
+  assert.equal(fd3.data.group, 3);
+  ['', 'x', '9', '-1', '1.5'].forEach((bad) => { const f = mkFidel(); f.onLoad({ group: bad }); assert.equal(f.data.group, 1, `非法 group「${bad}」回到第 1 批`); });
+  const fdNone = mkFidel();
+  fdNone.onLoad({});
+  assert.equal(fdNone.data.group, 1, '缺省 group 回到第 1 批');
+  // 首页全表自测任务：只过 1-4 批不算完成，5 批全过才算
+  const homeDec = Object.create(pageOf('index/index'));
+  const fullTask = langs.pack('am').plan.getDayTasks(8, 6).find((t) => t.type === 'alphabet');
+  const freshP = { unitsLearned: {}, quizScores: [], missions: {}, reflections: {}, fidelGroupsDone: { 1: true, 2: true, 3: true, 4: true } };
+  assert.equal(homeDec.decorate(fullTask, freshP, { due: 0, total: 0 }).done, false, '只过 1-4 批：全表自测未完成');
+  freshP.fidelGroupsDone[5] = true;
+  assert.equal(homeDec.decorate(fullTask, freshP, { due: 0, total: 0 }).done, true, '5 批全过：全表自测完成');
+  const batch2 = { ...fullTask, group: 2 };
+  assert.equal(homeDec.decorate(batch2, { ...freshP, fidelGroupsDone: { 2: true } }, { due: 0, total: 0 }).done, true, '单批任务仍按该批判断');
+
   // Qubee 字母页：只从奥罗莫语进入；通过小测只写奥罗莫语进度
   const qubeePage = pageOf('qubee/qubee');
   const mkQubee = () => Object.assign(Object.create(qubeePage), { data: { ...qubeePage.data }, setData(d) { this.data = { ...this.data, ...d }; } });
@@ -442,6 +467,16 @@ async function main() {
   assert.equal(qb.data.tc, 'latin');
   qb.pickGroup({ currentTarget: { dataset: { g: '0' } } });
   assert.equal(qb.data.sections.length, 5, '「全部」显示 5 批');
+  const qb0 = mkQubee();
+  qb0.onLoad({ group: '0' });
+  assert.equal(qb0.data.group, 0, 'Qubee 页 group=0 不被改成 1');
+  assert.equal(qb0.data.sections.length, 5, 'Qubee 全表显示 5 批');
+  const qbBad = mkQubee();
+  qbBad.onLoad({ group: '9' });
+  assert.equal(qbBad.data.group, 1, '非法 group 回到第 1 批');
+  const qbNone = mkQubee();
+  qbNone.onLoad({});
+  assert.equal(qbNone.data.group, 1, '缺省 group 回到第 1 批');
   qb.pickGroup({ currentTarget: { dataset: { g: '1' } } });
   qb.startQuiz();
   assert.equal(qb.data.mode, 'quiz');
