@@ -15,7 +15,7 @@ const meta = {
   beta: true,
   audio: true,
   // 音频版本：audio-om/ 里任何 mp3 换成真人录音后加 1，手机上的旧本地缓存随之失效（见 README「换成真人录音」）
-  audioVersion: 1,
+  audioVersion: 2, // 2：按标点分段合成、v 按 f 读（2026-10-01）
   voiceNote: '合成音',
   ttsLogin: false,
   strings: {
