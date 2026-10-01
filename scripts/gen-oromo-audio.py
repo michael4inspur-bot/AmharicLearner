@@ -8,7 +8,12 @@ https://creativecommons.org/licenses/by-nc/4.0/）。
   python scripts/gen-oromo-audio.py           # 只生成新增/改动的句子
   python scripts/gen-oromo-audio.py --prune   # 同时删除已不在词库里的旧文件
   python scripts/gen-oromo-audio.py --force   # 全部重新生成（会覆盖已换成真人录音的文件！）
-同一句话每次生成的结果相同（固定随机种子）。每个文件先写临时文件再改名，中途中断不会留下半截 mp3。
+同一台机器上同一句话每次生成的结果逐字节相同（固定随机种子）；换了机器（CPU 不同）浮点运算有极小差异，文件会变但听不出区别。每个文件先写临时文件再改名，中途中断不会留下半截 mp3。
+
+模型只认识小写字母、撇号 ' 和连字符 -：标点会被直接丢掉，长句和对话就读成一口气。
+所以按标点分段合成，段间插入静音（逗号类 0.25 秒，句号、问号、感叹号 0.4 秒）；
+模型词表里没有 v（外来词如 Sarvarii），合成时按 f 读。只影响音频，页面上显示的文字不变。
+改了分段或读法规则后用 --force 全部重新生成，并把 langs/om/index.js 的 meta.audioVersion 加 1。
 
 换成真人录音（文件名见 audio-om/manifest.json，「语速|文本 → 文件名」）：
   1. 用真人录音的 mp3 覆盖 cloudfunctions/api/audio-om/ 里的同名文件（清单不用改）；
@@ -20,6 +25,7 @@ https://creativecommons.org/licenses/by-nc/4.0/）。
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -29,6 +35,31 @@ MODEL = 'facebook/mms-tts-orm'
 RATES = {'normal': 1.0, 'slow': 0.75}
 SEED = 555
 BITRATE = 32
+PAUSE_SHORT = 0.25  # 逗号、分号、冒号后的停顿（秒）
+PAUSE_LONG = 0.4    # 句号、问号、感叹号、省略号后的停顿（秒）
+SPLIT_RE = re.compile(r'([,;:.!?…]+)')
+
+
+def segments(text):
+    """按标点切成 [(要合成的文本, 之后的停顿秒数)]；最后一段停顿为 0，只有标点没有字母的段丢掉。"""
+    parts = SPLIT_RE.split(text)
+    out = []
+    for i in range(0, len(parts), 2):
+        chunk = parts[i].strip()
+        sep = parts[i + 1] if i + 1 < len(parts) else ''
+        if not re.search(r'[A-Za-z]', chunk):
+            continue
+        pause = PAUSE_SHORT if sep and set(sep) <= set(',;:') else PAUSE_LONG
+        out.append((chunk, pause))
+    if not out:
+        return [(text.strip(), 0.0)]
+    out[-1] = (out[-1][0], 0.0)
+    return out
+
+
+def tts_text(chunk):
+    """送进模型前的读法：小写；词表里没有 v，按 f 读。"""
+    return chunk.lower().replace('v', 'f')
 
 
 def key(rate, text):
@@ -62,9 +93,14 @@ def main():
             if os.path.exists(path) and not force:
                 continue
             model.speaking_rate = speed
-            torch.manual_seed(SEED)
-            with torch.no_grad():
-                wav = model(**tok(text, return_tensors='pt')).waveform[0].numpy()
+            pieces = []
+            for chunk, pause in segments(text):
+                torch.manual_seed(SEED)
+                with torch.no_grad():
+                    pieces.append(model(**tok(tts_text(chunk), return_tensors='pt')).waveform[0].numpy())
+                if pause > 0:
+                    pieces.append(np.zeros(int(sr * pause), dtype=pieces[-1].dtype))
+            wav = np.concatenate(pieces)
             pcm = (np.clip(wav, -1.0, 1.0) * 32767).astype(np.int16)
             enc = lameenc.Encoder()
             enc.set_bit_rate(BITRATE)

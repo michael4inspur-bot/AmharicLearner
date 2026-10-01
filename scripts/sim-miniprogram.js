@@ -649,19 +649,20 @@ async function main() {
   assert.equal(omCall.data.lang, 'om');
   assert.ok(sent.some((d) => d.action === 'tts.caps'), '先确认云函数支持奥罗莫语');
   assert.match(global.__audioCtx.src, /\/tmp\/sim\//, '播放下载到本地的文件');
-  assert.equal(langs.meta('om').audioVersion, 1, '奥罗莫语音频版本');
-  assert.ok(wx.getStorageSync('audio_cache_v1')[`om|v1|normal|${omText}`], '奥罗莫语本地缓存键带语言前缀与音频版本');
+  const omV = langs.meta('om').audioVersion;
+  assert.ok(Number.isInteger(omV) && omV >= 1, '奥罗莫语音频版本');
+  assert.ok(wx.getStorageSync('audio_cache_v1')[`om|v${omV}|normal|${omText}`], '奥罗莫语本地缓存键带语言前缀与音频版本');
   assert.equal(audio.cacheKey('ሰላም', 'female', 'normal', 'am'), 'female|normal|ሰላም', '阿姆哈拉语缓存键不变');
   assert.equal(audio.cacheKey('ሰላም', 'female', 'normal'), 'female|normal|ሰላም', '不带语言时按阿姆哈拉语');
   // 换成真人录音后把 audioVersion 加 1：旧的本地文件不再命中，重新下载
   const omMeta = langs.meta('om');
-  omMeta.audioVersion = 2;
-  assert.equal(audio.cacheKey(omText, 'female', 'normal', 'om'), `om|v2|normal|${omText}`, 'audioVersion 变了缓存键跟着变');
+  omMeta.audioVersion = omV + 1;
+  assert.equal(audio.cacheKey(omText, 'female', 'normal', 'om'), `om|v${omV + 1}|normal|${omText}`, 'audioVersion 变了缓存键跟着变');
   sent.length = 0;
   await audio.speak(omText);
   assert.equal(sent.filter((d) => d.action === 'tts.get').length, 1, 'audioVersion 加 1 后重新取音频');
-  assert.ok(wx.getStorageSync('audio_cache_v1')[`om|v2|normal|${omText}`]);
-  omMeta.audioVersion = 1;
+  assert.ok(wx.getStorageSync('audio_cache_v1')[`om|v${omV + 1}|normal|${omText}`]);
+  omMeta.audioVersion = omV;
   sent.length = 0;
   await audio.speak(omText);
   assert.equal(sent.filter((d) => d.action === 'tts.get').length, 0, '第二次走本地缓存');
