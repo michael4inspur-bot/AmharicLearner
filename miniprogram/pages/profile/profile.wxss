@@ -72,3 +72,4 @@
 .account-card .muted-2 { margin-top: 6rpx; }
 .logout-btn { margin-top: 20rpx; }
 .tag.mint-strong { background: var(--mint-ink); color: #fff; }
+.about-credit { margin-top: 12rpx; }

@@ -28,8 +28,8 @@ page {
   --border: #F1E3D6;
 }
 .am { font-family: "NotoSansEthiopic", "Noto Sans Ethiopic", "Kefa", "Abyssinica SIL", system-ui, sans-serif; font-weight: 700; color: var(--accent); }
-/* 拉丁字母的外语原文（如奥罗莫语）：不用 Ethiopic 字体，字号与 .am 对齐 */
-.latin { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; letter-spacing: 0.2rpx; }
+/* 拉丁字母的外语原文（如奥罗莫语）：不用 Ethiopic 字体，字重与颜色与 .am 一致 */
+.latin { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; font-weight: 700; color: var(--accent); letter-spacing: 0.2rpx; }
 /* 底部留白要覆盖悬浮导航条：24 + 安全区 + 128 rpx，刘海屏上安全区约 68rpx */
 .page { padding: 24rpx 40rpx calc(200rpx + env(safe-area-inset-bottom)); }
 .page.no-tab { padding-bottom: 60rpx; }
@@ -149,3 +149,6 @@ textarea.input.on-card, input.input.on-card { background: var(--bg); box-shadow:
 @keyframes pulse { 0% { transform: scale(1); } 40% { transform: scale(1.03); } 100% { transform: scale(1); } }
 .pop { animation: pop 240ms ease-out both; }
 .pulse { animation: pulse 300ms ease-out both; }
+
+/* 合成语音标注（奥罗莫语朗读为模型预生成） */
+.syn-tag { display: inline-block; font-size: 20rpx; line-height: 1.6; padding: 0 10rpx; border-radius: 8rpx; background: var(--lav, #EEEAFB); color: #4C3D8F; margin-left: 8rpx; vertical-align: middle; }

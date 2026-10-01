@@ -3,7 +3,7 @@
     <view class="search-icon"><x-icon name="search" size="34" color="#B08A78" /></view>
     <input class="input search-input" value="{{q}}" placeholder="{{L.searchPlaceholder}}" placeholder-class="ph" bindinput="onInput" bindconfirm="onConfirm" confirm-type="search" focus />
   </view>
-  <view class="hint">{{L.searchHint}}</view>
+  <view class="hint">{{L.searchHint}}<text class="syn-tag" wx:if="{{voiceNote}}">{{voiceNote}}</text></view>
 
   <block wx:if="{{!q && recent.length}}">
     <view class="section-title">最近搜索</view>
@@ -27,7 +27,7 @@
         <x-icon name="chevron-right" size="22" color="#B08A78" />
       </view>
     </view>
-    <view class="square mint" data-text="{{item.text}}" catchtap="play">
+    <view class="square mint" wx:if="{{audio}}" data-text="{{item.text}}" catchtap="play">
       <x-icon name="speaker" size="36" color="#2F7A5E" />
     </view>
     <view class="square lav" data-id="{{item.id}}" catchtap="addCard">

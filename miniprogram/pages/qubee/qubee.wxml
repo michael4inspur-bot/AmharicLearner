@@ -1,0 +1,53 @@
+<view class="page no-tab">
+  <view class="qb-head">
+    <view class="qb-title">Qubee 字母</view>
+    <view class="muted">奥罗莫语用拉丁字母书写，按读音拼写：长音写两个元音，重读写两个辅音。</view>
+  </view>
+
+  <scroll-view scroll-x class="groups">
+    <view class="gbtn {{group===g.group ? 'on' : ''}}" wx:for="{{groups}}" wx:for-item="g" wx:key="group" data-g="{{g.group}}" bindtap="pickGroup">第 {{g.group}} 批</view>
+    <view class="gbtn {{group===0 ? 'on' : ''}}" data-g="0" bindtap="pickGroup">全部</view>
+  </scroll-view>
+
+  <block wx:if="{{mode==='rules'}}">
+    <view class="tag mint qb-done" wx:if="{{done}}">已通过</view>
+    <view class="qb-section" wx:for="{{sections}}" wx:for-item="s" wx:key="group">
+      <view class="qb-sec-title">第 {{s.group}} 批 · {{s.title}}</view>
+      <view class="muted qb-intro">{{s.intro}}</view>
+      <view class="card qb-rule" wx:for="{{s.rules}}" wx:for-item="r" wx:key="pattern">
+        <view class="{{tc}} qb-pattern">{{r.pattern}}</view>
+        <view class="qb-zh">{{r.zh}}</view>
+        <view class="row between qb-ex" wx:for="{{r.examples}}" wx:for-item="ex" wx:key="text">
+          <view class="{{tc}} qb-ex-text">{{ex.text}}</view>
+          <view class="muted qb-ex-zh">{{ex.zh}}</view>
+        </view>
+      </view>
+    </view>
+    <view class="btn" bindtap="startQuiz">开始小测（10 题）</view>
+  </block>
+
+  <block wx:if="{{mode==='quiz'}}">
+    <view class="row between qz-head">
+      <view class="qz-count">第 {{qIdx + 1}} / {{qTotal}} 题</view>
+      <view class="qz-score">得分 {{qScore}}</view>
+    </view>
+    <view class="card qbox">
+      <view class="{{tc}} big">{{q.text}}</view>
+      <view class="muted">这是什么意思？</view>
+    </view>
+    <view class="opt {{qPicked ? (item === q.answer ? 'right pulse' : (item === qPicked ? 'wrong pulse' : 'dim')) : ''}}"
+          wx:for="{{q.options}}" wx:key="*this" data-opt="{{item}}" bindtap="pickQ">{{item}}</view>
+  </block>
+
+  <view class="card result-card" wx:if="{{mode==='result'}}">
+    <view class="{{tc}} result-am">{{pct >= 70 ? L.praise : L.praiseLow}}</view>
+    <view class="result-score">{{pct}}%</view>
+    <view class="muted">答对 {{qScore}} / {{qTotal}}</view>
+    <view class="stars result-stars" wx:if="{{earned > 0}}">
+      <x-icon name="star" size="32" color="#F59E0B" />
+      <text>+{{earned}} 星</text>
+    </view>
+    <view class="muted">{{pct >= 70 ? '本批规则已掌握，计划里会打钩。' : '再看一遍规则和例词，明天再测。'}}</view>
+    <view class="btn outline" bindtap="backRules">再看规则</view>
+  </view>
+</view>

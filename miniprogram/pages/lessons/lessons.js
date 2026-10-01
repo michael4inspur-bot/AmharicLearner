@@ -5,6 +5,7 @@ Page({
   data: { weeks: [] },
   onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().select('/pages/lessons/lessons');
+    this.setData(langs.view());
     const pk = langs.pack();
     const p = progress.load();
     const pos = progress.currentPosition(p);
@@ -23,10 +24,10 @@ Page({
       unitList: w.units.map(unitRow),
       extraUnit: w.extra ? unitRow(w.extra) : null
     }));
-    this.setData({ weeks, pos });
+    this.setData({ weeks, pos, alphabetName: pk.alphabet.name });
   },
   open(e) { wx.navigateTo({ url: `/pages/lesson/lesson?id=${e.currentTarget.dataset.id}` }); },
-  goFidel(e) { wx.navigateTo({ url: `/pages/fidel/fidel?group=${e.currentTarget.dataset.group}` }); },
+  goAlphabet(e) { wx.navigateTo({ url: `${langs.pack().alphabet.page}?group=${e.currentTarget.dataset.group}` }); },
   goPlan() { wx.navigateTo({ url: '/pages/plan/plan' }); },
   goSearch() { wx.navigateTo({ url: '/pages/search/search' }); }
 });

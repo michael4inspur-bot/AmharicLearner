@@ -9,7 +9,8 @@ const STAR_RULES = {
   quiz_bonus: 10,   // 小测 ≥ 80%
   mission: 40,      // 实战任务
   score: 8,         // 跟读评分一次
-  fidel: 15         // Fidel 批次通过
+  alphabet: 15,     // 字母批次通过
+  compare: 1        // 跟读对比（不评分的语言），每词每天一次
 };
 
 function ensure(p) {
@@ -88,7 +89,7 @@ function allBadges(p) {
 function celebrate() {
   const fresh = checkBadges();
   if (fresh.length && typeof wx !== 'undefined' && wx.showModal) {
-    wx.showModal({ title: `获得徽章「${fresh[0].name}」`, content: fresh[0].desc, showCancel: false, confirmText: langs.meta().strings.praise });
+    wx.showModal({ title: `获得徽章「${fresh[0].name}」`, content: fresh[0].desc, showCancel: false, confirmText: '好的' });
   }
   return fresh;
 }

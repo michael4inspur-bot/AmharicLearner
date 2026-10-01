@@ -11,7 +11,7 @@
 | 问题 | 决定 |
 | --- | --- |
 | 产品形态 | 同一个小程序，切换语言 |
-| 奥罗莫语发音 | 用 Meta 开源模型 MMS（`facebook/mms-tts-orm`，CC BY-NC 4.0）预先生成 mp3，以后可逐条换成真人录音 |
+| 奥罗莫语发音 | 用 Meta 公开模型 MMS（`facebook/mms-tts-orm`，CC BY-NC 4.0）预先生成 mp3，以后可逐条换成真人录音 |
 | 课程内容 | 与阿姆哈拉语相同的 16 个场景、8 周计划完整对照；Fidel 页换成 Qubee 字母与发音规则页 |
 | 小程序名称 | 不改名，仍为 Amharic Learner，简介写「阿姆哈拉语·奥罗莫语」；显示名收拢到一处常量 |
 
@@ -59,14 +59,14 @@ miniprogram/langs/
 - 本地进度：阿姆哈拉语仍是 `progress_v1`，奥罗莫语 `progress_om_v1`。星星、徽章、复习卡片、周任务各语言独立。
 - 云端进度：`progress.get` / `progress.put` 增加可选参数 `lang`。阿姆哈拉语文档仍是 `_id = openid`（老数据零迁移），奥罗莫语 `_id = openid + ':om'`。冲突检测（`baseUpdatedAt`）按文档各自进行。
 - 用户摘要（管理端列表）只由阿姆哈拉语的上传写入，保持现状。
-- 徽章里写死的 `u14/u15/u16`、`missions.w1/w4` 改为读当前语言包的配置。
+- 徽章里写死的 `u14/u15/u16` 改为读当前语言包的配置。实战任务键 `missions.w1/w4` 不改为语言包配置：两种语言的 8 周结构一致，任务键按周编号，进度又按语言分开存，不会串。
 
 ### 2.4 字母页
 
-`pages/fidel` 改名为 `pages/alphabet`，按 `meta.script` 渲染：
+不把 `pages/fidel` 改名为通用页，而是保留 `pages/fidel`（阿姆哈拉语）、新增 `pages/qubee`（奥罗莫语），由语言包的 `alphabet.page` 决定跳转。两种文字的交互完全不同，拆成两页比一个页面里分支渲染简单，也不影响现有 Fidel 页。
 
-- `ethiopic`：现有 Fidel 字母表，功能不变。
-- `latin`：Qubee 页，按以下几项讲解，每项配例词与发音：元音长短（`a`/`aa`）、辅音重读（`d`/`dd`）、撇号 `'`（hudhaa，喉塞音）、双字母 `ch dh ny ph sh`、特殊字母 `c q x`。
+- `pages/fidel`（`ethiopic`）：现有 Fidel 字母表，功能不变。
+- `pages/qubee`（`latin`）：Qubee 页，按以下几项讲解，每项配例词与发音：元音长短（`a`/`aa`）、辅音重读（`d`/`dd`）、撇号 `'`（hudhaa，喉塞音）、双字母 `ch dh ny ph sh`、特殊字母 `c q x`。
 
 计划里的 `type: 'fidel'` 任务改为 `type: 'alphabet'`，文案取自语言包。
 
@@ -90,31 +90,34 @@ miniprogram/langs/
 - `tts.get` / `tts.batch` 增加可选参数 `lang`，缺省 `am`，阿姆哈拉语逻辑与缓存 key（`sha1(voice|rate|text)`）完全不变。
 - `lang === 'om'`：
   1. 按 manifest 找本地 mp3，找不到返回 `BAD_REQUEST`「这句还没有生成语音」。
-  2. 缓存 key 为 `sha1('om|' + rate + '|' + text)`；未命中时读取代码包内文件上传到 `tts/om/<key>.mp3`，写 `tts_cache`。
-  3. 返回 `{ url, key, fileID }`，与阿姆哈拉语一致。
+  2. 缓存 key 带文件内容版本：`sha1('om|' + rate + '|' + text + '|' + ver)`，`ver` 为该 mp3 字节 sha1 的前 12 位（`om-audio.js` 按文件路径在进程内记忆）。未命中时读取代码包内文件上传到 `tts/om/<key>.mp3`，写 `tts_cache`。代码包里的文件名仍是 `sha1('om|' + rate + '|' + text).mp3`；把某个 mp3 换成真人录音并重新部署后，内容版本变了，缓存键随之变化，自动上传并改用新文件。
+  3. 返回 `{ url, key, fileID, lang: 'om' }`（`tts.batch` 返回 `{ urls, files, lang: 'om' }`）。`lang` 供前端识别：灰度 / 多实例部署时请求可能落到不认识 `lang` 的旧实例，旧实例的回包不带 `lang`。
   4. 不调用 Azure、不计入每日次数和每月字符额度、不写 `ai_logs`。
   5. **不要求登录**：`handler.js` 的登录门槛对 `tts.*` 且 `lang === 'om'` 的请求放行。已停用账号的限制同样不作用于此（没有成本，也没有用户数据）。
-- `stt.score` 只服务阿姆哈拉语，`lang === 'om'` 直接返回 `BAD_REQUEST`。
+- `tts.caps`（免登录）返回 `{ langs: ['am', 'om'] }`，前端朗读非阿姆哈拉语前先调它确认云函数已更新；旧云函数不认识这个 action，返回 `BAD_REQUEST`。阿姆哈拉语从不调用它。
+- `stt.score` 只服务阿姆哈拉语：先校验录音是本人上传的（`stt/<openid>/`），`lang` 不是 `am` 时删除该录音后返回 `BAD_REQUEST`（不识别、不写日志）。前端 `api.sttScore` 带上当前语言。
 
 ### 3.3 小程序前端
 
 - `api.ttsGet(text, voice, rate, lang)`、`api.ttsBatch(items, voice, rate, lang)` 透传 `lang`。
 - `utils/audio.js`：
-  - `speak(text, opts)` 的语言取自 `opts.lang`，缺省为当前语言。
-  - 本地缓存 key：阿姆哈拉语保持 `voice|rate|text`（老缓存继续有效），奥罗莫语为 `om|rate|text`。
+  - `speak(text, opts)` 的语言取自当前语言（`langs.meta().code`），不接受 `opts.lang`。
+  - 本地缓存 key：阿姆哈拉语保持 `voice|rate|text`（老缓存继续有效），奥罗莫语为 `om|v<audioVersion>|rate|text`，`audioVersion` 在 `langs/om/index.js` 的 meta 里（正整数，`check-langs.js` 校验）；换真人录音后加 1，手机上的旧文件不再命中。
+  - 非阿姆哈拉语先用 `tts.caps` 确认云函数支持（只缓存「支持」）；`tts.get` / `tts.batch` 的回包 `lang` 与请求不一致时不播放、不缓存，主动点的提示「云函数版本过旧」。
   - 奥罗莫语自动播放（`silent`）不再因为未登录而跳过。
   - 上一轮的「先云存储下载 → 换源 → 坏缓存重下」逻辑全部复用。
+- PR 2 起语言包有 `audio` 开关；奥罗莫语语音上线前为 false。
 - 设置：`meta.voices` 只有一种时隐藏「男声 / 女声」，保留语速。
 - 小测听力题、复习「先听再看」：奥罗莫语不要求登录即可出现。
 
 ### 3.4 跟读页
 
 - 阿姆哈拉语：不变。
-- 奥罗莫语（`meta.scoring === false`）：「录音 → 回放 → 与标准音交替对比听」，不显示分数、不调用 `stt.score`。完成一次对比练习给 1 颗星（每词每天最多一次）。
+- 奥罗莫语（`meta.scoring === false`）：「录音 → 回放 → 与标准音交替对比听」，不显示分数、不调用 `stt.score`。完成一次对比练习给 1 颗星、记 1 分钟学习时长（每词每天最多一次）。录音只在本机回放，不上传。
 
 ### 3.5 合规
 
-- 「关于」页与隐私页服务说明加：「奥罗莫语发音为 Meta MMS 开源模型预先合成的机器语音（CC BY-NC 4.0），可能与真人发音有差异」。
+- 「关于」页与隐私页服务说明加：「奥罗莫语发音为 Meta MMS 公开模型预先合成的机器语音（CC BY-NC 4.0），可能与真人发音有差异」。
 - 奥罗莫语朗读按钮旁显示小标注「合成音」。
 - 这是预先生成的固定音频，用户不能输入内容让它生成，性质与现有 Azure 朗读相同；与上一轮被驳回的「AI 问答」不同。
 - `scripts/check-privacy-scopes.js` 增加检查：奥罗莫语朗读入口的模板必须带「合成音」标注；「关于」页必须含 MMS 署名。

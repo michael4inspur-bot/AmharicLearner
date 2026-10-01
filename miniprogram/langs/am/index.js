@@ -12,6 +12,9 @@ const meta = {
   voices: ['female', 'male'],
   scoring: true,
   beta: false,
+  audio: true,
+  voiceNote: '',
+  ttsLogin: true,
   strings: {
     langName: '阿姆哈拉语',
     askSay: '阿姆哈拉语怎么说？',

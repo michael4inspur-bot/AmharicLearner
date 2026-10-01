@@ -35,6 +35,7 @@ Page({
   },
   onShow() {
     this.setData(langs.view());
+    if (!this.data.audio && this.data.mode === 'listen') this.setData({ mode: 'text' });
     if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().select('/pages/review/review');
     this.loadQueue();
     this.enterAt = Date.now();
@@ -52,6 +53,9 @@ Page({
     const queue = progress.dueCards(p, 30).map(withUnit);
     // tabBar 页实例常驻，不跨天重置的话第二天进来还显示「第 41 / 45 张」
     const today = progress.todayStr();
+    // 换了学习语言：本次学习的计数（第几张、答对 / 答错、清空加星）都从零开始
+    const lang = langs.current();
+    if (this.sessionLang !== lang) { this.sessionLang = lang; this.sessionDay = ''; this.setData({ sessionCorrect: 0, sessionWrong: 0 }); }
     if (this.sessionDay !== today) { this.sessionDay = today; this.cleared = false; this.setData({ done: 0, sessionTotal: 0 }); }
     const done = this.sessionDay === today ? this.data.done : 0;
     const sessionTotal = Math.max(this.data.sessionTotal, done + queue.length);
@@ -74,7 +78,7 @@ Page({
     // 自动播放：失败静默，用户没点任何按钮，不该被要求登录
     if (this.data.mode === 'listen' && cur && cur.text) audio.speak(cur.text, { silent: true });
   },
-  /** 播当前卡的阿姆哈拉语（catchtap，不触发翻面） */
+  /** 播当前卡的原文（catchtap，不触发翻面） */
   play() {
     const cur = this.data.current;
     if (cur && cur.text) audio.speak(cur.text);
@@ -87,6 +91,7 @@ Page({
   flip() { if (!this.data.flipped) this.setData({ flipped: true }); },
   setMode(e) {
     const mode = e.currentTarget.dataset.m;
+    if (mode === 'listen' && !this.data.audio) return;
     if (mode === this.data.mode) return;
     this.setData({ mode, flipped: false });
     this.autoPlay();

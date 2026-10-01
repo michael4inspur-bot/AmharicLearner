@@ -97,7 +97,9 @@ async function handle(action, data, ctx) {
   if (typeof action !== 'string') return fail('BAD_REQUEST', `未知 action: ${action}`);
 
   // 账号状态拦截：放在分发之前，speech.js 与 admin.js 都不必自行检查。
-  const isGated = GATED_PREFIXES.some((p) => action.startsWith(p));
+  // 奥罗莫语语音是随代码包发布的预生成音频：没有成本、不涉及用户数据，不设登录门槛
+  const isFreeTts = action.startsWith('tts.') && (data.lang === 'om' || action === 'tts.caps');
+  const isGated = !isFreeTts && GATED_PREFIXES.some((p) => action.startsWith(p));
   const isProgress = action === 'progress.get' || action === 'progress.put';
   if (isGated || isProgress) {
     // 账号状态是管理便利，不是安全边界：users 集合缺失或数据库抖动时放行，

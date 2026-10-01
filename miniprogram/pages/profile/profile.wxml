@@ -85,6 +85,10 @@
 
   <view class="card">
     <view class="card-title">学习设置</view>
+    <view class="row between list-item" wx:if="{{langSwitchable}}" bindtap="switchLang">
+      <text class="set-label">学习语言</text>
+      <text class="set-val">{{langLabel}} ▾</text>
+    </view>
     <view class="list-item">
       <view class="row between nick-head">
         <text class="set-label">昵称</text>
@@ -107,7 +111,7 @@
       </view>
     </view>
     <view class="row between list-item"><text class="set-label">计划开始日期</text><picker mode="date" value="{{startDate}}" bindchange="onStartDate"><view class="link row gap"><text>{{startDate}}</text><x-icon name="chevron-right" size="26" color="#C2410C" /></view></picker></view>
-    <view class="row between list-item"><text class="set-label">标准音</text>
+    <view class="row between list-item" wx:if="{{voiceChoice}}"><text class="set-label">标准音</text>
       <radio-group class="set-ctrl radios" bindchange="onVoice">
         <label class="radio-label"><radio value="female" color="#C2410C" checked="{{voice === 'female'}}" /><text>女声</text></label>
         <label class="radio-label"><radio value="male" color="#C2410C" checked="{{voice === 'male'}}" /><text>男声</text></label>
@@ -127,7 +131,7 @@
       <view class="card-title" style="margin-bottom:0">云端同步</view>
       <text class="tag {{cloudReady ? 'mint' : 'gray'}}">{{cloudReady ? '已连接' : '未配置'}}</text>
     </view>
-    <view class="muted" style="margin-top:10rpx">{{cloudReady ? '微信云开发，进度会自动同步。' : '还没配置云环境，请管理员在 miniprogram/config.js 填写 cloudEnv。'}}</view>
+    <view class="muted" style="margin-top:10rpx">{{cloudReady ? '微信云开发，进度会自动同步。当前语言：' + L.langName + '，每种语言的进度分开保存。' : '还没配置云环境，请管理员在 miniprogram/config.js 填写 cloudEnv。'}}</view>
     <view class="usage" wx:if="{{usage}}">
       <view class="usage-row">
         <view class="usage-cell">
@@ -161,6 +165,7 @@
   <view class="card">
     <view class="card-title">关于</view>
     <view class="muted">Amharic Learner · {{L.about}}学习计划依据成人学习特性设计：知道为什么学、自主导向、经验为本、问题驱动、微学习、间隔重复。</view>
+    <view class="muted-2 about-credit">奥罗莫语发音：Meta MMS 公开模型（facebook/mms-tts-orm，CC BY-NC 4.0）预先合成，仅供学习参考。</view>
     <view class="divider"></view>
     <view class="list-item row between update-row">
       <view class="grow">
@@ -189,6 +194,6 @@
       <x-icon name="chevron-right" size="28" color="#9C8C82" />
     </view>
     <button class="btn ghost" open-type="feedback">意见反馈</button>
-    <view class="btn danger" bindtap="resetAll">清空全部进度</view>
+    <view class="btn danger" bindtap="resetAll">清空{{L.langName}}进度</view>
   </view>
 </view>

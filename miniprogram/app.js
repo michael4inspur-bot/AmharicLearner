@@ -20,7 +20,7 @@ App({
     progress.setOnSaved((p, code) => sync.scheduleSync(3000, code));
   },
   onHide() {
-    // 切到后台时把进度静默上传到云端（未配置云环境时跳过）
-    sync.syncNow();
+    // 切到后台时把所有有改动的语言的进度静默上传（未配置云环境时跳过）
+    sync.flushPending();
   }
 });

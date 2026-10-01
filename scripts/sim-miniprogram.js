@@ -54,6 +54,8 @@ global.wx = {
     init() {},
     callFunction({ data, success, fail }) {
       global.__calls = (global.__calls || []).concat(data.action);
+      // 阿姆哈拉语绝不探测 tts.caps（旧云函数照常可用）；整个模拟过程累计，结尾断言为 0
+      if (data.action === 'tts.caps' && langs.current() === 'am') global.__amCaps = (global.__amCaps || 0) + 1;
       handle(data.action, data.data, { openid: simOpenid, db, azure, storage })
         .then((result) => success({ result }))
         .catch((e) => fail({ errMsg: e.message }));
@@ -83,6 +85,8 @@ global.App = (cfg) => { global.__app = cfg; };
 
 // 先填云环境，再加载依赖 config 的模块
 require(path.join(root, 'config.js')).cloudEnv = 'sim-env';
+// 模拟会走奥罗莫语（试用版）流程：不受提审开关 showBetaLangs 影响
+require(path.join(root, 'config.js')).showBetaLangs = true;
 
 const progress = require(path.join(root, 'utils/progress.js'));
 const quiz = require(path.join(root, 'utils/quiz.js'));
@@ -93,11 +97,11 @@ const api = require(path.join(root, 'utils/api.js'));
 const sync = require(path.join(root, 'utils/sync.js'));
 const audio = require(path.join(root, 'utils/audio.js'));
 
-const PAGE_NAMES = ['index/index', 'lessons/lessons', 'lesson/lesson', 'review/review', 'quiz/quiz', 'plan/plan', 'fidel/fidel', 'profile/profile', 'search/search', 'speak/speak', 'admin/admin', 'login/login', 'privacy/privacy'];
+const PAGE_NAMES = ['index/index', 'lessons/lessons', 'lesson/lesson', 'review/review', 'quiz/quiz', 'plan/plan', 'fidel/fidel', 'qubee/qubee', 'profile/profile', 'search/search', 'speak/speak', 'admin/admin', 'login/login', 'privacy/privacy'];
 PAGE_NAMES.forEach((p) => require(path.join(root, 'pages', p + '.js')));
 /** 按页面名取 Page 配置，避免下标随页面增删错位 */
 const pageOf = (name) => pages[PAGE_NAMES.indexOf(name)];
-assert.equal(pages.length, 13, 'pages loaded');
+assert.equal(pages.length, 14, 'pages loaded');
 // 自定义 tabBar：AI 教练下线后不应出现在底部导航
 require(path.join(root, 'custom-tab-bar/index.js'));
 const tabBar = global.__components[global.__components.length - 1];
@@ -136,8 +140,7 @@ async function main() {
   progress.recordQuiz('u01', 8, 10);
   progress.addMinutes(12);
   progress.completeMission('w1');
-  const s = progress.summary();
-  assert.equal(s.streak, 1);
+  assert.equal(progress.streak(), 1);
   assert.equal(plan.planOutline().weeks.length, 8);
   plan.weeks.forEach((w) => w.units.forEach((id) => assert.ok(vocab.getUnit(id), 'unit ' + id)));
 
@@ -147,6 +150,8 @@ async function main() {
   assert.ok(plan.getDayTasks(2, 5).some((t) => t.optional === true && t.unit === 'u13'), '第 2 周第 5 天含自选 u13');
   assert.equal(plan.planOutline().weeks[1].extra, 'u13', '大纲第 2 周 extra 为 u13');
   assert.equal(plan.planOutline().dailyMinutes, 33, '每日 33 分钟');
+  assert.ok(plan.getDayTasks(1, 1).some((t) => t.type === 'alphabet' && t.group === 1 && /Fidel 字母表 第 1 批/.test(t.title)), '字母任务按语言包命名');
+  assert.equal(vocab.alphabet.page, '/pages/fidel/fidel');
 
   // 今日页
   const indexPage = pageOf('index/index');
@@ -284,21 +289,8 @@ async function main() {
   assert.equal(progress.isEmpty(), true, '重置后是空进度');
   assert.equal(await sync.syncNow(), false, '空进度不上传，不会覆盖云端');
   progress.replace(realProgress);
-  // 多语言：注册一个最小的测试语言包，验证进度与云端文档按语言分开
-  const amPack = langs.pack('am');
-  const omUnit = { id: 'om-u01', week: 1, title: '测试单元', items: [
-    { id: 'om-u01-01', text: 'Akkam', zh: '你好', unit: 'om-u01' },
-    { id: 'om-u01-02', text: 'Galatoomi', zh: '谢谢', unit: 'om-u01' }
-  ], dialog: [] };
-  langs.register('om', {
-    ...amPack,
-    meta: { ...amPack.meta, code: 'om', script: 'latin', hasRom: false },
-    units: [omUnit],
-    getUnit: (id) => (id === 'om-u01' ? omUnit : undefined),
-    getItem: (id) => omUnit.items.find((it) => it.id === id),
-    allItems: () => omUnit.items.slice(),
-    unitsForWeek: (w) => (w === 1 ? [omUnit] : [])
-  });
+  // 多语言：用已注册的奥罗莫语包，验证进度与云端文档按语言分开
+  const omWord = langs.pack('om').getUnit('om-u01').items[0].text;
   assert.equal(progress.keyOf('am'), 'progress_v1', '阿姆哈拉语沿用老键名');
   assert.equal(progress.keyOf('om'), 'progress_om_v1');
   const amUnitsBefore = JSON.stringify(progress.load().unitsLearned);
@@ -310,13 +302,37 @@ async function main() {
     oldCloudActions.push(data.action);
     success({ result: { ok: true, data: data.action === 'progress.get' ? { progress: null, updatedAt: null } : { updatedAt: 'x' } } });
   };
+  // 没有语音的语言（用测试语言 xx 代替：奥罗莫语已有语音）：朗读 / 预取不发任何 tts 请求，只在主动点时提示即将上线
+  langs.register('xx', { ...langs.pack('om'), meta: { ...langs.meta('om'), code: 'xx', audio: false } });
+  langs.set('xx');
+  const ttsCalls = [];
+  const cfBefore = wx.cloud.callFunction;
+  wx.cloud.callFunction = (o) => { if (/^tts\./.test(o.data.action)) ttsCalls.push(o.data.action); return cfBefore(o); };
+  const toasts = [];
+  const realToast = wx.showToast;
+  wx.showToast = (o) => { toasts.push(o.title); };
+  await audio.speak(omWord);
+  assert.equal(toasts.length, 1, '主动点一次提示一次');
+  assert.match(toasts[0], /发音即将上线/);
+  await audio.speak(omWord, { silent: true });
+  assert.equal(toasts.length, 1, 'silent 不提示');
+  audio.prefetch([{ id: 'x', text: omWord }]);
+  await new Promise((r) => setTimeout(r, 20));
+  wx.showToast = realToast;
+  wx.cloud.callFunction = cfBefore;
+  assert.deepEqual(ttsCalls, [], '没有语音的语言不发任何 tts 请求');
+  assert.equal(langs.view().audio, false);
+  assert.ok(!quiz.buildQuiz('om-u01', 10, progress.load(), langs.meta().audio).some((q) => q.listen), '没有语音的语言不出听音题');
   langs.set('om');
+  langs.unregister('xx');
   progress.learnUnit('om-u01');
   assert.equal(await sync.syncNow(), false, '云端不支持多语言时不上传');
   assert.ok(!oldCloudActions.includes('progress.put'), '一次 progress.put 都没发');
   wx.cloud.callFunction = realCallOld;
 
   // 新版云函数：奥罗莫语进度写到 openid:om，阿姆哈拉语文档不受影响
+  assert.equal(await sync.syncNow(), false, '刚探测过不支持，10 分钟内不再探测');
+  assert.equal(await sync.cloudSupports('om', { force: true }), true, 'force 立即重新探测');
   assert.ok(progress.load().srs['om-u01-01'], '奥罗莫语进度在奥罗莫语存储里');
   assert.equal(await sync.syncNow(), true, '云端支持后上传');
   const omDoc = await db.getProgress(`${simOpenid}:om`);
@@ -327,17 +343,427 @@ async function main() {
   assert.equal(omFetched.lang, 'om');
   assert.ok(omFetched.progress.unitsLearned['om-u01']);
 
+  // 进度对象绑定到它所属的语言：切换语言后再保存，也不会写进另一种语言
+  const omHeld = progress.load();
+  langs.set('am');
+  omHeld.stars = 7;
+  progress.save(omHeld, 'om');
+  assert.notEqual(progress.load().stars, 7, '阿姆哈拉语进度没被写入');
+  assert.equal(progress.load('om').stars, 7, '奥罗莫语进度按指定语言保存');
+  langs.set('om');
+  // 切后台时两种语言都同步
+  progress.addMinutes(1);
+  langs.set('am');
+  progress.addMinutes(1);
+  const flushed = await sync.flushPending();
+  assert.ok(flushed.length >= 2 && flushed.every((r) => r === true), '切后台时所有有改动的语言都上传');
+
   // 切回阿姆哈拉语，原进度完好
   langs.set('am');
   assert.equal(JSON.stringify(progress.load().unitsLearned), amUnitsBefore, '切回后阿姆哈拉语进度不变');
   assert.ok(!progress.load().srs['om-u01-01']);
   assert.ok(wx.getStorageSync('progress_om_v1').srs['om-u01-01'], '奥罗莫语进度存在自己的键下');
 
+  // 进行中的上传结束后，期间新增的改动还要再传一次
+  langs.set('am');
+  progress.addMinutes(1);
+  // 第一次 progress.put 发出（内容按发出时的快照）之后，上传还没结束时进度又改了
+  const cfResync = wx.cloud.callFunction;
+  let changedMidFlight = false;
+  wx.cloud.callFunction = (o) => {
+    if (o.data.action === 'progress.put' && !changedMidFlight) {
+      changedMidFlight = true;
+      const snapshot = { ...o, data: JSON.parse(JSON.stringify(o.data)) };
+      progress.addMinutes(1);
+      return cfResync(snapshot);
+    }
+    return cfResync(o);
+  };
+  assert.equal(await sync.syncNow(), true);
+  await new Promise((r) => setTimeout(r, 20)); // 不依赖 3 秒的延迟同步：靠结束后的再同步
+  wx.cloud.callFunction = cfResync;
+  assert.ok(changedMidFlight, '上传期间改过进度');
+  const amCloud = await db.getProgress(simOpenid);
+  assert.equal(JSON.stringify(amCloud.progress.logs), JSON.stringify(progress.load().logs), '上传期间的改动也传上去了');
+  // 探测只有拿到答复才进入退避：网络失败后立刻再探测要重新发 progress.get
+  langs.register('zz', { ...langs.pack('om'), meta: { ...langs.meta('om'), code: 'zz' } });
+  const cfProbe = wx.cloud.callFunction;
+  let probeGets = 0;
+  wx.cloud.callFunction = (o) => {
+    if (o.data.action === 'progress.get') { probeGets += 1; o.fail({ errMsg: 'request:fail timeout' }); return; }
+    cfProbe(o);
+  };
+  assert.equal(await sync.cloudSupports('zz'), false, '网络失败按不支持处理');
+  assert.equal(await sync.cloudSupports('zz'), false);
+  assert.equal(probeGets, 2, '网络失败不进入退避：立刻再探测会再发一次 progress.get');
+  wx.cloud.callFunction = cfProbe;
+  langs.unregister('zz');
+  // 只有一种语言可选时隐藏切换入口
+  const langSwitch2 = require(path.join(root, 'utils/lang-switch.js'));
+  assert.equal(langSwitch2.available(), true);
+  const cfg = require(path.join(root, 'config.js'));
+  cfg.showBetaLangs = false;
+  assert.equal(langSwitch2.available(), false, '奥罗莫语隐藏后不显示切换入口');
+  cfg.showBetaLangs = true;
+  // 第 8 周全表自测打开全部批次
+  assert.equal(langs.pack('am').plan.getDayTasks(8, 6).find((t) => t.type === 'alphabet').group, 0);
+
+  // 全表自测（group 0）：字母页保持 0 并显示全部批次；缺省 / 非法值回到第 1 批
+  assert.equal(langs.current(), 'am');
+  const fidelPage = pageOf('fidel/fidel');
+  const mkFidel = () => Object.assign(Object.create(fidelPage), { data: { ...fidelPage.data }, setData(d) { this.data = { ...this.data, ...d }; } });
+  const fd0 = mkFidel();
+  fd0.onLoad({ group: '0' });
+  assert.equal(fd0.data.group, 0, 'Fidel 页 group=0 不被改成 1');
+  assert.deepEqual([...new Set(fd0.data.rows.map((c) => c.group))].sort(), [1, 2, 3, 4, 5], 'Fidel 全表覆盖 1..5 批');
+  const fd3 = mkFidel();
+  fd3.onLoad({ group: '3' });
+  assert.equal(fd3.data.group, 3);
+  ['', 'x', '9', '-1', '1.5'].forEach((bad) => { const f = mkFidel(); f.onLoad({ group: bad }); assert.equal(f.data.group, 1, `非法 group「${bad}」回到第 1 批`); });
+  const fdNone = mkFidel();
+  fdNone.onLoad({});
+  assert.equal(fdNone.data.group, 1, '缺省 group 回到第 1 批');
+  // 首页全表自测任务：只过 1-4 批不算完成，5 批全过才算
+  const homeDec = Object.create(pageOf('index/index'));
+  const fullTask = langs.pack('am').plan.getDayTasks(8, 6).find((t) => t.type === 'alphabet');
+  const freshP = { unitsLearned: {}, quizScores: [], missions: {}, reflections: {}, fidelGroupsDone: { 1: true, 2: true, 3: true, 4: true } };
+  assert.equal(homeDec.decorate(fullTask, freshP, { due: 0, total: 0 }).done, false, '只过 1-4 批：全表自测未完成');
+  freshP.fidelGroupsDone[5] = true;
+  assert.equal(homeDec.decorate(fullTask, freshP, { due: 0, total: 0 }).done, true, '5 批全过：全表自测完成');
+  const batch2 = { ...fullTask, group: 2 };
+  assert.equal(homeDec.decorate(batch2, { ...freshP, fidelGroupsDone: { 2: true } }, { due: 0, total: 0 }).done, true, '单批任务仍按该批判断');
+
+  // Qubee 字母页：只从奥罗莫语进入；通过小测只写奥罗莫语进度
+  const qubeePage = pageOf('qubee/qubee');
+  const mkQubee = () => Object.assign(Object.create(qubeePage), { data: { ...qubeePage.data }, setData(d) { this.data = { ...this.data, ...d }; } });
+  const realBack = wx.navigateBack;
+  let backs = 0;
+  wx.navigateBack = () => { backs += 1; };
+  const realRedirect = wx.redirectTo;
+  const redirects = [];
+  wx.redirectTo = (o) => { redirects.push(o.url); };
+  const realPages = global.getCurrentPages;
+  global.getCurrentPages = () => [{}, {}];
+  const qbAm = mkQubee();
+  qbAm.onLoad({ group: '1' });
+  assert.equal(backs, 1, '阿姆哈拉语下打开 Qubee 页直接返回');
+  assert.equal(qbAm.data.groups.length, 0, '返回前不加载数据');
+  assert.deepEqual(redirects, [], '有上一页时返回，不跳转');
+  // 从分享 / 最近使用直接打开（页面栈只有这一页）：返回不了，跳到当前语言自己的字母页
+  global.getCurrentPages = () => [{}];
+  const qbAmFirst = mkQubee();
+  qbAmFirst.onLoad({ group: '1' });
+  assert.equal(backs, 1, '栈底页不调用 navigateBack');
+  assert.deepEqual(redirects, ['/pages/fidel/fidel'], '栈底页跳到 Fidel 字母表');
+  assert.equal(qbAmFirst.data.groups.length, 0);
+  global.getCurrentPages = realPages;
+  wx.redirectTo = realRedirect;
+  langs.set('om');
+  const qb = mkQubee();
+  qb.onLoad({ group: '2' });
+  assert.equal(backs, 1, '奥罗莫语下正常打开');
+  assert.equal(qb.data.groups.length, 5);
+  assert.equal(qb.data.group, 2);
+  assert.equal(qb.data.sections.length, 1, '单批只显示本批规则');
+  assert.equal(qb.data.sections[0].group, 2);
+  assert.equal(qb.data.tc, 'latin');
+  qb.pickGroup({ currentTarget: { dataset: { g: '0' } } });
+  assert.equal(qb.data.sections.length, 5, '「全部」显示 5 批');
+  const qb0 = mkQubee();
+  qb0.onLoad({ group: '0' });
+  assert.equal(qb0.data.group, 0, 'Qubee 页 group=0 不被改成 1');
+  assert.equal(qb0.data.sections.length, 5, 'Qubee 全表显示 5 批');
+  const qbBad = mkQubee();
+  qbBad.onLoad({ group: '9' });
+  assert.equal(qbBad.data.group, 1, '非法 group 回到第 1 批');
+  const qbNone = mkQubee();
+  qbNone.onLoad({});
+  assert.equal(qbNone.data.group, 1, '缺省 group 回到第 1 批');
+  qb.pickGroup({ currentTarget: { dataset: { g: '1' } } });
+  qb.startQuiz();
+  assert.equal(qb.data.mode, 'quiz');
+  assert.equal(qb.data.qTotal, 10);
+  assert.ok(qb.data.q.options.includes(qb.data.q.answer));
+  const omStarsBefore = progress.load('om').stars || 0;
+  const amGroupsBefore = JSON.stringify(progress.load('am').fidelGroupsDone);
+  qb.setData({ qScore: 10, qIdx: 10 });
+  qb.showQ();
+  assert.equal(qb.data.mode, 'result');
+  assert.equal(qb.data.pct, 100);
+  assert.ok(qb.data.earned > 0, '首次通过加星');
+  assert.ok(progress.load('om').fidelGroupsDone[1], '奥罗莫语第 1 批已通过');
+  assert.equal(JSON.stringify(progress.load('am').fidelGroupsDone), amGroupsBefore, '阿姆哈拉语字母进度不变');
+  assert.equal(progress.load('om').stars, omStarsBefore + qb.data.earned);
+  qb.startQuiz();
+  qb.setData({ qScore: 10, qIdx: 10 });
+  qb.showQ();
+  assert.equal(qb.data.earned, 0, '再次通过不重复加星');
+  qb.backRules();
+  assert.equal(qb.data.mode, 'rules');
+  qb.enterAt = Date.now();
+  qb.onUnload();
+  wx.navigateBack = realBack;
+  langs.set('am');
+
+  // 语言切换入口：首页标签 → 选奥罗莫语 → 各页按奥罗莫语显示
+  const langSwitch = require(path.join(root, 'utils/lang-switch.js'));
+  assert.equal(langSwitch.label(langs.meta('om')), 'Afaan Oromoo 奥罗莫语（试用版）');
+  const realSheet = wx.showActionSheet;
+  wx.showActionSheet = ({ itemList, success }) => { global.__sheet = itemList; success({ tapIndex: itemList.findIndex((t) => /Oromoo/.test(t)) }); };
+  // 用 Object.create 包一层：setData 合并进各自的 data，不污染共享的页面配置
+  const mkPage = (name, data) => Object.assign(Object.create(pageOf(name)), { data: { ...(data || pageOf(name).data) }, setData(d) { this.data = { ...this.data, ...d }; } });
+  assert.equal(langs.current(), 'am');
+  const amGroupsSnap = JSON.stringify(progress.load('am').fidelGroupsDone);
+  const homeSw = mkPage('index/index', {});
+  homeSw.onShow();
+  assert.match(homeSw.data.langLabel, /阿姆哈拉语/);
+  homeSw.switchLang();
+  assert.equal(langs.current(), 'om', '首页切到奥罗莫语');
+  assert.equal(global.__sheet.length, 2);
+  assert.match(homeSw.data.langLabel, /奥罗莫语（试用版）/, '切换后首页立即刷新');
+  assert.equal(homeSw.data.tc, 'latin');
+  assert.ok(homeSw.data.tasks.some((t) => t.type === 'alphabet'), '今日任务来自奥罗莫语计划');
+  assert.equal(homeSw.data.alphabetName, 'Qubee 字母');
+
+  // 课程 → 学单元 → 复习 → 小测（无听力题、选项没有转写）→ 搜索 → Qubee
+  const lessonPage = mkPage('lesson/lesson', {});
+  lessonPage.onLoad({ id: 'om-u03' });
+  assert.equal(lessonPage.data.unit.id, 'om-u03');
+  assert.equal(lessonPage.data.hasRom, false);
+  assert.equal(lessonPage.data.audio, true, '奥罗莫语有语音后课文页显示喇叭');
+  progress.learnUnit('om-u03');
+  const omDue = progress.dueCards();
+  assert.ok(omDue.length > 0 && omDue.every((c) => c.id.startsWith('om-')), '复习队列只有奥罗莫语卡片');
+  // 复习页（tabBar 常驻实例）：换语言后本次学习的计数从零开始，不接着另一种语言的「第 N 张」
+  const rv = mkPage('review/review');
+  rv.onShow();
+  assert.ok(rv.data.current && rv.data.current.id.startsWith('om-'));
+  rv.grade({ currentTarget: { dataset: { g: '4' } } });
+  rv.grade({ currentTarget: { dataset: { g: '1' } } });
+  assert.equal(rv.data.done, 2);
+  assert.equal(rv.data.sessionCorrect, 1);
+  assert.equal(rv.data.sessionWrong, 1);
+  langs.set('am');
+  rv.onShow();
+  assert.equal(rv.data.done, 0, '换语言后已答数清零');
+  assert.equal(rv.data.sessionCorrect, 0, '换语言后答对数清零');
+  assert.equal(rv.data.sessionWrong, 0, '换语言后答错数清零');
+  assert.equal(rv.data.sessionTotal, rv.data.queue.length, '总数只算当前语言的队列');
+  langs.set('om');
+  const omQuiz = quiz.buildQuiz('om-u03', 10, progress.load(), false);
+  assert.equal(omQuiz.filter((q) => q.listen).length, 0);
+  omQuiz.forEach((q) => { assert.equal(q.promptRom, ''); q.options.forEach((o) => assert.ok(!/  /.test(o.text), '选项不拼接转写')); });
+  const omSearch = mkPage('search/search', { q: '', results: [], recent: [] });
+  omSearch.onLoad();
+  omSearch.search('你好');
+  assert.ok(omSearch.data.results.length > 0 && omSearch.data.results.every((r) => r.id.startsWith('om-')), '搜索只搜当前语言');
+  const qubee = mkPage('qubee/qubee');
+  qubee.onLoad({ group: '3' });
+  assert.ok(!progress.load().fidelGroupsDone[3], '第 3 批起初未通过');
+  assert.notEqual(qubee.data.done, true);
+  qubee.startQuiz();
+  qubee.questions.forEach((qq) => { qubee.data.q = qq; qubee.data.qScore += 1; });
+  qubee.data.qIdx = qubee.data.qTotal;
+  qubee.finish();
+  assert.equal(qubee.data.done, true);
+  assert.ok(progress.load().fidelGroupsDone[3], 'Qubee 第 3 批记在奥罗莫语进度里');
+  // 徽章弹框：按钮文字 ≤ 4 个字（微信 showModal 的 confirmText 限制），不用语言包里的长夸奖语
+  const points = require(path.join(root, 'utils/points.js'));
+  global.__modal = null;
+  progress.completeMission('w1');
+  assert.ok(points.celebrate().some((b) => b.id === 'first-words'), '奥罗莫语完成第 1 周任务得徽章');
+  assert.equal(global.__modal.confirmText, '好的', '徽章弹框按钮是「好的」');
+  assert.ok(global.__modal.confirmText.length <= 4);
+  // 跟读页：没有语音的语言打开旧链接直接返回，不加载词句（奥罗莫语有语音，能进入对比模式，见后面）
+  langs.register('xx', { ...langs.pack('om'), meta: { ...langs.meta('om'), code: 'xx', audio: false } });
+  langs.set('xx');
+  const realBackSp = wx.navigateBack;
+  let spBacks = 0;
+  wx.navigateBack = () => { spBacks += 1; };
+  const omSpeak = mkPage('speak/speak');
+  omSpeak.onLoad({ id: 'om-u03-01' });
+  wx.navigateBack = realBackSp;
+  assert.equal(spBacks, 1, '没有语音的语言打开跟读页直接返回');
+  assert.equal(omSpeak.data.item, null, '不加载词句');
+  assert.ok(!omSpeak.recorder, '不初始化录音器');
+  langs.set('om');
+  langs.unregister('xx');
+
+  // 「我的」页也能切回阿姆哈拉语，阿姆哈拉语进度完好
+  wx.showActionSheet = ({ itemList, success }) => success({ tapIndex: itemList.findIndex((t) => /阿姆哈拉语/.test(t)) });
+  const meSw = mkPage('profile/profile');
+  meSw.switchLang();
+  assert.equal(langs.current(), 'am');
+  assert.match(meSw.data.langLabel, /阿姆哈拉语/);
+  assert.ok(!progress.load().unitsLearned['om-u03'], '阿姆哈拉语进度没有混入奥罗莫语');
+  assert.equal(JSON.stringify(progress.load('am').fidelGroupsDone), amGroupsSnap, '阿姆哈拉语字母进度没被 Qubee 小测改动');
+  wx.showActionSheet = realSheet;
+
+  // 奥罗莫语朗读：免登录、带 lang、缓存键独立；旧云函数（不认识 tts.caps）时不发 tts 请求
+  langs.set('om');
+  const omText = langs.pack('om').getUnit('om-u01').items[0].text;
+  const omText2 = langs.pack('om').getUnit('om-u01').items[1].text;
+  assert.notEqual(omText, omText2);
+  const savedProfile = wx.getStorageSync('profile_v1');
+  wx.setStorageSync('profile_v1', { ...(savedProfile || {}), registered: false });
+  const sent = [];
+  const cf0 = wx.cloud.callFunction;
+  wx.cloud.downloadFile = ({ fileID, success }) => { const p = `/tmp/sim/${fileID.split('/').pop()}`; localFiles.add(p); success({ statusCode: 200, tempFilePath: p }); };
+  // 旧云函数：tts.caps 报「未知 action」→ 不发 tts.get，提示云函数版本过旧（只缓存「支持」，所以放在新云函数之前）
+  wx.cloud.callFunction = (o) => {
+    sent.push(o.data);
+    if (o.data.action === 'tts.caps') { o.success({ result: { ok: false, code: 'BAD_REQUEST', error: '未知 action: tts.caps' } }); return; }
+    return cf0(o);
+  };
+  global.__modal = null;
+  await audio.speak(omText2);
+  assert.ok(sent.some((d) => d.action === 'tts.caps'), '旧云函数：先探测 tts.caps');
+  assert.equal(sent.filter((d) => /^tts\.(get|batch)$/.test(d.action)).length, 0, '旧云函数不认识 lang：不发 tts.get');
+  assert.ok(global.__modal && /云函数版本过旧/.test(global.__modal.content), '提示云函数版本过旧');
+  audio.prefetch([{ id: 'p', text: omText2 }]);
+  await new Promise((r) => setTimeout(r, 20));
+  assert.equal(sent.filter((d) => /^tts\.(get|batch)$/.test(d.action)).length, 0, '旧云函数：预取也不发 tts.batch');
+  // 上面的等待期间，页面上挂起的「我的」刷新会把登记状态写回去：重新置为未登录
+  wx.setStorageSync('profile_v1', { ...(savedProfile || {}), registered: false });
+  // 网络类错误（不是「版本过旧」）：不发 tts.get，也不能误报云函数版本过旧，显示错误本身的文案
+  const omText3 = langs.pack('om').getUnit('om-u01').items[2].text;
+  wx.cloud.callFunction = (o) => {
+    sent.push(o.data);
+    if (o.data.action === 'tts.caps') { o.fail({ errMsg: 'cloud.callFunction:fail request:fail' }); return; }
+    return cf0(o);
+  };
+  sent.length = 0;
+  global.__modal = null;
+  await audio.speak(omText3);
+  assert.ok(sent.some((d) => d.action === 'tts.caps'), '网络失败：探测过 tts.caps');
+  assert.equal(sent.filter((d) => /^tts\.(get|batch)$/.test(d.action)).length, 0, '网络失败：不发 tts.get');
+  assert.ok(global.__modal && global.__modal.content, '网络失败：弹出错误提示');
+  assert.ok(!/云函数版本过旧/.test(global.__modal.content), '网络失败不能误报云函数版本过旧');
+  sent.length = 0;
+  global.__modal = null;
+  // 新云函数
+  wx.cloud.callFunction = (o) => { sent.push(o.data); return cf0(o); };
+  await audio.speak(omText);
+  const omCall = sent.find((d) => d.action === 'tts.get');
+  assert.ok(omCall, '未登录也能朗读奥罗莫语');
+  assert.equal(omCall.data.lang, 'om');
+  assert.ok(sent.some((d) => d.action === 'tts.caps'), '先确认云函数支持奥罗莫语');
+  assert.match(global.__audioCtx.src, /\/tmp\/sim\//, '播放下载到本地的文件');
+  assert.equal(langs.meta('om').audioVersion, 1, '奥罗莫语音频版本');
+  assert.ok(wx.getStorageSync('audio_cache_v1')[`om|v1|normal|${omText}`], '奥罗莫语本地缓存键带语言前缀与音频版本');
+  assert.equal(audio.cacheKey('ሰላም', 'female', 'normal', 'am'), 'female|normal|ሰላም', '阿姆哈拉语缓存键不变');
+  assert.equal(audio.cacheKey('ሰላም', 'female', 'normal'), 'female|normal|ሰላም', '不带语言时按阿姆哈拉语');
+  // 换成真人录音后把 audioVersion 加 1：旧的本地文件不再命中，重新下载
+  const omMeta = langs.meta('om');
+  omMeta.audioVersion = 2;
+  assert.equal(audio.cacheKey(omText, 'female', 'normal', 'om'), `om|v2|normal|${omText}`, 'audioVersion 变了缓存键跟着变');
+  sent.length = 0;
+  await audio.speak(omText);
+  assert.equal(sent.filter((d) => d.action === 'tts.get').length, 1, 'audioVersion 加 1 后重新取音频');
+  assert.ok(wx.getStorageSync('audio_cache_v1')[`om|v2|normal|${omText}`]);
+  omMeta.audioVersion = 1;
+  sent.length = 0;
+  await audio.speak(omText);
+  assert.equal(sent.filter((d) => d.action === 'tts.get').length, 0, '第二次走本地缓存');
+  // 混合部署：tts.caps 被新实例回答，tts.get / tts.batch 却落到旧实例（回包不带 lang，用阿姆哈拉语声音合成）→ 不播、不缓存
+  const omOld = langs.pack('om').getUnit('om-u01').items[5].text;
+  const stripLang = (o) => {
+    sent.push(o.data);
+    if (!/^tts\.(get|batch)$/.test(o.data.action)) return cf0(o);
+    return cf0({ ...o, success: (res) => { const r = res.result; if (r && r.ok) delete r.data.lang; o.success(res); } });
+  };
+  wx.cloud.callFunction = stripLang;
+  sent.length = 0;
+  global.__modal = null;
+  const playsOld = global.__audioPlays || 0;
+  await audio.speak(omOld);
+  assert.ok(sent.some((d) => d.action === 'tts.get'), '混合部署：发了 tts.get');
+  assert.ok(!wx.getStorageSync('audio_cache_v1')[audio.cacheKey(omOld, 'female', 'normal', 'om')], '回包没有 lang：不缓存');
+  assert.equal(global.__audioPlays || 0, playsOld, '回包没有 lang：不播放');
+  assert.ok(global.__modal && /云函数版本过旧/.test(global.__modal.content), '回包没有 lang：提示云函数版本过旧');
+  global.__modal = null;
+  await audio.speak(omOld, { silent: true });
+  assert.equal(global.__modal, null, '静默朗读不弹框');
+  audio.prefetch([{ id: 'x', text: omOld }]);
+  await new Promise((r) => setTimeout(r, 20));
+  assert.ok(sent.some((d) => d.action === 'tts.batch'), '混合部署：发了 tts.batch');
+  assert.ok(!wx.getStorageSync('audio_cache_v1')[audio.cacheKey(omOld, 'female', 'normal', 'om')], '预取回包没有 lang：不缓存');
+  wx.cloud.callFunction = (o) => { sent.push(o.data); return cf0(o); };
+  audio.prefetch([{ id: 'x', text: omOld }]);
+  await new Promise((r) => setTimeout(r, 20));
+  assert.ok(wx.getStorageSync('audio_cache_v1')[audio.cacheKey(omOld, 'female', 'normal', 'om')], '新云函数：预取正常缓存');
+  wx.setStorageSync('profile_v1', { ...(savedProfile || {}), registered: false });
+  const omQuiz2 = quiz.buildQuiz('om-u01', 9, progress.load(), langs.meta().audio);
+  assert.ok(omQuiz2.some((q) => q.listen), '奥罗莫语有语音后出听力题');
+  // 未登录：奥罗莫语小测页出听力题（免登录）；阿姆哈拉语仍然不出
+  const omQuizPage = mkPage('quiz/quiz', {});
+  omQuizPage.onLoad({ scope: 'om-u01' });
+  assert.ok(omQuizPage.data.questions.some((q) => q.listen), '未登录的奥罗莫语小测页有听力题');
+  // 静默朗读（自动播放）：奥罗莫语免登录照常请求；阿姆哈拉语未登录仍直接放弃
+  sent.length = 0;
+  await audio.speak(langs.pack('om').getUnit('om-u01').items[3].text, { silent: true });
+  const silentOm = sent.find((d) => d.action === 'tts.get');
+  assert.ok(silentOm, '未登录的奥罗莫语静默朗读也发 tts.get');
+  assert.equal(silentOm.data.lang, 'om');
+  langs.set('am');
+  const amQuizPage = mkPage('quiz/quiz', {});
+  amQuizPage.onLoad({ scope: 'u01' });
+  assert.equal(amQuizPage.data.questions.filter((q) => q.listen).length, 0, '未登录的阿姆哈拉语小测页没有听力题');
+  sent.length = 0;
+  await audio.speak('ጤና ይስጥልኝ ሰላም ነው', { silent: true });
+  assert.equal(sent.filter((d) => /^tts\./.test(d.action)).length, 0, '未登录的阿姆哈拉语静默朗读不发任何 tts 请求');
+  langs.set('om');
+  wx.cloud.callFunction = cf0;
+  delete wx.cloud.downloadFile;
+  wx.setStorageSync('profile_v1', savedProfile);
+  assert.equal(langs.view().voiceChoice, false, '奥罗莫语只有一种声音，不显示男声/女声');
+  langs.set('am');
+  assert.equal(langs.view().voiceChoice, true);
+
+  // 跟读对比：奥罗莫语不评分，对比完成每词每天 1 颗星，不调 stt.score
+  langs.set('om');
+  const omCmpPage = Object.create(pageOf('speak/speak'));
+  omCmpPage.data = { ...pageOf('speak/speak').data };
+  omCmpPage.setData = function (d) { this.data = { ...this.data, ...d }; };
+  omCmpPage.onLoad({ id: 'om-u01-01' });
+  omCmpPage.onShow();
+  assert.equal(omCmpPage.data.item.id, 'om-u01-01', '奥罗莫语能进跟读页');
+  assert.equal(omCmpPage.data.scoring, false);
+  assert.equal(omCmpPage.data.needLogin, false, '不评分就不需要登录提示');
+  const sttCalls = [];
+  const cf1 = wx.cloud.callFunction;
+  wx.cloud.callFunction = (o) => { if (o.data.action === 'stt.score') sttCalls.push(o); return cf1(o); };
+  const starsBefore = progress.load().stars || 0;
+  const todayMin = () => (progress.load().logs[progress.todayStr()] || {}).minutes || 0;
+  const minBefore = todayMin();
+  omCmpPage.data.tempFilePath = '/tmp/sim/rec.wav';
+  omCmpPage.practiceCompare();
+  assert.equal(todayMin() - minBefore, 1, '第一次对比记 1 分钟');
+  assert.equal((progress.load().stars || 0) - starsBefore, 1, '第一次对比 +1 星');
+  assert.equal(omCmpPage.data.practice.first, true);
+  omCmpPage.practiceCompare();
+  assert.equal((progress.load().stars || 0) - starsBefore, 1, '同一个词当天不重复给星');
+  assert.equal(todayMin() - minBefore, 1, '同一个词反复点对比不重复记学习时长');
+  assert.equal(omCmpPage.data.practice.first, false);
+  omCmpPage.score();
+  assert.equal(sttCalls.length, 0, '奥罗莫语绝不调用 stt.score');
+  if (omCmpPage.compareTimer) clearTimeout(omCmpPage.compareTimer);
+  wx.cloud.callFunction = cf1;
+  langs.set('am');
+  global.__audioPlays = 0; // 下面的语音测试从零计数
+  storage._files.clear();
+  global.__modal = null;
 
   // 语音：朗读走云端合成 + 本地缓存
   global.__modal = null;
   audio.stop(); // 页面 onHide 时会在还没播过任何音频的情况下调用
+  const amSent = [];
+  const cfAm = wx.cloud.callFunction;
+  wx.cloud.callFunction = (o) => { amSent.push(o.data.action); return cfAm(o); };
   await audio.speak('ሰላም');
+  wx.cloud.callFunction = cfAm;
+  assert.ok(amSent.includes('tts.get'), '阿姆哈拉语朗读发 tts.get');
+  assert.ok(!amSent.includes('tts.caps'), '阿姆哈拉语朗读从不探测 tts.caps（旧云函数照常可用）');
   assert.ok(global.__audioCtx, 'InnerAudioContext created');
   assert.equal(global.__modal, null, '第一次朗读不能误报 audioInstance is not set');
   assert.equal(global.__audioCtx.stops, 0, '新播放器设置 src 之前不调用 stop');
@@ -365,12 +791,27 @@ async function main() {
     cloudPath: `stt/${simOpenid}/sim.wav`, filePath: '/tmp/sim/rec.wav', success: (r) => resolve(r.fileID), fail: reject
   }));
   assert.ok(storage._files.has(fileID), '录音已上传');
+  const sttSent = [];
+  const cfStt = wx.cloud.callFunction;
+  wx.cloud.callFunction = (o) => { if (o.data.action === 'stt.score') sttSent.push(o.data.data); return cfStt(o); };
   const scored = await api.sttScore(fileID, 'ሰላም');
+  assert.equal(sttSent[0].lang, 'am', 'stt.score 带当前语言');
   assert.equal(scored.score, 100, '识别一致得 100 分');
   assert.equal(scored.transcript, 'ሰላም');
   assert.deepEqual(scored.words, [{ w: 'ሰላም', ok: true }]);
   assert.equal(azure.recogCalls.length, 1, '调用一次 Azure 识别');
   assert.equal(storage._files.has(fileID), false, '评分后录音文件已删除');
+  // 当前语言是奥罗莫语时（例如旧页面直接调了评分），云端按 lang 拒绝，且已上传的录音当场删除
+  langs.set('om');
+  const omFile = await new Promise((resolve, reject) => wx.cloud.uploadFile({
+    cloudPath: `stt/${simOpenid}/om.wav`, filePath: '/tmp/sim/rec.wav', success: (r) => resolve(r.fileID), fail: reject
+  }));
+  await assert.rejects(api.sttScore(omFile, 'Akkam'), (e) => /暂不支持发音评分/.test(e.message), '奥罗莫语 stt.score 被云端拒绝');
+  assert.equal(sttSent[1].lang, 'om');
+  assert.equal(storage._files.has(omFile), false, '被拒的奥罗莫语录音也已删除');
+  assert.equal(azure.recogCalls.length, 1, '奥罗莫语不调 Azure 识别');
+  langs.set('am');
+  wx.cloud.callFunction = cfStt;
 
   // 语音：跟读页可加载并展示词句
   const speakPage = pageOf('speak/speak');
@@ -520,11 +961,19 @@ async function main() {
 
   const fs = require('fs');
   const HARD = /阿姆哈拉语怎么说|在心里说出阿姆哈拉语|看阿<|ጥሩ ስራ|በጣም ጥሩ|ችግር የለም|ሰላም!/;
-  ['quiz/quiz', 'review/review', 'search/search', 'login/login', 'fidel/fidel'].forEach((p) => {
+  ['quiz/quiz', 'review/review', 'search/search', 'login/login', 'fidel/fidel', 'index/index', 'lesson/lesson', 'speak/speak', 'profile/profile', 'lessons/lessons', 'plan/plan', 'qubee/qubee'].forEach((p) => {
     const wxml = fs.readFileSync(path.join(root, 'pages', p + '.wxml'), 'utf8');
-    assert.ok(!HARD.test(wxml), `${p}.wxml 里还有写死的语言文案`);
+    // fidel 页自己的标题「Fidel 字母表」是阿姆哈拉语专属页的名字，对它单独跳过这一项
+    const re = new RegExp(HARD.source + (p === 'fidel/fidel' ? '' : '|Fidel 字母表<') + '|Fidel 字母 第');
+    assert.ok(!re.test(wxml), `${p}.wxml 里还有写死的语言文案`);
   });
 
+  // 「我的」页的清空按钮与云端同步说明写明是哪种语言（进度按语言分开）
+  const profileWxml = fs.readFileSync(path.join(root, 'pages', 'profile/profile.wxml'), 'utf8');
+  assert.ok(profileWxml.includes('清空{{L.langName}}进度'), '清空按钮写明当前语言');
+  assert.ok(/当前语言：' \+ L\.langName/.test(profileWxml), '云端同步说明写明当前语言');
+
+  assert.equal(global.__amCaps || 0, 0, '阿姆哈拉语在整个模拟过程中从未发过 tts.caps');
   console.log('OK: miniprogram simulation passed');
 }
 

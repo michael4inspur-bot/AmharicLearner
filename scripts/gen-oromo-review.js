@@ -1,0 +1,75 @@
+// 生成奥罗莫语母语者校对表 docs/oromo-review.md。
+// 用法：node scripts/gen-oromo-review.js          写文件
+//       node scripts/gen-oromo-review.js --check  只比对，词库改了却没重新生成时失败（npm test 用）
+const fs = require('fs');
+const path = require('path');
+const langs = require(path.join(__dirname, '..', 'miniprogram', 'langs', 'index.js'));
+
+const OUT = path.join(__dirname, '..', 'docs', 'oromo-review.md');
+const MANIFEST_PATH = path.join(__dirname, '..', 'cloudfunctions', 'api', 'audio-om', 'manifest.json');
+const cell = (s) => String(s == null ? '' : s).replace(/\|/g, '\\|').replace(/\n/g, ' ');
+
+function build() {
+  const p = langs.pack('om');
+  const manifest = fs.existsSync(MANIFEST_PATH) ? JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8')) : {};
+
+  const lines = [
+    '# 奥罗莫语校对表',
+    '',
+    '由 `node scripts/gen-oromo-review.js` 生成，请勿手改。请母语者逐行核对「奥罗莫语」一列的拼写与用词是否自然，在「意见」列写修改建议；中文意思不对也请指出。音频文件在 cloudfunctions/api/audio-om/，可直接用播放器打开核对发音。',
+    '',
+    '## 问候语（首页）',
+    '',
+    '| # | 奥罗莫语 | 中文 | 音频（正常速） | 意见 |',
+    '| --- | --- | --- | --- | --- |',
+    ...p.greetings.map((g, i) => {
+      const audioFile = manifest['normal|' + g.text.trim()] || '';
+      return `| ${i + 1} | ${cell(g.text)} | ${cell(g.zh)} | ${cell(audioFile)} |  |`;
+    }),
+    ''
+  ];
+  p.units.forEach((u) => {
+    lines.push(`## ${u.id} ${cell(u.title)}`, '', '| id | 奥罗莫语 | 中文 | 备注 | 音频（正常速） | 意见 |', '| --- | --- | --- | --- | --- | --- |');
+    u.items.forEach((it) => {
+      const audioFile = manifest['normal|' + it.text.trim()] || '';
+      lines.push(`| ${it.id} | ${cell(it.text)} | ${cell(it.zh)} | ${cell(it.note)} | ${cell(audioFile)} |  |`);
+    });
+    if (u.dialog && u.dialog.length) {
+      lines.push('', '对话：', '', '| 说话人 | 奥罗莫语 | 中文 | 音频（正常速） | 意见 |', '| --- | --- | --- | --- | --- |');
+      u.dialog.forEach((d) => {
+        const audioFile = manifest['normal|' + d.text.trim()] || '';
+        lines.push(`| ${cell(d.who)} | ${cell(d.text)} | ${cell(d.zh)} | ${cell(audioFile)} |  |`);
+      });
+    }
+    lines.push('');
+  });
+  lines.push('## Qubee 拼写规则例词', '', '| 批次 | 规则 | 例词 | 中文 | 音频（正常速） | 意见 |', '| --- | --- | --- | --- | --- | --- |');
+  p.alphabet.groups.forEach((g) => g.rules.forEach((r) => r.examples.forEach((ex) => {
+    const audioFile = manifest['normal|' + ex.text.trim()] || '';
+    lines.push(`| ${g.group} | ${cell(r.pattern)} | ${cell(ex.text)} | ${cell(ex.zh)} | ${cell(audioFile)} |  |`);
+  })));
+  lines.push('');
+  return lines.join('\n');
+}
+
+/** 比对时统一换行符：Windows 上 git 的 autocrlf 会把检出的文件改成 CRLF，内容相同不应判为不一致 */
+const normalize = (s) => s.replace(/\r\n/g, '\n');
+const sameText = (a, b) => normalize(a) === normalize(b);
+
+const text = build();
+if (process.argv.includes('--check')) {
+  // 自检：CRLF 版本的同一内容必须判为一致，内容不同必须判为不一致
+  if (!sameText(text.replace(/\n/g, '\r\n'), text) || sameText(`${text}x`, text)) {
+    console.error('gen-oromo-review 自检失败：换行符归一化不正确');
+    process.exit(1);
+  }
+  const cur = fs.existsSync(OUT) ? fs.readFileSync(OUT, 'utf8') : '';
+  if (!sameText(cur, text)) {
+    console.error('docs/oromo-review.md 与词库不一致，请运行 node scripts/gen-oromo-review.js 重新生成');
+    process.exit(1);
+  }
+  console.log('OK: 奥罗莫语校对表与词库一致');
+} else {
+  fs.writeFileSync(OUT, text);
+  console.log(`wrote ${path.relative(process.cwd(), OUT)}`);
+}

@@ -14,7 +14,8 @@ Page({
     const p = progress.load();
     // 未登记用户用不了朗读，出听力题等于给一道无法作答的空白题，
     // 而且自动播放会连弹登录框（审核驳回过的形态）
-    const withAudio = api.configured() && account.isRegistered();
+    const m = langs.meta();
+    const withAudio = api.configured() && m.audio && (!m.ttsLogin || account.isRegistered());
     const questions = quiz.buildQuiz(scope, 10, p, withAudio);
     const u = langs.pack().getUnit(scope);
     const title = u ? u.title : scope.startsWith('week:') ? `第 ${scope.slice(5)} 周综合` : '综合';
@@ -30,7 +31,7 @@ Page({
     // 自动播放：失败静默，用户没点任何按钮，不该被要求登录
     if (cur && cur.listen && cur.audioText) audio.speak(cur.audioText, { silent: true });
   },
-  /** 听力题大圆钮与题面小喇叭共用：播当前题的阿姆哈拉语 */
+  /** 听力题大圆钮与题面小喇叭共用：播当前题的原文 */
   playCurrent() {
     const cur = this.data.current;
     if (!cur) return;

@@ -6,6 +6,7 @@ const sync = require('../../utils/sync.js');
 const account = require('../../utils/account.js');
 const update = require('../../utils/update.js');
 const langs = require('../../langs/index.js');
+const langSwitch = require('../../utils/lang-switch.js');
 
 const PROFILE_KEY = 'profile_v1';
 
@@ -31,6 +32,7 @@ Page({
     const { voice, rate } = audio.getSettings();
     const badges = points.allBadges(p);
     this.setData({
+      langLabel: langSwitch.label(), langSwitchable: langSwitch.available(),
       cloudReady: api.configured(), goal: p.dailyMinutesGoal, newCards: p.newCardsPerDay, startDate: p.startDate, voice, rate,
       stats: progress.srsStats(p), streak: progress.streak(p), totalMinutes,
       days: Object.keys(p.logs).filter((k) => p.logs[k].minutes > 0).length,
@@ -46,6 +48,7 @@ Page({
     this.setData({ updateText: update.describe() });
     if (api.configured()) { this.loadUsage(); this.loadMe(); }
   },
+  switchLang() { langSwitch.choose(() => this.onShow()); },
   /** 微信只在冷启动时检查新版本，这里汇报本次检查结果；新版已就绪则直接问要不要重启 */
   checkUpdate() {
     const text = update.checkNow();
@@ -119,7 +122,7 @@ Page({
     const code = langs.current();
     const p = progress.load();
     try {
-      if (!(await sync.cloudSupports(code))) throw new Error('云函数版本过旧，不支持这种语言的进度。请重新部署云函数 api。');
+      if (!(await sync.cloudSupports(code, { force: true }))) throw new Error('云函数版本过旧，不支持这种语言的进度。请重新部署云函数 api。');
       await api.syncProgress(p, sync.buildMeta(p), undefined, code);
       wx.showToast({ title: '已上传到云端', icon: 'success' });
     } catch (e) { wx.showModal({ title: '上传失败', content: e.message, showCancel: false }); }
@@ -135,7 +138,7 @@ Page({
         title: '覆盖本地进度？', content: '将用云端的进度替换本机数据。',
         success: (res) => {
           if (!res.confirm) return;
-          progress.replace(remote);
+          progress.replace(remote, code);
           sync.noteRemoteVersion(updatedAt, code); // 记下云端版本，之后上传不会被判成旧快照
           this.onShow();
           wx.showToast({ title: '已恢复', icon: 'success' });
@@ -145,7 +148,7 @@ Page({
   },
   resetAll() {
     wx.showModal({
-      title: '清空全部进度', content: '闪卡、小测、学习记录都会删除，无法恢复。', confirmColor: '#c0392b',
+      title: '清空全部进度', content: `${langs.meta().strings.langName}的闪卡、小测、学习记录都会删除，无法恢复。其他语言的进度不受影响。`, confirmColor: '#c0392b',
       success: (r) => { if (r.confirm) { progress.reset(); this.onShow(); } }
     });
   }

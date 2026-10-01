@@ -35,7 +35,7 @@ function defaultProgress() {
   };
 }
 
-const OBJECT_FIELDS = ['unitsLearned', 'srs', 'logs', 'missions', 'reflections', 'fidelGroupsDone', 'starLog', 'badges'];
+const OBJECT_FIELDS = ['unitsLearned', 'srs', 'logs', 'missions', 'reflections', 'fidelGroupsDone', 'starLog', 'badges', 'compared'];
 const ARRAY_FIELDS = ['quizScores'];
 
 /**
@@ -100,8 +100,9 @@ let onSaved = null;
 /** fn(p, code)：每次保存后回调，code 是这份进度所属的语言 */
 function setOnSaved(fn) { onSaved = fn; }
 
-function save(p) {
-  const code = langs.current();
+/** 保存进度。code 是这份进度所属的语言；页面拿着进度对象跨过语言切换时必须传 */
+function save(p, code) {
+  code = code || langs.current();
   caches[code] = p;
   try { wx.setStorageSync(keyOf(code), p); } catch (e) { /* ignore */ }
   if (onSaved) onSaved(p, code);
@@ -115,16 +116,18 @@ function reset() {
   return load();
 }
 
-function replace(p) {
-  const local = load();
+function replace(p, code) {
+  code = code || langs.current();
+  const local = load(code);
   const next = sanitize(p);
   // 云端快照可能早于积分功能，缺这三个字段。浅合并会把本机已得的星星和徽章清零且不可逆，
   // 所以云端没有时保留本机的。
   if (!p || typeof p !== 'object' || p.stars == null) next.stars = local.stars || 0;
   if (!p || !p.starLog) next.starLog = local.starLog || {};
   if (!p || !p.badges) next.badges = local.badges || {};
-  delete caches[langs.current()];
-  return save(next);
+  if (!p || !p.compared) next.compared = local.compared || {};
+  delete caches[code];
+  return save(next, code);
 }
 
 // ---------- 当前周 / 天 ----------
@@ -151,6 +154,17 @@ function todayLog(p) {
   const k = todayStr();
   if (!p.logs[k]) p.logs[k] = { ...ZERO_LOG };
   return p.logs[k];
+}
+
+/** 今天第一次对比练习这个词返回 true（用于每词每天只给一次星） */
+function markCompared(itemId) {
+  const p = load();
+  const today = todayStr();
+  if (!p.compared || p.compared.date !== today || !p.compared.ids || typeof p.compared.ids !== 'object') p.compared = { date: today, ids: {} };
+  if (p.compared.ids[itemId]) return false;
+  p.compared.ids[itemId] = true;
+  save(p);
+  return true;
 }
 
 function addMinutes(min) {
@@ -257,71 +271,14 @@ function completeMission(key) {
   return save(p);
 }
 
-function completeFidelGroup(group) {
+// 字母批次完成记录。字段名 fidelGroupsDone 沿用老名字，本地和云端老数据才能直接读
+function completeAlphabetGroup(group) {
   const p = load();
   p.fidelGroupsDone[group] = todayStr();
   return save(p);
 }
 
-// ---------- 给 AI 的摘要 ----------
-function summary(p) {
-  p = p || load();
-  const pos = currentPosition(p);
-  const plannedUnits = langs.pack().plan.weeks.slice(0, pos.week).flatMap((w) => w.units);
-  const learned = Object.keys(p.unitsLearned);
-  const titles = (ids) => ids.map((id) => { const u = langs.pack().getUnit(id); return u ? `${id} ${u.title}` : id; });
-
-  const quizByUnit = {};
-  p.quizScores.forEach((q) => {
-    const k = q.unit;
-    if (!quizByUnit[k]) quizByUnit[k] = { unit: k, attempts: 0, best: 0, last: 0 };
-    const pct = Math.round((q.score / q.total) * 100);
-    quizByUnit[k].attempts += 1;
-    quizByUnit[k].best = Math.max(quizByUnit[k].best, pct);
-    quizByUnit[k].last = pct;
-  });
-
-  const days14 = [];
-  let correct7 = 0; let wrong7 = 0;
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date(); d.setDate(d.getDate() - i);
-    const k = todayStr(d);
-    const l = p.logs[k] || { minutes: 0, correct: 0, wrong: 0 };
-    days14.push({ date: k.slice(5), minutes: l.minutes });
-    if (i < 7) { correct7 += l.correct; wrong7 += l.wrong; }
-  }
-  const retention7d = correct7 + wrong7 ? Math.round((correct7 / (correct7 + wrong7)) * 100) : null;
-
-  const weakItems = Object.keys(p.srs)
-    .map((id) => ({ id, lapses: p.srs[id].lapses || 0 }))
-    .filter((x) => x.lapses > 0)
-    .sort((a, b) => b.lapses - a.lapses)
-    .slice(0, 10)
-    .map((x) => { const it = langs.pack().getItem(x.id); return it ? { text: it.text, zh: it.zh, lapses: x.lapses } : null; })
-    .filter(Boolean);
-
-  const stats = srsStats(p);
-  return {
-    today: todayStr(),
-    startDate: p.startDate,
-    currentWeek: pos.week,
-    currentDay: pos.day,
-    dailyMinutesGoal: p.dailyMinutesGoal,
-    newCardsPerDay: p.newCardsPerDay,
-    streak: streak(p),
-    unitsPlannedSoFar: titles(plannedUnits),
-    unitsLearned: titles(learned),
-    unitsBehind: titles(plannedUnits.filter((id) => !p.unitsLearned[id])),
-    quiz: Object.values(quizByUnit),
-    srs: { total: stats.total, due: stats.due, mature: stats.mature, retention7d, wrong7d: wrong7, reviews7d: correct7 + wrong7 },
-    minutesLast14: days14,
-    missionsDone: Object.keys(p.missions),
-    fidelGroupsDone: Object.keys(p.fidelGroupsDone).map(Number),
-    weakItems,
-  };
-}
-
 module.exports = {
-  todayStr, keyOf, load, save, reset, replace, sanitize, isEmpty, setOnSaved, currentPosition, todayLog, addMinutes, streak,
-  learnUnit, dueCards, gradeCard, srsStats, recordQuiz, completeMission, completeReflection, completeFidelGroup, summary
+  todayStr, keyOf, load, save, reset, replace, sanitize, isEmpty, setOnSaved, currentPosition, todayLog, addMinutes, markCompared, streak,
+  learnUnit, dueCards, gradeCard, srsStats, recordQuiz, completeMission, completeReflection, completeAlphabetGroup
 };

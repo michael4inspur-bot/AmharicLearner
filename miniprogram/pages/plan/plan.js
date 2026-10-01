@@ -5,7 +5,7 @@ Page({
   data: { weeks: [], principles: [], showPrinciples: false, daily: {} },
   onLoad() {
     const pk = langs.pack();
-    this.setData({ principles: pk.plan.principles, daily: pk.plan.DAILY_TEMPLATE });
+    this.setData({ principles: pk.plan.principles, daily: pk.plan.DAILY_TEMPLATE, alphabetName: pk.alphabet.name });
   },
   onShow() {
     const pk = langs.pack();

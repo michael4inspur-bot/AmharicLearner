@@ -7,7 +7,7 @@ const langs = require('../langs/index.js');
 
 const states = {};
 function state(code) {
-  if (!states[code]) states[code] = { lastPayload: '', baseUpdatedAt: '', inFlight: null, supported: code === 'am' };
+  if (!states[code]) states[code] = { lastPayload: '', baseUpdatedAt: '', inFlight: null, checkedAt: 0, supported: code === 'am' };
   return states[code];
 }
 
@@ -24,16 +24,21 @@ function buildMeta(p) {
   }
 }
 
+const PROBE_INTERVAL_MS = 10 * 60 * 1000;
+
 /**
  * 云函数是否已支持这种语言的进度。旧版云函数不认识 lang，会把奥罗莫语进度
  * 整份写进阿姆哈拉语文档，所以非阿姆哈拉语上传前先确认云端会回显同一个 lang。
- * 只缓存「支持」：不支持时下次再探测，负责人重新部署云函数后自动恢复同步。
+ * 支持就一直缓存；不支持时 10 分钟内不再探测（每次探测都要拉一整份进度），
+ * opts.force 用于用户手动上传 / 恢复时立即重新探测。
  */
-function cloudSupports(code) {
+function cloudSupports(code, opts) {
   const s = state(code);
   if (s.supported) return Promise.resolve(true);
+  if (!(opts && opts.force) && s.checkedAt && Date.now() - s.checkedAt < PROBE_INTERVAL_MS) return Promise.resolve(false);
   return api.fetchProgress(code)
-    .then((r) => { s.supported = !!r && r.lang === code; return s.supported; })
+    // 只有拿到答复才进入退避；网络失败不算，下次还要再探测
+    .then((r) => { s.checkedAt = Date.now(); s.supported = !!r && r.lang === code; return s.supported; })
     .catch(() => false);
 }
 
@@ -58,7 +63,12 @@ function syncNow(code) {
         .then((r) => { s.lastPayload = payload; if (r && r.updatedAt) s.baseUpdatedAt = r.updatedAt; return true; });
     })
     .catch(() => false)
-    .then((r) => { s.inFlight = null; return r; });
+    .then((r) => {
+      s.inFlight = null;
+      // 上传期间又有改动：再传一次，否则切后台时最后的改动会漏掉
+      if (r && JSON.stringify(progress.load(code)) !== s.lastPayload) return syncNow(code);
+      return r;
+    });
   return s.inFlight;
 }
 
@@ -76,6 +86,14 @@ function scheduleSync(delayMs, code) {
   }, delayMs == null ? 3000 : delayMs);
 }
 
+/** 立即同步所有待同步的语言和当前语言（切后台时用：后台计时器可能被冻结） */
+function flushPending() {
+  if (timer) { clearTimeout(timer); timer = null; }
+  const codes = new Set([...pending, langs.current()]);
+  pending.clear();
+  return Promise.all([...codes].map((c) => syncNow(c)));
+}
+
 /** 从云端恢复后调用，记下这份数据对应的云端版本，之后上传才不会被判成旧快照 */
 function noteRemoteVersion(updatedAt, code) {
   const s = state(code || langs.current());
@@ -83,4 +101,4 @@ function noteRemoteVersion(updatedAt, code) {
   s.lastPayload = '';
 }
 
-module.exports = { syncNow, scheduleSync, configured, buildMeta, noteRemoteVersion, cloudSupports };
+module.exports = { syncNow, scheduleSync, configured, buildMeta, noteRemoteVersion, cloudSupports, flushPending };

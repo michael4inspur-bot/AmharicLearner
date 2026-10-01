@@ -4,3 +4,5 @@ node_modules/
 .workbuddy/
 .claude/
 project.private.config.json
+__pycache__/
+.venv-tts/
